@@ -474,17 +474,27 @@
                     <p class="text-sm text-gray-400 mb-4">Scan QR or pay via UPI to complete your purchase.</p>
                     
                     <div class="text-center mb-6">
-                        <div class="inline-block bg-white p-4 rounded-2xl mb-4">
-                            <img src="qr-payment.png" alt="UPI QR Code" class="w-48 h-48 object-contain mx-auto">
+                        <div class="inline-block bg-white p-3 rounded-xl mb-4 shadow-lg">
+                            <img src="qr-payment.png" alt="UPI QR Code" class="w-56 h-56 object-cover object-center mx-auto rounded" style="object-position: center 55%;">
                         </div>
-                        <p class="text-gray-300 font-medium mb-1">Pay to UPI ID:</p>
-                        <div class="inline-flex items-center gap-2 px-4 py-2 bg-gray-800 rounded-lg">
-                            <code class="text-indigo-300 text-sm">9019879108@kotakbank</code>
-                            <button id="copy-upi" class="text-gray-400 hover:text-white transition-colors" title="Copy UPI ID">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
-                            </button>
+                        
+                        <p class="text-gray-500 text-xs mb-4">— OR pay directly from your app —</p>
+                        
+                        <a id="upi-pay-link" href="#" target="_blank" class="inline-flex items-center gap-2 px-6 py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold rounded-xl transition-all hover:shadow-lg hover:shadow-indigo-500/25 mb-4">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
+                            Pay via PhonePe / GPay / UPI App
+                        </a>
+
+                        <div class="flex items-center justify-center gap-2 mb-3">
+                            <p class="text-gray-300 text-sm">UPI ID:</p>
+                            <div class="inline-flex items-center gap-2 px-3 py-1.5 bg-gray-800 rounded-lg">
+                                <code class="text-indigo-300 text-sm">9019879108@kotakbank</code>
+                                <button id="copy-upi" class="text-gray-400 hover:text-white transition-colors" title="Copy UPI ID">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+                                </button>
+                            </div>
                         </div>
-                        <p class="text-emerald-400 font-bold text-lg mt-4" id="payment-amount">Amount: ₹1,892</p>
+                        <p class="text-emerald-400 font-bold text-lg" id="payment-amount">Amount: ₹1,892</p>
                     </div>
 
                     <div class="flex items-center gap-3 p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl mb-6">

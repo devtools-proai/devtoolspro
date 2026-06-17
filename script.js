@@ -1,13 +1,6 @@
 // ─── CONFIGURATION ───
 const WHATSAPP_NUMBER = '919019879108';
 
-const PLAN_AMOUNTS = {
-  'Pro — ₹946/month (1,000 credits)': '₹946',
-  'Pro+ — ₹1,892/month (2,000 credits)': '₹1,892',
-  'Pro Max — ₹4,731/month (5,000 credits)': '₹4,731',
-  'Power — ₹9,461/month (10,000 credits)': '₹9,461',
-};
-
 document.addEventListener('DOMContentLoaded', () => {
   // ─── DOM REFERENCES ───
   const step1 = document.getElementById('step-1');
@@ -48,6 +41,13 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // ─── STEP 1 → STEP 2 ───
+  const PLAN_AMOUNTS_RAW = {
+    'Pro — ₹946/month (1,000 credits)': 946,
+    'Pro+ — ₹1,892/month (2,000 credits)': 1892,
+    'Pro Max — ₹4,731/month (5,000 credits)': 4731,
+    'Power — ₹9,461/month (10,000 credits)': 9461,
+  };
+
   document.getElementById('to-step-2').addEventListener('click', () => {
     const radio = document.querySelector('input[name="selectedPlan"]:checked');
     const planError = document.getElementById('plan-error');
@@ -57,7 +57,13 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     planError.classList.add('hidden');
     selectedPlan = radio.value;
-    document.getElementById('payment-amount').textContent = 'Amount: ' + PLAN_AMOUNTS[selectedPlan];
+    const amount = PLAN_AMOUNTS_RAW[selectedPlan];
+    document.getElementById('payment-amount').textContent = 'Amount: ₹' + amount.toLocaleString('en-IN');
+    
+    // Set UPI deep link with amount pre-filled
+    const upiLink = `upi://pay?pa=9019879108@kotakbank&pn=DevTools%20Pro&am=${amount}&cu=INR&tn=${encodeURIComponent('DevTools Pro - ' + selectedPlan.split(' — ')[0])}`;
+    document.getElementById('upi-pay-link').href = upiLink;
+    
     showStep(2);
   });
 
