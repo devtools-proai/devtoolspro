@@ -486,20 +486,20 @@
                             </div>
                         </div>
                         
-                        <p class="text-gray-500 text-xs mb-4">— OR pay directly from your app —</p>
+                        <p class="text-gray-500 text-xs mb-4 md:hidden">— OR pay directly from your app —</p>
                         
-                        <div class="flex flex-col sm:flex-row gap-3 mb-4" id="pay-buttons">
-                            <a id="phonepe-link" href="#" class="flex-1 inline-flex items-center justify-center gap-2 px-5 py-3 bg-purple-600 hover:bg-purple-500 text-white font-semibold rounded-xl transition-all hover:shadow-lg">
-                                <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14.5v-9l7 4.5-7 4.5z"/></svg>
-                                PhonePe
+                        <div class="flex gap-3 mb-4 md:hidden" id="pay-buttons">
+                            <a id="phonepe-link" href="#" class="flex-1 flex flex-col items-center gap-1.5 py-3 bg-[#5f259f] hover:bg-[#7b3cbf] text-white font-semibold rounded-xl transition-all">
+                                <img src="https://cdn.jsdelivr.net/gh/nicklodeon23/upi-icons/phonepe.svg" alt="PhonePe" class="w-7 h-7" onerror="this.style.display='none'">
+                                <span class="text-xs">PhonePe</span>
                             </a>
-                            <a id="gpay-link" href="#" class="flex-1 inline-flex items-center justify-center gap-2 px-5 py-3 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-xl transition-all hover:shadow-lg">
-                                <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
-                                Google Pay
+                            <a id="gpay-link" href="#" class="flex-1 flex flex-col items-center gap-1.5 py-3 bg-[#1a73e8] hover:bg-[#4285f4] text-white font-semibold rounded-xl transition-all">
+                                <img src="https://cdn.jsdelivr.net/gh/nicklodeon23/upi-icons/gpay.svg" alt="Google Pay" class="w-7 h-7" onerror="this.style.display='none'">
+                                <span class="text-xs">Google Pay</span>
                             </a>
-                            <a id="upi-link" href="#" class="flex-1 inline-flex items-center justify-center gap-2 px-5 py-3 bg-gray-700 hover:bg-gray-600 text-white font-semibold rounded-xl transition-all hover:shadow-lg">
-                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
-                                Any UPI
+                            <a id="upi-link" href="#" class="flex-1 flex flex-col items-center gap-1.5 py-3 bg-gray-700 hover:bg-gray-600 text-white font-semibold rounded-xl transition-all">
+                                <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
+                                <span class="text-xs">Any UPI</span>
                             </a>
                         </div>
 
