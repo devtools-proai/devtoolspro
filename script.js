@@ -1,95 +1,85 @@
 // ─── CONFIGURATION ───
-// Replace with your actual WhatsApp number (country code + number, no spaces/dashes)
 const WHATSAPP_NUMBER = '919019879108';
+
+const PLAN_AMOUNTS = {
+  'Pro — ₹946/month (1,000 credits)': '₹946',
+  'Pro+ — ₹1,892/month (2,000 credits)': '₹1,892',
+  'Pro Max — ₹4,731/month (5,000 credits)': '₹4,731',
+  'Power — ₹9,461/month (10,000 credits)': '₹9,461',
+};
 
 document.addEventListener('DOMContentLoaded', () => {
   // ─── DOM REFERENCES ───
+  const step1 = document.getElementById('step-1');
+  const step2 = document.getElementById('step-2');
+  const step3 = document.getElementById('step-3');
+  const stepSuccess = document.getElementById('step-success');
   const form = document.getElementById('signup-form');
-  const firstName = document.getElementById('firstName');
-  const lastName = document.getElementById('lastName');
-  const email = document.getElementById('emailId');
-  const plan = document.getElementById('kiroPlan');
   const header = document.querySelector('header');
-  const btnUSD = document.getElementById('btn-usd');
-  const btnINR = document.getElementById('btn-inr');
-  const pricingCards = document.querySelectorAll('.flip-card');
 
-  let currentCurrency = 'usd';
+  // Step indicators
+  const stepInds = [document.getElementById('step-ind-1'), document.getElementById('step-ind-2'), document.getElementById('step-ind-3')];
+  const stepLines = [document.getElementById('step-line-1'), document.getElementById('step-line-2')];
 
-  // ─── CURRENCY TOGGLE ───
-  function switchCurrency(currency) {
-    currentCurrency = currency;
+  let selectedPlan = '';
 
-    // Update button styles
-    if (currency === 'usd') {
-      btnUSD.classList.add('bg-indigo-600', 'text-white');
-      btnUSD.classList.remove('text-gray-400');
-      btnINR.classList.remove('bg-indigo-600', 'text-white');
-      btnINR.classList.add('text-gray-400');
-    } else {
-      btnINR.classList.add('bg-indigo-600', 'text-white');
-      btnINR.classList.remove('text-gray-400');
-      btnUSD.classList.remove('bg-indigo-600', 'text-white');
-      btnUSD.classList.add('text-gray-400');
-    }
+  // ─── STEP NAVIGATION HELPERS ───
+  function showStep(num) {
+    [step1, step2, step3, stepSuccess].forEach(el => el.classList.add('hidden'));
+    if (num === 1) step1.classList.remove('hidden');
+    if (num === 2) step2.classList.remove('hidden');
+    if (num === 3) step3.classList.remove('hidden');
+    if (num === 4) stepSuccess.classList.remove('hidden');
 
-    // Flip animation + update prices
-    pricingCards.forEach(card => {
-      const inner = card.querySelector('.flip-card-inner');
-      inner.classList.add('flipping');
-
-      setTimeout(() => {
-        const original = card.querySelector('.original-price');
-        const discounted = card.querySelector('.discounted-price');
-        const origVal = card.dataset[`${currency}Original`];
-        const discVal = card.dataset[`${currency}Discounted`];
-        const symbol = currency === 'usd' ? '$' : '₹';
-
-        original.textContent = `${symbol}${origVal}/month`;
-        discounted.innerHTML = `${symbol}${discVal}<span class="text-base font-normal text-gray-400">/mo</span>`;
-      }, 300);
-
-      setTimeout(() => {
-        inner.classList.remove('flipping');
-      }, 600);
+    // Update indicators
+    stepInds.forEach((ind, i) => {
+      if (i < num) {
+        ind.classList.remove('bg-gray-700', 'text-gray-400');
+        ind.classList.add('bg-indigo-600', 'text-white');
+      } else {
+        ind.classList.remove('bg-indigo-600', 'text-white');
+        ind.classList.add('bg-gray-700', 'text-gray-400');
+      }
+    });
+    stepLines.forEach((line, i) => {
+      line.classList.toggle('bg-indigo-600', i < num - 1);
+      line.classList.toggle('bg-gray-700', i >= num - 1);
     });
   }
 
-  btnUSD.addEventListener('click', () => switchCurrency('usd'));
-  btnINR.addEventListener('click', () => switchCurrency('inr'));
-
-  // ─── FORM CURRENCY TOGGLE ───
-  const formBtnUSD = document.getElementById('form-btn-usd');
-  const formBtnINR = document.getElementById('form-btn-inr');
-  const planOptions = document.querySelectorAll('#kiroPlan option[data-usd]');
-
-  function switchFormCurrency(currency) {
-    // Update button styles
-    if (currency === 'usd') {
-      formBtnUSD.classList.add('bg-indigo-600', 'text-white');
-      formBtnUSD.classList.remove('text-gray-400');
-      formBtnINR.classList.remove('bg-indigo-600', 'text-white');
-      formBtnINR.classList.add('text-gray-400');
-    } else {
-      formBtnINR.classList.add('bg-indigo-600', 'text-white');
-      formBtnINR.classList.remove('text-gray-400');
-      formBtnUSD.classList.remove('bg-indigo-600', 'text-white');
-      formBtnUSD.classList.add('text-gray-400');
+  // ─── STEP 1 → STEP 2 ───
+  document.getElementById('to-step-2').addEventListener('click', () => {
+    const radio = document.querySelector('input[name="selectedPlan"]:checked');
+    const planError = document.getElementById('plan-error');
+    if (!radio) {
+      planError.classList.remove('hidden');
+      return;
     }
+    planError.classList.add('hidden');
+    selectedPlan = radio.value;
+    document.getElementById('payment-amount').textContent = 'Amount: ' + PLAN_AMOUNTS[selectedPlan];
+    showStep(2);
+  });
 
-    // Update option text and values
-    planOptions.forEach(opt => {
-      const val = opt.dataset[currency];
-      opt.value = val;
-      opt.textContent = val.split(' (')[0]; // show just plan + price
-    });
+  // ─── STEP 2 → STEP 3 ───
+  document.getElementById('to-step-3').addEventListener('click', () => {
+    showStep(3);
+    document.getElementById('selected-plan-display').textContent = selectedPlan;
+  });
 
-    // Reset selection
-    plan.value = '';
-  }
+  // ─── BACK BUTTONS ───
+  document.getElementById('back-to-1').addEventListener('click', () => showStep(1));
+  document.getElementById('back-to-2').addEventListener('click', () => showStep(2));
 
-  formBtnUSD.addEventListener('click', () => switchFormCurrency('usd'));
-  formBtnINR.addEventListener('click', () => switchFormCurrency('inr'));
+  // ─── COPY UPI ID ───
+  document.getElementById('copy-upi').addEventListener('click', () => {
+    navigator.clipboard.writeText('9019879108@kotakbank');
+    const btn = document.getElementById('copy-upi');
+    btn.innerHTML = '<svg class="w-4 h-4 text-emerald-400" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>';
+    setTimeout(() => {
+      btn.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>';
+    }, 2000);
+  });
 
   // ─── VALIDATION ───
   function validateEmail(value) {
@@ -98,16 +88,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function showError(field, message) {
     const errorEl = document.getElementById(`${field.id}-error`);
-    errorEl.textContent = message;
-    errorEl.classList.remove('hidden');
+    if (errorEl) { errorEl.textContent = message; errorEl.classList.remove('hidden'); }
     field.classList.add('border-red-500');
     field.classList.remove('border-gray-700');
   }
 
   function clearError(field) {
     const errorEl = document.getElementById(`${field.id}-error`);
-    errorEl.textContent = '';
-    errorEl.classList.add('hidden');
+    if (errorEl) { errorEl.textContent = ''; errorEl.classList.add('hidden'); }
     field.classList.remove('border-red-500');
     field.classList.add('border-gray-700');
   }
@@ -116,58 +104,88 @@ document.addEventListener('DOMContentLoaded', () => {
     const value = field.value.trim();
     switch (field.id) {
       case 'firstName':
-        if (!value) { showError(field, 'First name is required'); return false; }
-        break;
+        if (!value) { showError(field, 'Required'); return false; } break;
       case 'lastName':
-        if (!value) { showError(field, 'Last name is required'); return false; }
-        break;
+        if (!value) { showError(field, 'Required'); return false; } break;
       case 'emailId':
-        if (!value) { showError(field, 'Email is required'); return false; }
-        if (!validateEmail(value)) { showError(field, 'Enter a valid email address'); return false; }
-        break;
-      case 'kiroPlan':
-        if (!value) { showError(field, 'Please select a plan'); return false; }
-        break;
+        if (!value) { showError(field, 'Required'); return false; }
+        if (!validateEmail(value)) { showError(field, 'Invalid email'); return false; } break;
+      case 'utrId':
+        if (!value) { showError(field, 'Required'); return false; }
+        if (value.length < 6) { showError(field, 'Enter valid UTR'); return false; } break;
     }
     clearError(field);
     return true;
   }
 
-  // ─── REAL-TIME VALIDATION ───
-  [firstName, lastName, email, plan].forEach(field => {
-    field.addEventListener('blur', () => validateField(field));
-    field.addEventListener('input', () => {
-      if (field.classList.contains('border-red-500')) validateField(field);
-    });
-  });
-
-  // ─── FORM SUBMIT → WHATSAPP WITH USER DATA ───
+  // ─── FORM SUBMIT → WHATSAPP ───
   form.addEventListener('submit', (e) => {
     e.preventDefault();
+    const firstName = document.getElementById('firstName');
+    const lastName = document.getElementById('lastName');
+    const email = document.getElementById('emailId');
+    const utr = document.getElementById('utrId');
 
-    const isValid = [firstName, lastName, email, plan].every(f => validateField(f));
+    const fields = [firstName, lastName, email, utr];
+    const isValid = fields.every(f => validateField(f));
 
     if (isValid) {
-      const fName = firstName.value.trim();
-      const lName = lastName.value.trim();
-      const emailVal = email.value.trim();
-      const planVal = plan.value;
-
-      const message = `Hi! I'd like to purchase a subscription.\n\nFirst Name: ${fName}\nLast Name: ${lName}\nEmail: ${emailVal}\nSelected Plan: ${planVal}\n\nPlease share payment details and schedule my 1:1 Google Meet setup. Thanks!`;
+      const message = `Hi! I've made the payment and want to set up my subscription.\n\nFirst Name: ${firstName.value.trim()}\nLast Name: ${lastName.value.trim()}\nEmail: ${email.value.trim()}\nSelected Plan: ${selectedPlan}\nUTR/Transaction ID: ${utr.value.trim()}\n\nPlease verify and schedule my 1:1 Google Meet setup. Thanks!`;
 
       const whatsappUrl = `https://api.whatsapp.com/send?phone=${WHATSAPP_NUMBER}&text=${encodeURIComponent(message)}`;
-
       window.open(whatsappUrl, '_blank');
+
+      // Show success
+      showStep(4);
     }
   });
 
-  // ─── HEADER SCROLL EFFECT ───
-  window.addEventListener('scroll', () => {
-    if (window.scrollY > 50) {
-      header.style.background = 'rgba(3, 7, 18, 0.95)';
-    } else {
-      header.style.background = 'rgba(17, 24, 39, 0.8)';
+  // Real-time validation on blur
+  ['firstName', 'lastName', 'emailId', 'utrId'].forEach(id => {
+    const field = document.getElementById(id);
+    if (field) {
+      field.addEventListener('blur', () => validateField(field));
+      field.addEventListener('input', () => {
+        if (field.classList.contains('border-red-500')) validateField(field);
+      });
     }
+  });
+
+  // ─── PRICING SECTION CURRENCY TOGGLE (unchanged) ───
+  const btnUSD = document.getElementById('btn-usd');
+  const btnINR = document.getElementById('btn-inr');
+  const pricingCards = document.querySelectorAll('.flip-card');
+  let currentCurrency = 'usd';
+
+  function switchCurrency(currency) {
+    currentCurrency = currency;
+    if (currency === 'usd') {
+      btnUSD.classList.add('bg-indigo-600', 'text-white'); btnUSD.classList.remove('text-gray-400');
+      btnINR.classList.remove('bg-indigo-600', 'text-white'); btnINR.classList.add('text-gray-400');
+    } else {
+      btnINR.classList.add('bg-indigo-600', 'text-white'); btnINR.classList.remove('text-gray-400');
+      btnUSD.classList.remove('bg-indigo-600', 'text-white'); btnUSD.classList.add('text-gray-400');
+    }
+    pricingCards.forEach(card => {
+      const inner = card.querySelector('.flip-card-inner');
+      inner.classList.add('flipping');
+      setTimeout(() => {
+        const original = card.querySelector('.original-price');
+        const discounted = card.querySelector('.discounted-price');
+        const symbol = currency === 'usd' ? '$' : '₹';
+        original.textContent = `${symbol}${card.dataset[`${currency}Original`]}/month`;
+        discounted.innerHTML = `${symbol}${card.dataset[`${currency}Discounted`]}<span class="text-base font-normal text-gray-400">/mo</span>`;
+      }, 300);
+      setTimeout(() => inner.classList.remove('flipping'), 600);
+    });
+  }
+
+  btnUSD.addEventListener('click', () => switchCurrency('usd'));
+  btnINR.addEventListener('click', () => switchCurrency('inr'));
+
+  // ─── HEADER SCROLL ───
+  window.addEventListener('scroll', () => {
+    header.style.background = window.scrollY > 50 ? 'rgba(3,7,18,0.95)' : 'rgba(17,24,39,0.8)';
   });
 
   // ─── FAQ ACCORDION ───
@@ -176,32 +194,21 @@ document.addEventListener('DOMContentLoaded', () => {
       const answer = btn.nextElementSibling;
       const icon = btn.querySelector('.faq-icon');
       const isOpen = !answer.classList.contains('hidden');
-
-      // Close all
       document.querySelectorAll('.faq-answer').forEach(a => a.classList.add('hidden'));
       document.querySelectorAll('.faq-icon').forEach(i => i.classList.remove('rotate-180'));
-
-      // Open clicked one (if it was closed)
-      if (!isOpen) {
-        answer.classList.remove('hidden');
-        icon.classList.add('rotate-180');
-      }
+      if (!isOpen) { answer.classList.remove('hidden'); icon.classList.add('rotate-180'); }
     });
   });
 
-  // ─── SCROLL REVEAL ANIMATION ───
+  // ─── SCROLL REVEAL ───
   const observer = new IntersectionObserver((entries) => {
     entries.forEach(entry => {
-      if (entry.isIntersecting) {
-        entry.target.style.opacity = '1';
-        entry.target.style.transform = 'translateY(0)';
-      }
+      if (entry.isIntersecting) { entry.target.style.opacity = '1'; entry.target.style.transform = 'translateY(0)'; }
     });
   }, { threshold: 0.1 });
 
   document.querySelectorAll('#pricing .flip-card, #what .bg-gray-900\\/50').forEach(el => {
-    el.style.opacity = '0';
-    el.style.transform = 'translateY(20px)';
+    el.style.opacity = '0'; el.style.transform = 'translateY(20px)';
     el.style.transition = 'opacity 0.6s ease, transform 0.6s ease';
     observer.observe(el);
   });
