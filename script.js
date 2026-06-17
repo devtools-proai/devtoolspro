@@ -46,7 +46,17 @@ document.addEventListener('DOMContentLoaded', () => {
       if (amountEl) amountEl.textContent = 'Amount: ₹' + amount.toLocaleString('en-IN');
 
       const upiString = `upi://pay?pa=9019879108@kotakbank&pn=DevTools%20Pro&am=${amount}&cu=INR&tn=${encodeURIComponent('DevTools Pro - ' + selectedPlan.split(' —')[0].trim())}`;
-      const upiLink = document.getElementById('upi-pay-link');
+      
+      // Set app-specific deep links
+      const phonePeLink = document.getElementById('phonepe-link');
+      const gpayLink = document.getElementById('gpay-link');
+      const upiLink = document.getElementById('upi-link');
+      
+      const phonepeUrl = `phonepe://pay?pa=9019879108@kotakbank&pn=DevTools%20Pro&am=${amount}&cu=INR&tn=${encodeURIComponent('DevTools Pro - ' + selectedPlan.split(' —')[0].trim())}`;
+      const gpayUrl = `tez://upi/pay?pa=9019879108@kotakbank&pn=DevTools%20Pro&am=${amount}&cu=INR&tn=${encodeURIComponent('DevTools Pro - ' + selectedPlan.split(' —')[0].trim())}`;
+      
+      if (phonePeLink) phonePeLink.href = phonepeUrl;
+      if (gpayLink) gpayLink.href = gpayUrl;
       if (upiLink) upiLink.href = upiString;
 
       // Render QR
