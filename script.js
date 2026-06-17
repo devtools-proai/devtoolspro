@@ -40,14 +40,34 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // ─── STEP 1 → STEP 2 ───
-  const PLAN_AMOUNTS_RAW = {
-    'Pro — ₹946/month (1,000 credits)': 946,
-    'Pro+ — ₹1,892/month (2,000 credits)': 1892,
-    'Pro Max — ₹4,731/month (5,000 credits)': 4731,
-    'Power — ₹9,461/month (10,000 credits)': 9461,
-  };
+  // ─── STEP 1 CURRENCY TOGGLE ───
+  let step1Currency = 'inr';
+  const step1BtnINR = document.getElementById('step1-btn-inr');
+  const step1BtnUSD = document.getElementById('step1-btn-usd');
+  const planRadios = document.querySelectorAll('input[name="selectedPlan"]');
+  const planPrices = document.querySelectorAll('.plan-price');
 
+  function switchStep1Currency(currency) {
+    step1Currency = currency;
+    if (currency === 'inr') {
+      step1BtnINR.classList.add('bg-indigo-600', 'text-white'); step1BtnINR.classList.remove('text-gray-400');
+      step1BtnUSD.classList.remove('bg-indigo-600', 'text-white'); step1BtnUSD.classList.add('text-gray-400');
+    } else {
+      step1BtnUSD.classList.add('bg-indigo-600', 'text-white'); step1BtnUSD.classList.remove('text-gray-400');
+      step1BtnINR.classList.remove('bg-indigo-600', 'text-white'); step1BtnINR.classList.add('text-gray-400');
+    }
+    planRadios.forEach((radio, i) => {
+      radio.value = radio.dataset[currency];
+      const amount = radio.dataset[`${currency}Amount`];
+      const symbol = currency === 'inr' ? '₹' : '$';
+      planPrices[i].textContent = `${symbol}${Number(amount).toLocaleString('en-IN')}/mo`;
+    });
+  }
+
+  step1BtnINR.addEventListener('click', () => switchStep1Currency('inr'));
+  step1BtnUSD.addEventListener('click', () => switchStep1Currency('usd'));
+
+  // ─── STEP 1 → STEP 2 ───
   document.getElementById('to-step-2').addEventListener('click', () => {
     const radio = document.querySelector('input[name="selectedPlan"]:checked');
     const planError = document.getElementById('plan-error');
@@ -57,11 +77,15 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     planError.classList.add('hidden');
     selectedPlan = radio.value;
-    const amount = PLAN_AMOUNTS_RAW[selectedPlan];
-    document.getElementById('payment-amount').textContent = 'Amount: ₹' + amount.toLocaleString('en-IN');
     
-    // Set UPI deep link with amount pre-filled
-    const upiLink = `upi://pay?pa=9019879108@kotakbank&pn=DevTools%20Pro&am=${amount}&cu=INR&tn=${encodeURIComponent('DevTools Pro - ' + selectedPlan.split(' — ')[0])}`;
+    const amountINR = Number(radio.dataset.inrAmount);
+    const amountUSD = Number(radio.dataset.usdAmount);
+    const displayAmount = step1Currency === 'inr' ? `₹${amountINR.toLocaleString('en-IN')}` : `$${amountUSD}`;
+    
+    document.getElementById('payment-amount').textContent = 'Amount: ' + displayAmount;
+    
+    // Set UPI deep link with amount pre-filled (always INR for UPI)
+    const upiLink = `upi://pay?pa=9019879108@kotakbank&pn=DevTools%20Pro&am=${amountINR}&cu=INR&tn=${encodeURIComponent('DevTools Pro - ' + selectedPlan.split(' — ')[0])}`;
     document.getElementById('upi-pay-link').href = upiLink;
     
     showStep(2);
