@@ -19,6 +19,7 @@ const { v4: uuidv4 } = require('uuid');
 const { initDB, addSubmission, getAllSubmissions, getSubmissionByUTR, getStats, getClient } = require('./db');
 const { generateSetupMessage, generateQuickReply } = require('./meet-service');
 const { createPaymentRecord, submitUTR, getPaymentStatus, verifyPayment, getPendingPayments, getUTRConfidence } = require('./payment-verify');
+const { verifyGoogleToken, findOrCreateUser, generateSessionToken, requireAuth, GOOGLE_CLIENT_ID } = require('./auth');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -28,7 +29,7 @@ app.use(express.json());
 app.use(cors({
   origin: process.env.FRONTEND_URL || '*',
   methods: ['GET', 'POST'],
-  allowedHeaders: ['Content-Type', 'x-admin-key']
+  allowedHeaders: ['Content-Type', 'x-admin-key', 'Authorization']
 }));
 
 // Rate limiting
@@ -60,6 +61,156 @@ app.get('/', (req, res) => {
     version: '1.0.0',
     timestamp: new Date().toISOString()
   });
+});
+
+// ═══════════════════════════════════════════
+// AUTHENTICATION ENDPOINTS
+// ═══════════════════════════════════════════
+
+// ─── POST /auth/google ───
+// Verify Google ID token and return session JWT
+app.post('/auth/google', async (req, res) => {
+  try {
+    const { idToken } = req.body;
+    if (!idToken) {
+      return res.status(400).json({ status: 'error', message: 'ID token required' });
+    }
+
+    // Verify with Google
+    const result = await verifyGoogleToken(idToken);
+    if (!result.valid) {
+      return res.status(401).json({ status: 'error', message: result.message });
+    }
+
+    // Find or create user in DB
+    const client = getClient();
+    const user = await findOrCreateUser(client, result.user);
+    if (!user) {
+      return res.status(500).json({ status: 'error', message: 'Failed to create user' });
+    }
+
+    // Generate session token
+    const sessionToken = generateSessionToken(user);
+
+    res.json({
+      status: 'success',
+      token: sessionToken,
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        picture: user.picture,
+        currentPlan: user.current_plan,
+        planStatus: user.plan_status,
+        planEndDate: user.plan_end_date
+      }
+    });
+
+    console.log(`🔐 User logged in: ${user.email}`);
+  } catch (error) {
+    console.error('Auth error:', error);
+    res.status(500).json({ status: 'error', message: 'Authentication failed' });
+  }
+});
+
+// ─── GET /auth/me ───
+// Get current user profile (requires auth)
+app.get('/auth/me', requireAuth, async (req, res) => {
+  try {
+    const client = getClient();
+    const { data: user, error } = await client
+      .from('users')
+      .select('*')
+      .eq('id', req.user.userId)
+      .single();
+
+    if (error || !user) {
+      return res.status(404).json({ status: 'error', message: 'User not found' });
+    }
+
+    res.json({
+      status: 'success',
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        picture: user.picture,
+        currentPlan: user.current_plan,
+        planStatus: user.plan_status,
+        planStartDate: user.plan_start_date,
+        planEndDate: user.plan_end_date,
+        utrId: user.utr_id,
+        meetLink: user.meet_link,
+        createdAt: user.created_at
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ status: 'error', message: 'Internal error' });
+  }
+});
+
+// ─── POST /auth/update-plan ───
+// Update user's plan after successful payment (requires auth)
+app.post('/auth/update-plan', requireAuth, async (req, res) => {
+  try {
+    const { plan, utrId, meetLink } = req.body;
+    const client = getClient();
+
+    const now = new Date();
+    const endDate = new Date(now);
+    endDate.setMonth(endDate.getMonth() + 1);
+    if (endDate.getDate() !== now.getDate()) endDate.setDate(0);
+
+    const { data, error } = await client
+      .from('users')
+      .update({
+        current_plan: plan,
+        plan_status: 'active',
+        plan_start_date: now.toISOString(),
+        plan_end_date: endDate.toISOString(),
+        utr_id: utrId || null,
+        meet_link: meetLink || null
+      })
+      .eq('id', req.user.userId)
+      .select()
+      .single();
+
+    if (error) {
+      return res.status(500).json({ status: 'error', message: 'Failed to update plan' });
+    }
+
+    res.json({ status: 'success', message: 'Plan activated', user: data });
+  } catch (error) {
+    res.status(500).json({ status: 'error', message: 'Internal error' });
+  }
+});
+
+// ─── POST /auth/cancel-plan ───
+// Cancel user's plan (requires auth)
+app.post('/auth/cancel-plan', requireAuth, async (req, res) => {
+  try {
+    const client = getClient();
+    const { data, error } = await client
+      .from('users')
+      .update({ plan_status: 'cancelled' })
+      .eq('id', req.user.userId)
+      .select()
+      .single();
+
+    if (error) {
+      return res.status(500).json({ status: 'error', message: 'Failed to cancel' });
+    }
+
+    res.json({ status: 'success', message: 'Plan cancelled — active until end of billing cycle', user: data });
+  } catch (error) {
+    res.status(500).json({ status: 'error', message: 'Internal error' });
+  }
+});
+
+// ─── GET /auth/google-client-id ───
+// Return the Google Client ID for frontend
+app.get('/auth/google-client-id', (req, res) => {
+  res.json({ clientId: GOOGLE_CLIENT_ID });
 });
 
 // ─── POST /api/submit ───

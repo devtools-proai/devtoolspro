@@ -3,6 +3,13 @@ const WHATSAPP_NUMBER = '919019879108';
 const API_BASE = 'https://devtools-pro.onrender.com';
 const API_ENDPOINT = `${API_BASE}/api/submit`;
 
+// ─── AUTH SESSION ───
+function getToken() { return localStorage.getItem('dt_token'); }
+function setToken(token) { localStorage.setItem('dt_token', token); }
+function getStoredUser() { try { return JSON.parse(localStorage.getItem('dt_user')); } catch { return null; } }
+function setStoredUser(user) { localStorage.setItem('dt_user', JSON.stringify(user)); }
+let currentUser = null;
+
 // ─── BACKEND API SUBMISSION ───
 async function submitToBackend(payload) {
   const controller = new AbortController();
@@ -85,11 +92,79 @@ document.addEventListener('DOMContentLoaded', () => {
   const header = document.querySelector('header');
   const stepInds = [document.getElementById('step-ind-1'), document.getElementById('step-ind-2'), document.getElementById('step-ind-3')];
   const stepLines = [document.getElementById('step-line-1'), document.getElementById('step-line-2')];
+  const signinGate = document.getElementById('signin-gate');
+  const signedinBar = document.getElementById('signedin-bar');
+  const stepIndicators = document.querySelector('.flex.items-center.justify-center.gap-2.mb-8');
 
   let selectedPlan = '';
   let selectedAmount = 0;
   let currentPaymentId = null;
   let verificationPollTimer = null;
+
+  // ─── AUTH GATE: Check if user is signed in ───
+  function checkAuthState() {
+    const token = getToken();
+    const user = getStoredUser();
+
+    if (token && user) {
+      currentUser = user;
+      // Hide gate, show checkout
+      if (signinGate) signinGate.classList.add('hidden');
+      if (signedinBar) {
+        signedinBar.classList.remove('hidden');
+        document.getElementById('signup-user-avatar').src = user.picture || '';
+        document.getElementById('signup-user-name').textContent = user.name || '';
+        document.getElementById('signup-user-email').textContent = user.email || '';
+      }
+      if (step1) step1.classList.remove('hidden');
+      if (stepIndicators) stepIndicators.classList.remove('hidden');
+    } else {
+      // Show gate, hide checkout
+      if (signinGate) signinGate.classList.remove('hidden');
+      if (signedinBar) signedinBar.classList.add('hidden');
+      if (step1) step1.classList.add('hidden');
+      if (stepIndicators) stepIndicators.classList.add('hidden');
+    }
+  }
+
+  // Initialize auth state
+  checkAuthState();
+
+  // Google Sign-In button in signup section
+  const signupGoogleBtn = document.getElementById('signup-google-btn');
+  if (signupGoogleBtn) {
+    signupGoogleBtn.addEventListener('click', () => {
+      // Fetch client ID and trigger Google Sign-In
+      fetch(`${API_BASE}/auth/google-client-id`)
+        .then(r => r.json())
+        .then(data => {
+          if (typeof google !== 'undefined' && google.accounts) {
+            google.accounts.id.initialize({
+              client_id: data.clientId,
+              callback: async (response) => {
+                try {
+                  const res = await fetch(`${API_BASE}/auth/google`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ idToken: response.credential })
+                  });
+                  const result = await res.json();
+                  if (result.status === 'success') {
+                    setToken(result.token);
+                    setStoredUser(result.user);
+                    currentUser = result.user;
+                    checkAuthState();
+                  }
+                } catch (e) {
+                  console.error('Sign-in error:', e);
+                }
+              }
+            });
+            google.accounts.id.prompt();
+          }
+        });
+    });
+  }
 
   function showStep(num) {
     [step1, step2, step3, stepSuccess].forEach(el => { if (el) el.classList.add('hidden'); });

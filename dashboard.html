@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard — DevTools Pro</title>
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 36 36'%3E%3Crect width='36' height='36' rx='8' fill='url(%23g)'/%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='36' y2='36'%3E%3Cstop offset='0%25' stop-color='%236366f1'/%3E%3Cstop offset='100%25' stop-color='%238b5cf6'/%3E%3C/linearGradient%3E%3C/defs%3E%3Cpath d='M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4' stroke='white' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round' fill='none' transform='translate(8,10) scale(0.8)'/%3E%3C/svg%3E">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = { darkMode: 'class' }
+    </script>
+    <style>
+        .gradient-text { background: linear-gradient(135deg, #818cf8, #6366f1, #a78bfa); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+        .glass { background: rgba(17,24,39,0.8); backdrop-filter: blur(16px); }
+    </style>
+</head>
+<body class="bg-gray-950 text-gray-100 font-sans antialiased min-h-screen">
+
+    <!-- Header -->
+    <header class="fixed top-0 w-full z-50 glass border-b border-gray-800/50">
+        <div class="w-full px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between">
+            <a href="index.html" class="inline-flex items-center gap-2 text-xl font-extrabold">
+                <span class="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
+                    <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"/></svg>
+                </span>
+                <span class="gradient-text">DevTools Pro</span>
+            </a>
+            <div class="flex items-center gap-4">
+                <div id="user-info" class="hidden flex items-center gap-3">
+                    <img id="user-avatar" class="w-8 h-8 rounded-full border border-gray-700" src="" alt="">
+                    <span id="user-name" class="text-sm text-gray-300 hidden sm:block"></span>
+                </div>
+                <button id="logout-btn" class="hidden px-3 py-1.5 text-xs text-gray-400 hover:text-white border border-gray-700 hover:border-gray-500 rounded-lg transition-all">Sign Out</button>
+            </div>
+        </div>
+    </header>
+
+    <main class="pt-20 px-4 pb-12">
+        <div class="max-w-2xl mx-auto">
+
+            <!-- Loading State -->
+            <div id="dash-loading" class="flex items-center justify-center py-20">
+                <svg class="animate-spin w-8 h-8 text-indigo-400" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
+            </div>
+
+            <!-- Not Logged In State -->
+            <div id="dash-login" class="hidden text-center py-16">
+                <div class="w-16 h-16 mx-auto mb-6 bg-gray-800 border border-gray-700 rounded-full flex items-center justify-center">
+                    <svg class="w-8 h-8 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+                </div>
+                <h2 class="text-2xl font-bold text-white mb-2">Sign in to your account</h2>
+                <p class="text-gray-400 text-sm mb-8">View your plan, manage subscription, or get started.</p>
+                <button id="google-signin-btn" class="inline-flex items-center gap-3 px-6 py-3 bg-white hover:bg-gray-100 text-gray-800 font-semibold rounded-xl transition-all hover:shadow-lg">
+                    <svg class="w-5 h-5" viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
+                    Continue with Google
+                </button>
+            </div>
+
+            <!-- Dashboard Content (logged in) -->
+            <div id="dash-content" class="hidden space-y-6">
+                <!-- Plan Status Card -->
+                <div class="bg-gray-900/50 border border-gray-800 rounded-2xl p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <h2 class="text-lg font-bold text-white">Your Subscription</h2>
+                        <span id="plan-badge" class="px-3 py-1 rounded-full text-xs font-bold bg-gray-700 text-gray-400">No Plan</span>
+                    </div>
+
+                    <!-- No Plan State -->
+                    <div id="no-plan-state">
+                        <p class="text-gray-400 text-sm mb-4">You don't have an active subscription yet.</p>
+                        <a href="index.html#signup" class="inline-flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold rounded-xl transition-all text-sm">
+                            Get a Plan
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
+                        </a>
+                    </div>
+
+                    <!-- Active Plan State -->
+                    <div id="active-plan-state" class="hidden">
+                        <div class="grid grid-cols-2 gap-4 mb-4">
+                            <div class="bg-gray-800/50 rounded-xl p-4">
+                                <p class="text-xs text-gray-500 mb-1">Current Plan</p>
+                                <p id="dash-plan-name" class="text-white font-bold">—</p>
+                            </div>
+                            <div class="bg-gray-800/50 rounded-xl p-4">
+                                <p class="text-xs text-gray-500 mb-1">Status</p>
+                                <p id="dash-plan-status" class="text-emerald-400 font-bold">—</p>
+                            </div>
+                            <div class="bg-gray-800/50 rounded-xl p-4">
+                                <p class="text-xs text-gray-500 mb-1">Started</p>
+                                <p id="dash-plan-start" class="text-white font-medium text-sm">—</p>
+                            </div>
+                            <div class="bg-gray-800/50 rounded-xl p-4">
+                                <p class="text-xs text-gray-500 mb-1">Renews On</p>
+                                <p id="dash-plan-end" class="text-white font-medium text-sm">—</p>
+                            </div>
+                        </div>
+                        <div class="flex gap-3">
+                            <a href="index.html#signup" class="flex-1 text-center px-4 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold rounded-xl transition-all text-sm">Upgrade Plan</a>
+                            <button id="cancel-plan-btn" class="px-4 py-2.5 border border-red-500/30 text-red-400 hover:bg-red-500/10 font-medium rounded-xl transition-all text-sm">Cancel</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Account Details -->
+                <div class="bg-gray-900/50 border border-gray-800 rounded-2xl p-6">
+                    <h3 class="text-lg font-bold text-white mb-4">Account Details</h3>
+                    <div class="space-y-3">
+                        <div class="flex justify-between items-center py-2 border-b border-gray-800/50">
+                            <span class="text-gray-400 text-sm">Email</span>
+                            <span id="dash-email" class="text-white text-sm font-medium">—</span>
+                        </div>
+                        <div class="flex justify-between items-center py-2 border-b border-gray-800/50">
+                            <span class="text-gray-400 text-sm">Name</span>
+                            <span id="dash-name" class="text-white text-sm font-medium">—</span>
+                        </div>
+                        <div class="flex justify-between items-center py-2 border-b border-gray-800/50">
+                            <span class="text-gray-400 text-sm">UTR / Transaction ID</span>
+                            <span id="dash-utr" class="text-gray-300 text-sm">—</span>
+                        </div>
+                        <div class="flex justify-between items-center py-2">
+                            <span class="text-gray-400 text-sm">Meet Setup Link</span>
+                            <a id="dash-meet" href="#" target="_blank" class="text-indigo-400 hover:text-indigo-300 text-sm">—</a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Quick Actions -->
+                <div class="bg-gray-900/50 border border-gray-800 rounded-2xl p-6">
+                    <h3 class="text-lg font-bold text-white mb-4">Quick Actions</h3>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <a href="https://kiro.dev/downloads/" target="_blank" class="flex items-center gap-3 p-3 bg-gray-800/50 hover:bg-gray-800 border border-gray-700/50 hover:border-indigo-500/30 rounded-xl transition-all">
+                            <svg class="w-5 h-5 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                            <span class="text-sm text-gray-300">Download Kiro IDE</span>
+                        </a>
+                        <a href="https://kiro.dev/docs/billing" target="_blank" class="flex items-center gap-3 p-3 bg-gray-800/50 hover:bg-gray-800 border border-gray-700/50 hover:border-indigo-500/30 rounded-xl transition-all">
+                            <svg class="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                            <span class="text-sm text-gray-300">Billing Docs</span>
+                        </a>
+                        <a href="https://api.whatsapp.com/send?phone=919019879108&text=Hi%2C%20I%20need%20help%20with%20my%20subscription" target="_blank" class="flex items-center gap-3 p-3 bg-gray-800/50 hover:bg-gray-800 border border-gray-700/50 hover:border-emerald-500/30 rounded-xl transition-all">
+                            <svg class="w-5 h-5 text-green-400" fill="currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+                            <span class="text-sm text-gray-300">WhatsApp Support</span>
+                        </a>
+                        <a href="https://kiro.dev/faq" target="_blank" class="flex items-center gap-3 p-3 bg-gray-800/50 hover:bg-gray-800 border border-gray-700/50 hover:border-indigo-500/30 rounded-xl transition-all">
+                            <svg class="w-5 h-5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                            <span class="text-sm text-gray-300">Kiro FAQs</span>
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Cancel Confirmation Modal -->
+            <div id="cancel-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm">
+                <div class="bg-gray-900 border border-gray-700 rounded-2xl p-6 max-w-sm mx-4 text-center">
+                    <div class="w-12 h-12 mx-auto mb-4 bg-red-500/10 border border-red-500/20 rounded-full flex items-center justify-center">
+                        <svg class="w-6 h-6 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z"/></svg>
+                    </div>
+                    <h3 class="text-white font-bold mb-2">Cancel Subscription?</h3>
+                    <p class="text-gray-400 text-sm mb-6">Your plan will remain active until the end of the current billing cycle. You won't be charged again.</p>
+                    <div class="flex gap-3">
+                        <button id="cancel-dismiss" class="flex-1 py-2.5 border border-gray-700 hover:border-gray-500 text-gray-300 rounded-xl text-sm font-medium transition-all">Keep Plan</button>
+                        <button id="cancel-confirm" class="flex-1 py-2.5 bg-red-600 hover:bg-red-500 text-white rounded-xl text-sm font-bold transition-all">Yes, Cancel</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+    const API_BASE = 'https://devtools-pro.onrender.com';
+
+    // Session management
+    function getToken() { return localStorage.getItem('dt_token'); }
+    function setToken(token) { localStorage.setItem('dt_token', token); }
+    function clearToken() { localStorage.removeItem('dt_token'); localStorage.removeItem('dt_user'); }
+    function getStoredUser() { try { return JSON.parse(localStorage.getItem('dt_user')); } catch { return null; } }
+    function setStoredUser(user) { localStorage.setItem('dt_user', JSON.stringify(user)); }
+
+    // DOM elements
+    const loadingEl = document.getElementById('dash-loading');
+    const loginEl = document.getElementById('dash-login');
+    const contentEl = document.getElementById('dash-content');
+    const userInfoEl = document.getElementById('user-info');
+    const logoutBtn = document.getElementById('logout-btn');
+
+    // Initialize
+    async function init() {
+      const token = getToken();
+      if (!token) {
+        showLogin();
+        return;
+      }
+
+      // Fetch user data
+      try {
+        const res = await fetch(`${API_BASE}/auth/me`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await res.json();
+
+        if (data.status === 'success') {
+          setStoredUser(data.user);
+          showDashboard(data.user);
+        } else {
+          clearToken();
+          showLogin();
+        }
+      } catch (e) {
+        // Offline fallback — show cached user
+        const cached = getStoredUser();
+        if (cached) { showDashboard(cached); }
+        else { clearToken(); showLogin(); }
+      }
+    }
+
+    function showLogin() {
+      loadingEl.classList.add('hidden');
+      loginEl.classList.remove('hidden');
+      contentEl.classList.add('hidden');
+      loadGoogleSignIn();
+    }
+
+    function showDashboard(user) {
+      loadingEl.classList.add('hidden');
+      loginEl.classList.add('hidden');
+      contentEl.classList.remove('hidden');
+
+      // Header user info
+      userInfoEl.classList.remove('hidden');
+      logoutBtn.classList.remove('hidden');
+      document.getElementById('user-avatar').src = user.picture || '';
+      document.getElementById('user-name').textContent = user.name || '';
+
+      // Account details
+      document.getElementById('dash-email').textContent = user.email || '—';
+      document.getElementById('dash-name').textContent = user.name || '—';
+      document.getElementById('dash-utr').textContent = user.utrId || 'Not submitted yet';
+      const meetEl = document.getElementById('dash-meet');
+      if (user.meetLink) { meetEl.textContent = 'Open Meet Link'; meetEl.href = user.meetLink; }
+      else { meetEl.textContent = 'Not assigned yet'; meetEl.removeAttribute('href'); }
+
+      // Plan state
+      const badge = document.getElementById('plan-badge');
+      const noPlan = document.getElementById('no-plan-state');
+      const activePlan = document.getElementById('active-plan-state');
+
+      if (user.planStatus === 'active' || user.planStatus === 'cancelled') {
+        noPlan.classList.add('hidden');
+        activePlan.classList.remove('hidden');
+        document.getElementById('dash-plan-name').textContent = user.currentPlan || '—';
+        document.getElementById('dash-plan-status').textContent = user.planStatus === 'active' ? 'Active' : 'Cancelled (active until renewal)';
+        document.getElementById('dash-plan-status').className = user.planStatus === 'active' ? 'text-emerald-400 font-bold' : 'text-amber-400 font-bold text-xs';
+        document.getElementById('dash-plan-start').textContent = user.planStartDate ? new Date(user.planStartDate).toLocaleDateString('en-IN') : '—';
+        document.getElementById('dash-plan-end').textContent = user.planEndDate ? new Date(user.planEndDate).toLocaleDateString('en-IN') : '—';
+        badge.textContent = user.planStatus === 'active' ? 'Active' : 'Cancelled';
+        badge.className = user.planStatus === 'active' ? 'px-3 py-1 rounded-full text-xs font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'px-3 py-1 rounded-full text-xs font-bold bg-amber-500/10 text-amber-400 border border-amber-500/20';
+      } else {
+        noPlan.classList.remove('hidden');
+        activePlan.classList.add('hidden');
+        badge.textContent = 'No Plan';
+        badge.className = 'px-3 py-1 rounded-full text-xs font-bold bg-gray-700 text-gray-400';
+      }
+    }
+
+    // Google Sign-In
+    function loadGoogleSignIn() {
+      // Load Google Identity Services library
+      const script = document.createElement('script');
+      script.src = 'https://accounts.google.com/gsi/client';
+      script.onload = initGoogleAuth;
+      document.head.appendChild(script);
+    }
+
+    async function initGoogleAuth() {
+      // Get client ID from backend
+      let clientId = '';
+      try {
+        const res = await fetch(`${API_BASE}/auth/google-client-id`);
+        const data = await res.json();
+        clientId = data.clientId;
+      } catch (e) {
+        console.error('Failed to get client ID');
+        return;
+      }
+
+      // Custom button click handler
+      document.getElementById('google-signin-btn').addEventListener('click', () => {
+        google.accounts.id.initialize({
+          client_id: clientId,
+          callback: handleGoogleResponse,
+          auto_select: false
+        });
+        google.accounts.id.prompt();
+      });
+    }
+
+    async function handleGoogleResponse(response) {
+      try {
+        const res = await fetch(`${API_BASE}/auth/google`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ idToken: response.credential })
+        });
+        const data = await res.json();
+
+        if (data.status === 'success') {
+          setToken(data.token);
+          setStoredUser(data.user);
+          showDashboard(data.user);
+        } else {
+          alert('Sign-in failed. Please try again.');
+        }
+      } catch (e) {
+        alert('Connection error. Please try again.');
+      }
+    }
+
+    // Logout
+    logoutBtn.addEventListener('click', () => {
+      clearToken();
+      window.location.reload();
+    });
+
+    // Cancel plan
+    document.getElementById('cancel-plan-btn')?.addEventListener('click', () => {
+      document.getElementById('cancel-modal').classList.remove('hidden');
+    });
+    document.getElementById('cancel-dismiss')?.addEventListener('click', () => {
+      document.getElementById('cancel-modal').classList.add('hidden');
+    });
+    document.getElementById('cancel-confirm')?.addEventListener('click', async () => {
+      const token = getToken();
+      try {
+        const res = await fetch(`${API_BASE}/auth/cancel-plan`, {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
+        });
+        const data = await res.json();
+        if (data.status === 'success') {
+          document.getElementById('cancel-modal').classList.add('hidden');
+          init(); // Refresh dashboard
+        }
+      } catch (e) {
+        alert('Failed to cancel. Please contact support on WhatsApp.');
+      }
+    });
+
+    // Boot
+    init();
+    </script>
+</body>
+</html>
