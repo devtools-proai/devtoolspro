@@ -483,12 +483,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const text = reviewText.value.trim();
     const successEl = document.getElementById('review-success');
     const errorEl = document.getElementById('review-error');
-    const animEl = document.getElementById('review-success-animation');
     const submitBtn = document.getElementById('review-submit-btn');
 
     if (successEl) successEl.classList.add('hidden');
     if (errorEl) errorEl.classList.add('hidden');
-    if (animEl) { animEl.classList.add('hidden'); animEl.innerHTML = ''; }
 
     if (!name || !city || !text) {
       if (errorEl) { errorEl.textContent = 'Please fill all fields'; errorEl.classList.remove('hidden'); }
@@ -512,7 +510,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
       if (data.status === 'success') {
         // Show glowing 3D stars burst animation
-        showSuccessAnimation(animEl, selectedRating);
+        showSuccessAnimation(selectedRating);
 
         reviewForm.reset();
         if (charCount) charCount.textContent = '0';
@@ -539,20 +537,40 @@ document.addEventListener('DOMContentLoaded', () => {
     if (submitBtn) { submitBtn.disabled = false; submitBtn.innerHTML = 'Submit Review ✨'; }
   });
 
-  // Glowing 3D stars burst animation on success
+  // Glowing 3D stars burst animation on success — fullscreen overlay
   function showSuccessAnimation(container, rating) {
-    if (!container) return;
+    // Create fullscreen overlay
+    const overlay = document.createElement('div');
+    overlay.className = 'review-overlay';
+    overlay.id = 'review-overlay';
+
     const starsHtml = Array.from({ length: rating }, () => '<span>★</span>').join('');
-    container.innerHTML = `
-      <div class="review-success-overlay">
+    overlay.innerHTML = `
+      <div class="review-overlay-content">
         <div class="review-stars-burst">${starsHtml}</div>
         <p class="thank-you-text">Thank you for your feedback!</p>
-        <p class="text-gray-400 text-xs mt-1" style="animation: successFadeIn 0.5s ease-out 1s both;">Your review is now live above ↑</p>
+        <p class="text-gray-400 text-sm mt-2" style="animation: thankYouPop 0.4s ease-out 1.1s both;">Your review is now live above ↑</p>
+        <button class="review-ok-btn" id="review-ok-btn">Okay</button>
       </div>
     `;
-    container.classList.remove('hidden');
-    // Auto-hide after 4 seconds
-    setTimeout(() => { container.classList.add('hidden'); container.innerHTML = ''; }, 4500);
+
+    document.body.appendChild(overlay);
+
+    // Close on OK button click
+    overlay.querySelector('#review-ok-btn').addEventListener('click', () => {
+      overlay.style.opacity = '0';
+      overlay.style.transition = 'opacity 0.3s ease';
+      setTimeout(() => overlay.remove(), 300);
+    });
+
+    // Also close on overlay background click
+    overlay.addEventListener('click', (e) => {
+      if (e.target === overlay) {
+        overlay.style.opacity = '0';
+        overlay.style.transition = 'opacity 0.3s ease';
+        setTimeout(() => overlay.remove(), 300);
+      }
+    });
   }
 
   // Inject new card into the first reviews track
