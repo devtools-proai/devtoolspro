@@ -575,7 +575,7 @@ document.addEventListener('DOMContentLoaded', () => {
         <div class="w-9 h-9 rounded-full bg-gradient-to-br ${randomColor} flex items-center justify-center text-white font-bold text-sm">${initials}</div>
         <div><p class="text-white text-sm font-semibold">${name}</p><p class="text-gray-500 text-xs">${city} · ${role}</p></div>
       </div>
-      <p class="text-gray-300 text-sm leading-relaxed">"${text}"</p>
+      <p class="text-gray-300 text-sm leading-relaxed">${text}</p>
       <div class="flex gap-0.5 mt-2">${starsHtml}</div>
       <p class="text-[10px] text-indigo-400 mt-2">Just now ✓</p>
     `;
@@ -661,7 +661,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const initials = review.n.split(' ').map(w => w[0]).join('').slice(0, 2);
         const color = colors[(trackIdx * 7 + i) % colors.length];
         const starsHtml = Array.from({ length: 5 }, (_, si) => si < review.s ? '★' : '<span class="text-gray-600">★</span>').join('');
-        html += `<div class="review-card"><div class="flex items-center gap-3 mb-3"><div class="w-9 h-9 rounded-full bg-gradient-to-br ${color} flex items-center justify-center text-white font-bold text-sm">${initials}</div><div><p class="text-white text-sm font-semibold">${review.n}</p><p class="text-gray-500 text-xs">${review.c} · ${review.r}</p></div></div><p class="text-gray-300 text-sm leading-relaxed">"${review.t}"</p><div class="flex gap-0.5 mt-2">${starsHtml}</div></div>`;
+        html += `<div class="review-card"><div class="flex items-center gap-3 mb-3"><div class="w-9 h-9 rounded-full bg-gradient-to-br ${color} flex items-center justify-center text-white font-bold text-sm">${initials}</div><div><p class="text-white text-sm font-semibold">${review.n}</p><p class="text-gray-500 text-xs">${review.c} · ${review.r}</p></div></div><p class="text-gray-300 text-sm leading-relaxed">${review.t}</p><div class="flex gap-0.5 mt-2">${starsHtml}</div></div>`;
       });
       // Duplicate for seamless infinite scroll
       track.innerHTML = html + html;
