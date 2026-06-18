@@ -538,7 +538,7 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   // Glowing 3D stars burst animation on success — fullscreen overlay
-  function showSuccessAnimation(container, rating) {
+  function showSuccessAnimation(rating) {
     // Create fullscreen overlay
     const overlay = document.createElement('div');
     overlay.className = 'review-overlay';
