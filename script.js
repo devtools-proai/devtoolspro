@@ -1,10 +1,7 @@
 // ─── CONFIGURATION ───
 const WHATSAPP_NUMBER = '919019879108';
-
-// Backend API endpoint (replace with your deployed backend URL)
-// For local development: http://localhost:3000
-// For production: https://your-app.onrender.com
-const API_ENDPOINT = 'https://devtools-pro.onrender.com/api/submit';
+const API_BASE = 'https://devtools-pro.onrender.com';
+const API_ENDPOINT = `${API_BASE}/api/submit`;
 
 // ─── BACKEND API SUBMISSION ───
 async function submitToBackend(payload) {
@@ -37,6 +34,48 @@ async function submitToBackend(payload) {
   }
 }
 
+// ─── PAYMENT VERIFICATION API ───
+async function createPayment(amount, plan) {
+  try {
+    const response = await fetch(`${API_BASE}/api/payment/create`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ amount, plan })
+    });
+    const data = await response.json();
+    if (data.status === 'success') return { success: true, paymentId: data.paymentId };
+    return { success: false };
+  } catch (e) {
+    console.error('Create payment error:', e);
+    return { success: false };
+  }
+}
+
+async function submitPaymentUTR(paymentId, utrId) {
+  try {
+    const response = await fetch(`${API_BASE}/api/payment/submit-utr`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ paymentId, utrId })
+    });
+    return await response.json();
+  } catch (e) {
+    console.error('Submit UTR error:', e);
+    return { status: 'error', message: 'Network error' };
+  }
+}
+
+async function checkPaymentStatus(paymentId) {
+  try {
+    const response = await fetch(`${API_BASE}/api/payment/status/${paymentId}`);
+    const data = await response.json();
+    if (data.status === 'success') return data.data;
+    return { status: 'unknown' };
+  } catch (e) {
+    return { status: 'unknown' };
+  }
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   const step1 = document.getElementById('step-1');
   const step2 = document.getElementById('step-2');
@@ -48,6 +87,9 @@ document.addEventListener('DOMContentLoaded', () => {
   const stepLines = [document.getElementById('step-line-1'), document.getElementById('step-line-2')];
 
   let selectedPlan = '';
+  let selectedAmount = 0;
+  let currentPaymentId = null;
+  let verificationPollTimer = null;
 
   function showStep(num) {
     [step1, step2, step3, stepSuccess].forEach(el => { if (el) el.classList.add('hidden'); });
@@ -70,25 +112,25 @@ document.addEventListener('DOMContentLoaded', () => {
   // ─── STEP 1 → STEP 2 ───
   const toStep2Btn = document.getElementById('to-step-2');
   if (toStep2Btn) {
-    toStep2Btn.addEventListener('click', () => {
+    toStep2Btn.addEventListener('click', async () => {
       const radio = document.querySelector('input[name="selectedPlan"]:checked');
       const planError = document.getElementById('plan-error');
       if (!radio) { if (planError) planError.classList.remove('hidden'); return; }
       if (planError) planError.classList.add('hidden');
       selectedPlan = radio.value;
-      const amount = Number(radio.dataset.amount);
+      selectedAmount = Number(radio.dataset.amount);
 
       const amountEl = document.getElementById('payment-amount');
-      if (amountEl) amountEl.textContent = 'Amount: ₹' + amount.toLocaleString('en-IN');
+      if (amountEl) amountEl.textContent = 'Amount: ₹' + selectedAmount.toLocaleString('en-IN');
 
-      const upiString = `upi://pay?pa=devtoolpro@ybl&pn=DevTools%20Pro&am=${amount}&cu=INR&tn=${encodeURIComponent('DevTools Pro - ' + selectedPlan.split(' —')[0].trim())}`;
+      const upiString = `upi://pay?pa=devtoolpro@ybl&pn=DevTools%20Pro&am=${selectedAmount}&cu=INR&tn=${encodeURIComponent('DevTools Pro - ' + selectedPlan.split(' —')[0].trim())}`;
       
       // Set app-specific deep links
       const phonePeLink = document.getElementById('phonepe-link');
       const gpayLink = document.getElementById('gpay-link');
       
-      const phonepeUrl = `phonepe://pay?pa=devtoolpro@ybl&pn=DevTools%20Pro&am=${amount}&cu=INR&tn=${encodeURIComponent('DevTools Pro - ' + selectedPlan.split(' —')[0].trim())}`;
-      const gpayUrl = `tez://upi/pay?pa=devtoolpro@ybl&pn=DevTools%20Pro&am=${amount}&cu=INR&tn=${encodeURIComponent('DevTools Pro - ' + selectedPlan.split(' —')[0].trim())}`;
+      const phonepeUrl = `phonepe://pay?pa=devtoolpro@ybl&pn=DevTools%20Pro&am=${selectedAmount}&cu=INR&tn=${encodeURIComponent('DevTools Pro - ' + selectedPlan.split(' —')[0].trim())}`;
+      const gpayUrl = `tez://upi/pay?pa=devtoolpro@ybl&pn=DevTools%20Pro&am=${selectedAmount}&cu=INR&tn=${encodeURIComponent('DevTools Pro - ' + selectedPlan.split(' —')[0].trim())}`;
       
       if (phonePeLink) phonePeLink.href = phonepeUrl;
       if (gpayLink) gpayLink.href = gpayUrl;
@@ -106,6 +148,14 @@ document.addEventListener('DOMContentLoaded', () => {
           correctLevel: QRCode.CorrectLevel.M
         });
       }
+
+      // Create payment session in backend
+      const paymentResult = await createPayment(selectedAmount, selectedPlan);
+      if (paymentResult.success) {
+        currentPaymentId = paymentResult.paymentId;
+        console.log('Payment session created:', currentPaymentId);
+      }
+
       showStep(2);
     });
   }
@@ -123,8 +173,8 @@ document.addEventListener('DOMContentLoaded', () => {
   // ─── BACK BUTTONS ───
   const backTo1 = document.getElementById('back-to-1');
   const backTo2 = document.getElementById('back-to-2');
-  if (backTo1) backTo1.addEventListener('click', () => showStep(1));
-  if (backTo2) backTo2.addEventListener('click', () => showStep(2));
+  if (backTo1) backTo1.addEventListener('click', () => { stopVerificationPoll(); showStep(1); });
+  if (backTo2) backTo2.addEventListener('click', () => { stopVerificationPoll(); showStep(2); });
 
   // ─── COPY UPI ───
   const copyBtn = document.getElementById('copy-upi');
@@ -154,12 +204,69 @@ document.addEventListener('DOMContentLoaded', () => {
       case 'firstName': if (!v) { showError(field, 'Required'); return false; } break;
       case 'lastName': if (!v) { showError(field, 'Required'); return false; } break;
       case 'emailId': if (!v) { showError(field, 'Required'); return false; } if (!validateEmail(v)) { showError(field, 'Invalid email'); return false; } break;
-      case 'utrId': if (!v) { showError(field, 'Required'); return false; } if (v.length < 6) { showError(field, 'Enter valid UTR'); return false; } break;
+      case 'utrId': if (!v) { showError(field, 'Required'); return false; } if (v.length < 6) { showError(field, 'Enter valid UTR (min 6 chars)'); return false; } if (!/^[a-zA-Z0-9\-]+$/.test(v)) { showError(field, 'Only letters and numbers allowed'); return false; } break;
     }
     clearError(field); return true;
   }
 
-  // ─── FORM SUBMIT → BACKEND + WHATSAPP WITH MEET LINK ───
+  // ─── PAYMENT VERIFICATION POLLING ───
+  function startVerificationPoll(paymentId, onVerified) {
+    const statusEl = document.getElementById('verification-status');
+    let pollCount = 0;
+    const maxPolls = 60; // 3 minutes (every 3 seconds)
+
+    if (statusEl) {
+      statusEl.classList.remove('hidden');
+      statusEl.innerHTML = `
+        <div class="flex items-center gap-2 text-amber-300">
+          <svg class="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+          </svg>
+          <span>Verifying payment...</span>
+        </div>
+      `;
+    }
+
+    verificationPollTimer = setInterval(async () => {
+      pollCount++;
+      const result = await checkPaymentStatus(paymentId);
+
+      if (result.status === 'verified') {
+        stopVerificationPoll();
+        if (statusEl) {
+          statusEl.innerHTML = `
+            <div class="flex items-center gap-2 text-emerald-400">
+              <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+              <span>Payment verified! ✓</span>
+            </div>
+          `;
+        }
+        if (onVerified) onVerified();
+      } else if (result.status === 'expired') {
+        stopVerificationPoll();
+        if (statusEl) {
+          statusEl.innerHTML = `<div class="text-red-400 text-sm">Payment session expired. Please try again.</div>`;
+        }
+      } else if (pollCount >= maxPolls) {
+        stopVerificationPoll();
+        // Still allow submission even if verification times out
+        if (statusEl) {
+          statusEl.innerHTML = `<div class="text-gray-400 text-sm">Verification taking longer than expected. You can still submit — we'll verify manually.</div>`;
+        }
+        if (onVerified) onVerified();
+      }
+    }, 3000);
+  }
+
+  function stopVerificationPoll() {
+    if (verificationPollTimer) {
+      clearInterval(verificationPollTimer);
+      verificationPollTimer = null;
+    }
+  }
+
+  // ─── FORM SUBMIT → VERIFY UTR → BACKEND + WHATSAPP WITH MEET LINK ───
   if (form) {
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
@@ -176,58 +283,77 @@ document.addEventListener('DOMContentLoaded', () => {
         const originalBtnText = submitBtn ? submitBtn.innerHTML : '';
         if (submitBtn) {
           submitBtn.disabled = true;
-          submitBtn.innerHTML = '<svg class="animate-spin w-5 h-5 mr-2 inline" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg> Processing...';
+          submitBtn.innerHTML = '<svg class="animate-spin w-5 h-5 mr-2 inline" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg> Verifying Payment...';
         }
 
-        // Build submission payload
-        const payload = {
-          firstName: firstName.value.trim(),
-          lastName: lastName.value.trim(),
-          email: email.value.trim(),
-          selectedPlan: selectedPlan,
-          utrId: utr.value.trim(),
-          submissionTimestamp: new Date().toISOString()
-        };
+        // Step 1: Submit UTR to payment verification system
+        if (currentPaymentId) {
+          const utrResult = await submitPaymentUTR(currentPaymentId, utr.value.trim());
 
-        // Submit to backend API
-        const result = await submitToBackend(payload);
-
-        if (result.success && result.data) {
-          // Backend returned Meet link and WhatsApp message
-          // Open WhatsApp with the enhanced message (includes Meet link + team note)
-          window.open(result.data.whatsappUrl, '_blank');
-          showStep(4);
-
-          // Update success step with Meet link info
-          const successContent = document.getElementById('step-success');
-          if (successContent) {
-            const meetInfoEl = successContent.querySelector('.meet-link-info');
-            if (meetInfoEl) {
-              meetInfoEl.innerHTML = `
-                <div class="mt-4 p-4 bg-indigo-500/10 border border-indigo-500/30 rounded-xl">
-                  <p class="text-indigo-300 font-semibold mb-2">🎥 Your Google Meet Setup Link:</p>
-                  <a href="${result.data.meetLink}" target="_blank" class="text-indigo-400 hover:text-indigo-300 underline break-all">${result.data.meetLink}</a>
-                  <p class="text-gray-400 text-sm mt-2">⏰ Our team will join within 5 minutes for your setup.</p>
-                </div>
-              `;
-            }
+          if (utrResult.status === 'error') {
+            showError(utr, utrResult.message || 'Invalid UTR');
+            if (submitBtn) { submitBtn.disabled = false; submitBtn.innerHTML = originalBtnText; }
+            return;
           }
-        } else if (result.error === 'duplicate') {
-          // UTR already submitted
-          showError(utr, 'This UTR has already been submitted');
-          if (submitBtn) { submitBtn.disabled = false; submitBtn.innerHTML = originalBtnText; }
-        } else {
-          // Backend unreachable — fallback to direct WhatsApp (without Meet link)
-          console.warn('Backend unavailable, falling back to direct WhatsApp');
-          const message = `Hi! I've made the payment and want to set up my subscription.\n\nFirst Name: ${firstName.value.trim()}\nLast Name: ${lastName.value.trim()}\nEmail: ${email.value.trim()}\nSelected Plan: ${selectedPlan}\nUTR/Transaction ID: ${utr.value.trim()}\n\nPlease verify and schedule my 1:1 Google Meet setup. Thanks!`;
-          window.open(`https://api.whatsapp.com/send?phone=${WHATSAPP_NUMBER}&text=${encodeURIComponent(message)}`, '_blank');
-          showStep(4);
-        }
 
-        // Reset button
-        if (submitBtn) { submitBtn.disabled = false; submitBtn.innerHTML = originalBtnText; }
+          // Step 2: Start polling for verification
+          startVerificationPoll(currentPaymentId, async () => {
+            // Payment verified (or timed out) — proceed with submission
+            await completeSubmission(firstName, lastName, email, utr, submitBtn, originalBtnText);
+          });
+        } else {
+          // No payment session (backend was unreachable earlier) — submit directly
+          await completeSubmission(firstName, lastName, email, utr, submitBtn, originalBtnText);
+        }
       }
     });
+  }
+
+  // Complete the submission after payment verification
+  async function completeSubmission(firstName, lastName, email, utr, submitBtn, originalBtnText) {
+    const payload = {
+      firstName: firstName.value.trim(),
+      lastName: lastName.value.trim(),
+      email: email.value.trim(),
+      selectedPlan: selectedPlan,
+      utrId: utr.value.trim(),
+      submissionTimestamp: new Date().toISOString()
+    };
+
+    // Submit to backend API
+    const result = await submitToBackend(payload);
+
+    if (result.success && result.data) {
+      // Backend returned Meet link and WhatsApp message
+      window.open(result.data.whatsappUrl, '_blank');
+      showStep(4);
+
+      // Update success step with Meet link info
+      const successContent = document.getElementById('step-success');
+      if (successContent) {
+        const meetInfoEl = successContent.querySelector('.meet-link-info');
+        if (meetInfoEl) {
+          meetInfoEl.innerHTML = `
+            <div class="mt-4 p-4 bg-indigo-500/10 border border-indigo-500/30 rounded-xl">
+              <p class="text-indigo-300 font-semibold mb-2">🎥 Your Google Meet Setup Link:</p>
+              <a href="${result.data.meetLink}" target="_blank" class="text-indigo-400 hover:text-indigo-300 underline break-all">${result.data.meetLink}</a>
+              <p class="text-gray-400 text-sm mt-2">⏰ Our team will join within 5 minutes for your setup.</p>
+            </div>
+          `;
+        }
+      }
+    } else if (result.error === 'duplicate') {
+      showError(utr, 'This UTR has already been submitted');
+    } else {
+      // Backend unreachable — fallback to direct WhatsApp
+      console.warn('Backend unavailable, falling back to direct WhatsApp');
+      const message = `Hi! I've made the payment and want to set up my subscription.\n\nFirst Name: ${firstName.value.trim()}\nLast Name: ${lastName.value.trim()}\nEmail: ${email.value.trim()}\nSelected Plan: ${selectedPlan}\nUTR/Transaction ID: ${utr.value.trim()}\n\nPlease verify and schedule my 1:1 Google Meet setup. Thanks!`;
+      window.open(`https://api.whatsapp.com/send?phone=${WHATSAPP_NUMBER}&text=${encodeURIComponent(message)}`, '_blank');
+      showStep(4);
+    }
+
+    // Reset button
+    if (submitBtn) { submitBtn.disabled = false; submitBtn.innerHTML = originalBtnText; }
   }
 
   // Blur validation
