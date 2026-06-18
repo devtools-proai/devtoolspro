@@ -814,29 +814,30 @@
                         <p class="text-emerald-400 font-bold text-lg" id="payment-amount">Amount: ₹1,892</p>
                         
                         <!-- Prorated Billing Breakdown -->
-                        <div id="billing-breakdown" class="mt-4 p-4 bg-gray-800/50 border border-gray-700 rounded-xl text-left text-sm">
-                            <p class="text-gray-300 font-semibold mb-2">📅 Billing Breakdown:</p>
-                            <div class="space-y-1.5 text-gray-400">
-                                <div class="flex justify-between">
-                                    <span>Today (<span id="billing-start-date">—</span>) → End of month:</span>
-                                    <span class="text-emerald-400 font-medium" id="billing-prorated-amount">—</span>
+                        <div id="billing-breakdown" class="mt-4 p-4 bg-gray-800/40 border border-gray-700/50 rounded-xl text-left text-sm">
+                            <p class="text-gray-200 font-semibold mb-3 text-xs uppercase tracking-wide">Billing Breakdown</p>
+                            <div class="space-y-2 text-gray-400">
+                                <div class="flex justify-between items-center">
+                                    <span class="text-gray-400">Today (<span id="billing-start-date">—</span>) to end of month</span>
+                                    <span class="text-emerald-400 font-semibold" id="billing-prorated-amount">—</span>
                                 </div>
-                                <div class="flex justify-between">
-                                    <span>Next month (<span id="billing-next-month">—</span>) onward:</span>
-                                    <span class="text-white font-medium" id="billing-full-amount">—</span>
+                                <div class="w-full h-px bg-gray-700/50"></div>
+                                <div class="flex justify-between items-center">
+                                    <span class="text-gray-400">From <span id="billing-next-month">—</span> onward</span>
+                                    <span class="text-white font-semibold" id="billing-full-amount">—</span>
                                 </div>
                             </div>
-                            <div class="mt-3 pt-3 border-t border-gray-700">
-                                <p class="text-[11px] text-gray-500">✓ You get <span class="text-emerald-400 font-medium">full credits immediately</span> — not prorated.</p>
-                                <p class="text-[11px] text-gray-500">✓ Credits reset on the 1st of each month.</p>
-                                <p class="text-[11px] text-gray-500">✓ Cancel anytime — no lock-in.</p>
+                            <div class="mt-3 pt-3 border-t border-gray-700/50 space-y-1">
+                                <p class="text-[11px] text-gray-500 flex items-center gap-1.5"><svg class="w-3 h-3 text-emerald-500 shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>Full credits available immediately — not prorated</p>
+                                <p class="text-[11px] text-gray-500 flex items-center gap-1.5"><svg class="w-3 h-3 text-emerald-500 shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>Credits reset on the 1st of each month</p>
+                                <p class="text-[11px] text-gray-500 flex items-center gap-1.5"><svg class="w-3 h-3 text-emerald-500 shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>Cancel anytime — no lock-in contract</p>
                             </div>
                         </div>
                     </div>
 
                     <div class="flex items-center gap-3 p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl mb-6">
                         <svg class="w-5 h-5 text-amber-400 shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/></svg>
-                        <p class="text-amber-200 text-xs">Pay the exact amount shown. Save the UTR/Transaction ID from your payment app — you'll need it next.</p>
+                        <p class="text-amber-200 text-xs">Pay the exact amount shown above. After payment, note down the UTR or Transaction ID from your UPI app — you will need it in the next step.</p>
                     </div>
 
                     <div class="flex gap-3">

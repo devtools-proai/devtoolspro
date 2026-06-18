@@ -136,9 +136,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const paymentAmountEl = document.getElementById('payment-amount');
 
     if (startDateEl) startDateEl.textContent = todayStr;
-    if (proratedEl) proratedEl.textContent = `₹${proratedAmount.toLocaleString('en-IN')} (${remainingDays} days)`;
+    if (proratedEl) proratedEl.textContent = `₹${proratedAmount.toLocaleString('en-IN')} · ${remainingDays} days`;
     if (nextMonthEl) nextMonthEl.textContent = nextMonthStr;
-    if (fullAmountEl) fullAmountEl.textContent = `₹${monthlyAmount.toLocaleString('en-IN')}/month`;
+    if (fullAmountEl) fullAmountEl.textContent = `₹${monthlyAmount.toLocaleString('en-IN')}/mo`;
 
     // Update the main payment amount to show prorated price
     if (paymentAmountEl) {
