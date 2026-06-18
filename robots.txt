@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://rishabhk165.github.io/devtools-pro/sitemap.xml
