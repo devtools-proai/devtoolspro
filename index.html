@@ -167,6 +167,7 @@
             <nav class="hidden md:flex items-center gap-6">
                 <a href="#what" class="text-gray-400 hover:text-indigo-400 transition-colors text-sm font-medium">What You Get</a>
                 <a href="#pricing" class="text-gray-400 hover:text-indigo-400 transition-colors text-sm font-medium">Pricing</a>
+                <a href="#billing" class="text-gray-400 hover:text-indigo-400 transition-colors text-sm font-medium">Billing</a>
                 <a href="#models" class="text-gray-400 hover:text-indigo-400 transition-colors text-sm font-medium">AI Models</a>
                 <a href="#faq" class="text-gray-400 hover:text-indigo-400 transition-colors text-sm font-medium">FAQ</a>
                 <a href="https://kiro.dev/downloads/" target="_blank" rel="noopener noreferrer" class="text-gray-400 hover:text-indigo-400 transition-colors text-sm font-medium flex items-center gap-1">
@@ -386,6 +387,98 @@
                 </div>
 
                 <p class="text-center text-gray-500 text-sm mt-8">* All prices without GST. You pay exactly what you see. No surprises.</p>
+            </div>
+        </section>
+
+        <!-- How Billing & Credits Work Section -->
+        <section id="billing" class="py-20 px-4">
+            <div class="max-w-5xl mx-auto">
+                <div class="text-center mb-12">
+                    <h2 class="text-3xl sm:text-4xl font-bold mb-4">How Billing & Credits <span class="gradient-text">Work</span></h2>
+                    <p class="text-gray-400 max-w-2xl mx-auto">Everything works exactly like the official Kiro — same billing cycle, same credits system, same features. We just provide the subscription at 50% off.</p>
+                </div>
+
+                <!-- Credits Explanation -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-12">
+                    <div class="bg-gray-900/50 border border-gray-800 rounded-2xl p-6">
+                        <div class="w-10 h-10 mb-4 bg-indigo-500/10 border border-indigo-500/20 rounded-lg flex items-center justify-center">
+                            <svg class="w-5 h-5 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                        </div>
+                        <h3 class="text-white font-bold mb-2">Fractional Credit System</h3>
+                        <p class="text-gray-400 text-sm">Credits are consumed fractionally based on each request. Simple edits use fewer credits than complex tasks. You're charged in 0.01 credit increments — so simple prompts can cost less than 1 credit.</p>
+                    </div>
+                    <div class="bg-gray-900/50 border border-gray-800 rounded-2xl p-6">
+                        <div class="w-10 h-10 mb-4 bg-emerald-500/10 border border-emerald-500/20 rounded-lg flex items-center justify-center">
+                            <svg class="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                        </div>
+                        <h3 class="text-white font-bold mb-2">Monthly Renewal</h3>
+                        <p class="text-gray-400 text-sm">Credits reset at the start of each billing cycle. Unused credits don't roll over. Your subscription renews monthly — cancel anytime, no lock-in.</p>
+                    </div>
+                    <div class="bg-gray-900/50 border border-gray-800 rounded-2xl p-6">
+                        <div class="w-10 h-10 mb-4 bg-purple-500/10 border border-purple-500/20 rounded-lg flex items-center justify-center">
+                            <svg class="w-5 h-5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                        </div>
+                        <h3 class="text-white font-bold mb-2">Overages (Opt-in)</h3>
+                        <p class="text-gray-400 text-sm">On paid tiers, you can opt-in to pay-as-you-go overages at $0.04/credit if you exceed your monthly limit. This is optional — you won't be charged unexpectedly.</p>
+                    </div>
+                    <div class="bg-gray-900/50 border border-gray-800 rounded-2xl p-6">
+                        <div class="w-10 h-10 mb-4 bg-amber-500/10 border border-amber-500/20 rounded-lg flex items-center justify-center">
+                            <svg class="w-5 h-5 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg>
+                        </div>
+                        <h3 class="text-white font-bold mb-2">Upgrades & Downgrades</h3>
+                        <p class="text-gray-400 text-sm">Upgrade anytime — you get immediate access to the new tier's full credits (prorated billing). Downgrades take effect next billing cycle.</p>
+                    </div>
+                </div>
+
+                <!-- What Counts as a Request -->
+                <div class="bg-gray-900/50 border border-gray-800 rounded-2xl p-8 mb-8">
+                    <h3 class="text-xl font-bold text-white mb-6 text-center">What Counts as a Credit?</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        <div>
+                            <h4 class="text-indigo-400 font-semibold mb-3 flex items-center gap-2">
+                                <span class="w-6 h-6 rounded bg-indigo-500/20 flex items-center justify-center text-xs">💬</span>
+                                Vibe Requests
+                            </h4>
+                            <ul class="space-y-2 text-sm text-gray-400">
+                                <li class="flex items-start gap-2"><span class="text-gray-600 mt-0.5">•</span>Chatting with Kiro ("explain this code")</li>
+                                <li class="flex items-start gap-2"><span class="text-gray-600 mt-0.5">•</span>Creating/refining spec documents</li>
+                                <li class="flex items-start gap-2"><span class="text-gray-600 mt-0.5">•</span>Triggering agent hooks</li>
+                                <li class="flex items-start gap-2"><span class="text-gray-600 mt-0.5">•</span>Complex prompts ("build an API") may use multiple</li>
+                            </ul>
+                        </div>
+                        <div>
+                            <h4 class="text-purple-400 font-semibold mb-3 flex items-center gap-2">
+                                <span class="w-6 h-6 rounded bg-purple-500/20 flex items-center justify-center text-xs">📋</span>
+                                Spec Requests
+                            </h4>
+                            <ul class="space-y-2 text-sm text-gray-400">
+                                <li class="flex items-start gap-2"><span class="text-gray-600 mt-0.5">•</span>Executing a task from tasks.md = 1 spec request</li>
+                                <li class="flex items-start gap-2"><span class="text-gray-600 mt-0.5">•</span>Running multiple tasks ("do tasks 1-3") = 3 spec requests</li>
+                                <li class="flex items-start gap-2"><span class="text-gray-600 mt-0.5">•</span>Subtasks each count as 1 spec request</li>
+                                <li class="flex items-start gap-2"><span class="text-gray-600 mt-0.5">•</span>Specs mode is more efficient for complex projects</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Key Points + Official Link -->
+                <div class="bg-gradient-to-r from-indigo-500/5 to-purple-500/5 border border-indigo-500/20 rounded-2xl p-6 text-center">
+                    <p class="text-gray-300 text-sm mb-4">Everything above works identically for our subscriptions. We provide the same Kiro account — the only difference is you pay 50% less through us.</p>
+                    <div class="flex flex-col sm:flex-row gap-3 justify-center">
+                        <a href="https://kiro.dev/docs/billing" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-2 px-5 py-2.5 bg-gray-800/60 border border-gray-700 hover:border-indigo-500/50 rounded-xl text-sm text-gray-300 hover:text-white transition-all">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+                            Official Billing Docs
+                        </a>
+                        <a href="https://kiro.dev/pricing" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-2 px-5 py-2.5 bg-gray-800/60 border border-gray-700 hover:border-indigo-500/50 rounded-xl text-sm text-gray-300 hover:text-white transition-all">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+                            Kiro Official Pricing
+                        </a>
+                        <a href="https://kiro.dev/faq" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-2 px-5 py-2.5 bg-gray-800/60 border border-gray-700 hover:border-indigo-500/50 rounded-xl text-sm text-gray-300 hover:text-white transition-all">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+                            Kiro FAQs
+                        </a>
+                    </div>
+                </div>
             </div>
         </section>
 
