@@ -656,6 +656,59 @@
             </div>
         </section>
 
+        <!-- Share Your Review Section -->
+        <section id="share-review" class="py-16 px-4 bg-gray-900/30">
+            <div class="max-w-lg mx-auto">
+                <div class="text-center mb-8">
+                    <h2 class="text-2xl sm:text-3xl font-bold mb-2">Share Your <span class="gradient-text">Experience</span></h2>
+                    <p class="text-gray-400 text-sm">Used DevTools Pro? Drop a quick review — it shows up live above.</p>
+                </div>
+                <form id="review-form" class="bg-gray-900/50 border border-gray-800 rounded-2xl p-6 space-y-4" novalidate>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-xs font-medium text-gray-300 mb-1">Your Name</label>
+                            <input type="text" id="reviewName" placeholder="e.g. Rahul K." required class="w-full px-3 py-2.5 bg-gray-800/50 border border-gray-700 rounded-lg text-white text-sm placeholder-gray-500 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-300 mb-1">City / Location</label>
+                            <input type="text" id="reviewCity" placeholder="e.g. Mumbai, India" required class="w-full px-3 py-2.5 bg-gray-800/50 border border-gray-700 rounded-lg text-white text-sm placeholder-gray-500 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-300 mb-1">Role</label>
+                        <select id="reviewRole" class="w-full px-3 py-2.5 bg-gray-800/50 border border-gray-700 rounded-lg text-white text-sm focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all">
+                            <option value="Developer">Developer</option>
+                            <option value="Student">Student</option>
+                            <option value="Freelancer">Freelancer</option>
+                            <option value="Team Lead">Team Lead</option>
+                            <option value="Startup Founder">Startup Founder</option>
+                            <option value="Intern">Intern</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-300 mb-1">Your Review</label>
+                        <textarea id="reviewText" rows="3" maxlength="200" placeholder="What's your experience with DevTools Pro?" required class="w-full px-3 py-2.5 bg-gray-800/50 border border-gray-700 rounded-lg text-white text-sm placeholder-gray-500 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all resize-none"></textarea>
+                        <p class="text-[10px] text-gray-500 mt-1 text-right"><span id="reviewCharCount">0</span>/200</p>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-300 mb-2">Rating</label>
+                        <div id="star-rating" class="flex gap-1 text-2xl cursor-pointer">
+                            <span data-star="1" class="text-gray-600 hover:text-yellow-400 transition-colors">★</span>
+                            <span data-star="2" class="text-gray-600 hover:text-yellow-400 transition-colors">★</span>
+                            <span data-star="3" class="text-gray-600 hover:text-yellow-400 transition-colors">★</span>
+                            <span data-star="4" class="text-gray-600 hover:text-yellow-400 transition-colors">★</span>
+                            <span data-star="5" class="text-yellow-400 transition-colors">★</span>
+                        </div>
+                    </div>
+                    <button type="submit" class="w-full py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl transition-all hover:shadow-lg hover:shadow-indigo-500/25 text-sm">
+                        Submit Review ✨
+                    </button>
+                    <p id="review-success" class="hidden text-center text-emerald-400 text-sm mt-2">Thanks! Your review is now live above 🎉</p>
+                    <p id="review-error" class="hidden text-center text-red-400 text-sm mt-2"></p>
+                </form>
+            </div>
+        </section>
+
         <!-- FAQ Section -->
         <section id="faq" class="py-20 px-4 bg-gray-900/30">
             <div class="max-w-3xl mx-auto">

@@ -417,3 +417,158 @@ document.addEventListener('DOMContentLoaded', () => {
     el.style.opacity = '0'; el.style.transform = 'translateY(20px)'; el.style.transition = 'opacity 0.6s ease, transform 0.6s ease'; observer.observe(el);
   });
 });
+
+// ═══════════════════════════════════════════
+// DYNAMIC REVIEWS — Submit + Live Render
+// ═══════════════════════════════════════════
+
+(function() {
+  const reviewForm = document.getElementById('review-form');
+  const charCount = document.getElementById('reviewCharCount');
+  const reviewText = document.getElementById('reviewText');
+  const starRating = document.getElementById('star-rating');
+  let selectedRating = 5;
+
+  if (!reviewForm) return;
+
+  // Character counter
+  if (reviewText && charCount) {
+    reviewText.addEventListener('input', () => {
+      charCount.textContent = reviewText.value.length;
+    });
+  }
+
+  // Star rating interactive
+  if (starRating) {
+    const stars = starRating.querySelectorAll('[data-star]');
+    stars.forEach(star => {
+      star.addEventListener('click', () => {
+        selectedRating = parseInt(star.dataset.star);
+        stars.forEach(s => {
+          s.classList.toggle('text-yellow-400', parseInt(s.dataset.star) <= selectedRating);
+          s.classList.toggle('text-gray-600', parseInt(s.dataset.star) > selectedRating);
+        });
+      });
+      star.addEventListener('mouseenter', () => {
+        const hoverVal = parseInt(star.dataset.star);
+        stars.forEach(s => {
+          s.classList.toggle('text-yellow-400', parseInt(s.dataset.star) <= hoverVal);
+          s.classList.toggle('text-gray-600', parseInt(s.dataset.star) > hoverVal);
+        });
+      });
+    });
+    starRating.addEventListener('mouseleave', () => {
+      stars.forEach(s => {
+        s.classList.toggle('text-yellow-400', parseInt(s.dataset.star) <= selectedRating);
+        s.classList.toggle('text-gray-600', parseInt(s.dataset.star) > selectedRating);
+      });
+    });
+  }
+
+  // Submit review
+  reviewForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const name = document.getElementById('reviewName').value.trim();
+    const city = document.getElementById('reviewCity').value.trim();
+    const role = document.getElementById('reviewRole').value;
+    const text = reviewText.value.trim();
+    const successEl = document.getElementById('review-success');
+    const errorEl = document.getElementById('review-error');
+
+    if (successEl) successEl.classList.add('hidden');
+    if (errorEl) errorEl.classList.add('hidden');
+
+    if (!name || !city || !text) {
+      if (errorEl) { errorEl.textContent = 'Please fill all fields'; errorEl.classList.remove('hidden'); }
+      return;
+    }
+
+    try {
+      const response = await fetch(`${API_BASE}/api/reviews`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, city, role, reviewText: text, rating: selectedRating })
+      });
+      const data = await response.json();
+
+      if (data.status === 'success') {
+        if (successEl) successEl.classList.remove('hidden');
+        reviewForm.reset();
+        if (charCount) charCount.textContent = '0';
+        selectedRating = 5;
+        if (starRating) {
+          starRating.querySelectorAll('[data-star]').forEach(s => s.classList.add('text-yellow-400'));
+          starRating.querySelectorAll('[data-star]').forEach(s => s.classList.remove('text-gray-600'));
+        }
+        // Inject the new review card into track 1
+        injectNewReviewCard({ name, city, role, text, rating: selectedRating });
+      } else {
+        if (errorEl) { errorEl.textContent = data.message || 'Something went wrong'; errorEl.classList.remove('hidden'); }
+      }
+    } catch (err) {
+      if (errorEl) { errorEl.textContent = 'Could not connect to server'; errorEl.classList.remove('hidden'); }
+    }
+  });
+
+  // Inject new card into the first reviews track
+  function injectNewReviewCard({ name, city, role, text, rating }) {
+    const track = document.querySelector('.reviews-track .reviews-scroll');
+    if (!track) return;
+
+    const initials = name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
+    const colors = ['from-indigo-400 to-purple-500', 'from-emerald-400 to-cyan-500', 'from-rose-400 to-pink-500', 'from-amber-400 to-orange-500', 'from-sky-400 to-blue-500'];
+    const randomColor = colors[Math.floor(Math.random() * colors.length)];
+    const starsHtml = Array.from({ length: 5 }, (_, i) => i < rating ? '★' : '<span class="text-gray-600">★</span>').join('');
+
+    const card = document.createElement('div');
+    card.className = 'review-card';
+    card.style.opacity = '0';
+    card.style.transform = 'scale(0.9)';
+    card.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
+    card.innerHTML = `
+      <div class="flex items-center gap-3 mb-3">
+        <div class="w-9 h-9 rounded-full bg-gradient-to-br ${randomColor} flex items-center justify-center text-white font-bold text-sm">${initials}</div>
+        <div><p class="text-white text-sm font-semibold">${name}</p><p class="text-gray-500 text-xs">${city} · ${role}</p></div>
+      </div>
+      <p class="text-gray-300 text-sm leading-relaxed">"${text}"</p>
+      <div class="flex gap-0.5 mt-2">${starsHtml}</div>
+      <p class="text-[10px] text-indigo-400 mt-2">Just now ✓</p>
+    `;
+
+    // Insert at the beginning of the track
+    track.insertBefore(card, track.firstChild);
+
+    // Animate in
+    requestAnimationFrame(() => {
+      card.style.opacity = '1';
+      card.style.transform = 'scale(1)';
+    });
+
+    // Remove the last card in this track to keep count stable
+    const allCards = track.querySelectorAll('.review-card');
+    if (allCards.length > 14) {
+      const lastCard = allCards[allCards.length - 1];
+      lastCard.style.opacity = '0';
+      lastCard.style.transform = 'scale(0.8)';
+      setTimeout(() => lastCard.remove(), 500);
+    }
+  }
+
+  // Load dynamic reviews from backend on page load (latest user-submitted ones)
+  async function loadDynamicReviews() {
+    try {
+      const response = await fetch(`${API_BASE}/api/reviews?limit=5`);
+      const data = await response.json();
+      if (data.status === 'success' && data.reviews.length > 0) {
+        data.reviews.reverse().forEach(r => {
+          injectNewReviewCard({ name: r.name, city: r.city, role: r.role, text: r.review_text, rating: r.rating });
+        });
+      }
+    } catch (e) {
+      // Silent fail — static reviews still show
+    }
+  }
+
+  // Load user reviews after a short delay (let static ones render first)
+  setTimeout(loadDynamicReviews, 2000);
+})();

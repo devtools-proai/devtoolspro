@@ -293,6 +293,70 @@ app.get('/api/payment/pending', async (req, res) => {
   }
 });
 
+// ═══════════════════════════════════════════
+// REVIEWS ENDPOINTS
+// ═══════════════════════════════════════════
+
+// ─── POST /api/reviews ───
+// Submit a new review
+app.post('/api/reviews', async (req, res) => {
+  try {
+    const { name, city, role, reviewText, rating } = req.body;
+    if (!name || !city || !reviewText) {
+      return res.status(400).json({ status: 'error', message: 'Name, city, and review text are required' });
+    }
+    if (!rating || rating < 1 || rating > 5) {
+      return res.status(400).json({ status: 'error', message: 'Rating must be 1-5' });
+    }
+    if (reviewText.length > 200) {
+      return res.status(400).json({ status: 'error', message: 'Review must be under 200 characters' });
+    }
+
+    const { createClient } = require('@supabase/supabase-js');
+    const client = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY);
+
+    const { data, error } = await client
+      .from('reviews')
+      .insert({ name: name.trim(), city: city.trim(), role: role || 'Developer', review_text: reviewText.trim(), rating: parseInt(rating) })
+      .select()
+      .single();
+
+    if (error) {
+      return res.status(500).json({ status: 'error', message: 'Failed to save review' });
+    }
+
+    res.status(201).json({ status: 'success', review: data });
+    console.log(`⭐ New review from ${name} (${city}) — ${rating}★`);
+  } catch (error) {
+    res.status(500).json({ status: 'error', message: 'Internal error' });
+  }
+});
+
+// ─── GET /api/reviews ───
+// Get latest approved reviews (for dynamic rendering)
+app.get('/api/reviews', async (req, res) => {
+  try {
+    const limit = parseInt(req.query.limit) || 20;
+    const { createClient } = require('@supabase/supabase-js');
+    const client = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY);
+
+    const { data, error } = await client
+      .from('reviews')
+      .select('*')
+      .eq('approved', true)
+      .order('created_at', { ascending: false })
+      .limit(limit);
+
+    if (error) {
+      return res.status(500).json({ status: 'error', message: error.message });
+    }
+
+    res.json({ status: 'success', count: (data || []).length, reviews: data || [] });
+  } catch (error) {
+    res.status(500).json({ status: 'error', message: 'Internal error' });
+  }
+});
+
 // ─── Start Server ───
 app.listen(PORT, () => {
   console.log(`
