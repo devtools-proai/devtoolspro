@@ -109,6 +109,43 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  // ─── BILLING BREAKDOWN CALCULATOR ───
+  function updateBillingBreakdown(monthlyAmount) {
+    const now = new Date();
+    const today = now.getDate();
+    const currentMonth = now.getMonth();
+    const currentYear = now.getFullYear();
+    const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+    const remainingDays = daysInMonth - today + 1; // including today
+
+    // Prorated amount = (remaining days / total days) * monthly price
+    const proratedAmount = Math.round((remainingDays / daysInMonth) * monthlyAmount);
+
+    // Format dates
+    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const todayStr = `${today} ${monthNames[currentMonth]}`;
+    const nextMonth = currentMonth === 11 ? 0 : currentMonth + 1;
+    const nextMonthYear = currentMonth === 11 ? currentYear + 1 : currentYear;
+    const nextMonthStr = `1 ${monthNames[nextMonth]} ${nextMonthYear}`;
+
+    // Update DOM
+    const startDateEl = document.getElementById('billing-start-date');
+    const proratedEl = document.getElementById('billing-prorated-amount');
+    const nextMonthEl = document.getElementById('billing-next-month');
+    const fullAmountEl = document.getElementById('billing-full-amount');
+    const paymentAmountEl = document.getElementById('payment-amount');
+
+    if (startDateEl) startDateEl.textContent = todayStr;
+    if (proratedEl) proratedEl.textContent = `₹${proratedAmount.toLocaleString('en-IN')} (${remainingDays} days)`;
+    if (nextMonthEl) nextMonthEl.textContent = nextMonthStr;
+    if (fullAmountEl) fullAmountEl.textContent = `₹${monthlyAmount.toLocaleString('en-IN')}/month`;
+
+    // Update the main payment amount to show prorated price
+    if (paymentAmountEl) {
+      paymentAmountEl.innerHTML = `Pay Today: <span class="text-white">₹${proratedAmount.toLocaleString('en-IN')}</span>`;
+    }
+  }
+
   // ─── STEP 1 → STEP 2 ───
   const toStep2Btn = document.getElementById('to-step-2');
   if (toStep2Btn) {
@@ -120,17 +157,23 @@ document.addEventListener('DOMContentLoaded', () => {
       selectedPlan = radio.value;
       selectedAmount = Number(radio.dataset.amount);
 
-      const amountEl = document.getElementById('payment-amount');
-      if (amountEl) amountEl.textContent = 'Amount: ₹' + selectedAmount.toLocaleString('en-IN');
+      // Calculate prorated amount for today
+      const now = new Date();
+      const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+      const remainingDays = daysInMonth - now.getDate() + 1;
+      const proratedAmount = Math.round((remainingDays / daysInMonth) * selectedAmount);
 
-      const upiString = `upi://pay?pa=devtoolpro@ybl&pn=DevTools%20Pro&am=${selectedAmount}&cu=INR&tn=${encodeURIComponent('DevTools Pro - ' + selectedPlan.split(' —')[0].trim())}`;
+      const amountEl = document.getElementById('payment-amount');
+      if (amountEl) amountEl.innerHTML = `Pay Today: <span class="text-white">₹${proratedAmount.toLocaleString('en-IN')}</span>`;
+
+      const upiString = `upi://pay?pa=devtoolpro@ybl&pn=DevTools%20Pro&am=${proratedAmount}&cu=INR&tn=${encodeURIComponent('DevTools Pro - ' + selectedPlan.split(' —')[0].trim())}`;
       
       // Set app-specific deep links
       const phonePeLink = document.getElementById('phonepe-link');
       const gpayLink = document.getElementById('gpay-link');
       
-      const phonepeUrl = `phonepe://pay?pa=devtoolpro@ybl&pn=DevTools%20Pro&am=${selectedAmount}&cu=INR&tn=${encodeURIComponent('DevTools Pro - ' + selectedPlan.split(' —')[0].trim())}`;
-      const gpayUrl = `tez://upi/pay?pa=devtoolpro@ybl&pn=DevTools%20Pro&am=${selectedAmount}&cu=INR&tn=${encodeURIComponent('DevTools Pro - ' + selectedPlan.split(' —')[0].trim())}`;
+      const phonepeUrl = `phonepe://pay?pa=devtoolpro@ybl&pn=DevTools%20Pro&am=${proratedAmount}&cu=INR&tn=${encodeURIComponent('DevTools Pro - ' + selectedPlan.split(' —')[0].trim())}`;
+      const gpayUrl = `tez://upi/pay?pa=devtoolpro@ybl&pn=DevTools%20Pro&am=${proratedAmount}&cu=INR&tn=${encodeURIComponent('DevTools Pro - ' + selectedPlan.split(' —')[0].trim())}`;
       
       if (phonePeLink) phonePeLink.href = phonepeUrl;
       if (gpayLink) gpayLink.href = gpayUrl;
@@ -155,6 +198,9 @@ document.addEventListener('DOMContentLoaded', () => {
         currentPaymentId = paymentResult.paymentId;
         console.log('Payment session created:', currentPaymentId);
       }
+
+      // Calculate and display prorated billing breakdown
+      updateBillingBreakdown(selectedAmount);
 
       showStep(2);
     });
