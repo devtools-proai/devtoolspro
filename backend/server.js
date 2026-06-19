@@ -24,6 +24,9 @@ const { verifyGoogleToken, findOrCreateUser, generateSessionToken, requireAuth, 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Trust proxy (Render, Railway, etc. put a reverse proxy in front)
+app.set('trust proxy', 1);
+
 // ─── Middleware ───
 app.use(express.json());
 app.use(cors({
