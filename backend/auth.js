@@ -20,28 +20,42 @@ const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || 'YOUR_GOOGLE_CLIENT_ID'
  */
 async function verifyGoogleToken(idToken) {
   try {
-    const response = await fetch(`https://oauth2.googleapis.com/tokeninfo?id_token=${idToken}`);
-    const payload = await response.json();
+    // Use native https to avoid cross-fetch issues on Render
+    const https = require('https');
+    const url = `https://oauth2.googleapis.com/tokeninfo?id_token=${idToken}`;
 
-    if (!response.ok) {
-      console.error('Google tokeninfo error:', payload);
-      return { valid: false, message: 'Invalid Google token: ' + (payload.error_description || payload.error || 'unknown') };
+    const payload = await new Promise((resolve, reject) => {
+      https.get(url, (res) => {
+        let data = '';
+        res.on('data', chunk => data += chunk);
+        res.on('end', () => {
+          try { resolve({ status: res.statusCode, body: JSON.parse(data) }); }
+          catch (e) { reject(new Error('Failed to parse Google response')); }
+        });
+      }).on('error', reject);
+    });
+
+    if (payload.status !== 200) {
+      console.error('Google tokeninfo error:', payload.body);
+      return { valid: false, message: 'Invalid Google token: ' + (payload.body.error_description || payload.body.error || 'unknown') };
     }
 
+    const data = payload.body;
+
     // Verify the token is for our app
-    if (payload.aud !== GOOGLE_CLIENT_ID) {
-      console.error('Client ID mismatch! Token aud:', payload.aud, '| Expected:', GOOGLE_CLIENT_ID);
+    if (data.aud !== GOOGLE_CLIENT_ID) {
+      console.error('Client ID mismatch! Token aud:', data.aud, '| Expected:', GOOGLE_CLIENT_ID);
       return { valid: false, message: 'Token not issued for this app' };
     }
 
     return {
       valid: true,
       user: {
-        googleId: payload.sub,
-        email: payload.email,
-        name: payload.name,
-        picture: payload.picture,
-        emailVerified: payload.email_verified === 'true'
+        googleId: data.sub,
+        email: data.email,
+        name: data.name || data.email.split('@')[0],
+        picture: data.picture || '',
+        emailVerified: data.email_verified === 'true'
       }
     };
   } catch (err) {
