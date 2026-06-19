@@ -133,36 +133,95 @@ document.addEventListener('DOMContentLoaded', () => {
   // Google Sign-In button in signup section
   const signupGoogleBtn = document.getElementById('signup-google-btn');
   if (signupGoogleBtn) {
-    signupGoogleBtn.addEventListener('click', () => {
-      // Fetch client ID and trigger Google Sign-In
-      fetch(`${API_BASE}/auth/google-client-id`)
-        .then(r => r.json())
-        .then(data => {
-          if (typeof google !== 'undefined' && google.accounts) {
-            google.accounts.id.initialize({
-              client_id: data.clientId,
-              callback: async (response) => {
-                try {
-                  const res = await fetch(`${API_BASE}/auth/google`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ idToken: response.credential })
-                  });
-                  const result = await res.json();
-                  if (result.status === 'success') {
-                    setToken(result.token);
-                    setStoredUser(result.user);
-                    currentUser = result.user;
-                    checkAuthState();
-                  }
-                } catch (e) {
-                  console.error('Sign-in error:', e);
-                }
-              }
-            });
-            google.accounts.id.prompt();
+    signupGoogleBtn.addEventListener('click', async () => {
+      try {
+        // Fetch client ID from backend
+        const r = await fetch(`${API_BASE}/auth/google-client-id`);
+        const data = await r.json();
+        const clientId = data.clientId;
+
+        if (typeof google === 'undefined' || !google.accounts) {
+          alert('Google Sign-In failed to load. Please disable ad-blockers and refresh.');
+          return;
+        }
+
+        // Use popup mode via google.accounts.oauth2 for reliable sign-in
+        const client = google.accounts.oauth2.initTokenClient({
+          client_id: clientId,
+          scope: 'openid email profile',
+          callback: async (tokenResponse) => {
+            if (tokenResponse.error) {
+              console.error('OAuth error:', tokenResponse.error);
+              return;
+            }
+            // Exchange the access token for user info, then get ID token via credential
+            // Alternative: use initCodeClient. But simplest is to use the ID token flow with a popup.
           }
         });
+
+        // Actually, use google.accounts.id with FedCM / popup fallback
+        google.accounts.id.initialize({
+          client_id: clientId,
+          callback: async (response) => {
+            try {
+              const res = await fetch(`${API_BASE}/auth/google`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ idToken: response.credential })
+              });
+              const result = await res.json();
+              if (result.status === 'success') {
+                setToken(result.token);
+                setStoredUser(result.user);
+                currentUser = result.user;
+                checkAuthState();
+              } else {
+                alert('Sign-in failed: ' + (result.message || 'Unknown error'));
+              }
+            } catch (e) {
+              console.error('Sign-in error:', e);
+              alert('Connection error. Please try again.');
+            }
+          },
+          use_fedcm_for_prompt: true
+        });
+
+        // Try prompt first, if it doesn't show (cooldown/blocked), fall back to renderButton
+        google.accounts.id.prompt((notification) => {
+          if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
+            // Prompt was suppressed — render a Google button in a temporary container
+            const tempDiv = document.createElement('div');
+            tempDiv.style.position = 'fixed';
+            tempDiv.style.top = '50%';
+            tempDiv.style.left = '50%';
+            tempDiv.style.transform = 'translate(-50%, -50%)';
+            tempDiv.style.zIndex = '9999';
+            tempDiv.style.background = 'rgba(0,0,0,0.8)';
+            tempDiv.style.padding = '40px';
+            tempDiv.style.borderRadius = '16px';
+            tempDiv.id = 'google-popup-fallback';
+            document.body.appendChild(tempDiv);
+
+            google.accounts.id.renderButton(tempDiv, {
+              theme: 'filled_blue',
+              size: 'large',
+              width: 280,
+              text: 'signin_with'
+            });
+
+            // Remove on outside click
+            tempDiv.addEventListener('click', (e) => {
+              if (e.target === tempDiv) tempDiv.remove();
+            });
+            document.addEventListener('keydown', function escHandler(e) {
+              if (e.key === 'Escape') { tempDiv.remove(); document.removeEventListener('keydown', escHandler); }
+            });
+          }
+        });
+      } catch (e) {
+        console.error('Failed to initialize Google Sign-In:', e);
+        alert('Could not connect to server. Please try again.');
+      }
     });
   }
 
