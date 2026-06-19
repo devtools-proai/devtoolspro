@@ -704,6 +704,9 @@
     }
 
     // ─── Google Sign-In ───
+    let googleClientId = '';
+    let googleInitialized = false;
+
     function loadGoogleSignIn() {
       // Load Google Identity Services library if not already loaded
       if (window.google && google.accounts) {
@@ -717,48 +720,61 @@
     }
 
     async function initGoogleAuth() {
-      // Get client ID from backend
-      let clientId = '';
-      try {
-        const res = await fetch(`${API_BASE}/auth/google-client-id`);
-        const data = await res.json();
-        clientId = data.clientId;
-      } catch (e) {
-        console.error('Failed to get client ID');
-        return;
+      // Get client ID from backend (only once)
+      if (!googleClientId) {
+        try {
+          const res = await fetch(`${API_BASE}/auth/google-client-id`);
+          const data = await res.json();
+          googleClientId = data.clientId;
+        } catch (e) {
+          console.error('Failed to get client ID');
+          return;
+        }
       }
 
-      // Custom button click handler
-      document.getElementById('google-signin-btn').addEventListener('click', () => {
+      // Initialize only once
+      if (!googleInitialized) {
         google.accounts.id.initialize({
-          client_id: clientId,
+          client_id: googleClientId,
           callback: handleGoogleResponse,
           auto_select: false,
           use_fedcm_for_prompt: true
         });
+        googleInitialized = true;
+      }
 
-        // Try prompt first, fall back to rendered button if suppressed
-        google.accounts.id.prompt((notification) => {
-          if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
-            // Prompt suppressed — show Google's rendered button in an overlay
-            const overlay = document.createElement('div');
-            overlay.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.8);display:flex;align-items:center;justify-content:center;';
-            overlay.id = 'google-btn-overlay';
-            const card = document.createElement('div');
-            card.style.cssText = 'background:#1f2937;padding:32px;border-radius:16px;text-align:center;';
-            card.innerHTML = '<p style="color:#9ca3af;margin-bottom:16px;font-size:14px;">Click below to sign in with Google</p><div id="g-btn-container"></div>';
-            overlay.appendChild(card);
-            document.body.appendChild(overlay);
+      // Button click handler — only attach once
+      const btn = document.getElementById('google-signin-btn');
+      if (btn && !btn._listenerAdded) {
+        btn._listenerAdded = true;
+        btn.addEventListener('click', () => {
+          // Remove any existing overlay
+          const existing = document.getElementById('google-btn-overlay');
+          if (existing) existing.remove();
 
-            google.accounts.id.renderButton(document.getElementById('g-btn-container'), {
-              theme: 'filled_blue', size: 'large', width: 280, text: 'signin_with'
-            });
+          // Try One Tap prompt first
+          google.accounts.id.prompt((notification) => {
+            if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
+              // Prompt suppressed — show rendered Google button in overlay
+              const overlay = document.createElement('div');
+              overlay.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.8);display:flex;align-items:center;justify-content:center;';
+              overlay.id = 'google-btn-overlay';
+              const card = document.createElement('div');
+              card.style.cssText = 'background:#1f2937;padding:32px;border-radius:16px;text-align:center;min-width:320px;';
+              card.innerHTML = '<p style="color:#9ca3af;margin-bottom:16px;font-size:14px;">Click below to sign in with Google</p><div id="g-btn-container"></div><p style="color:#6b7280;margin-top:12px;font-size:12px;">Press Escape or click outside to close</p>';
+              overlay.appendChild(card);
+              document.body.appendChild(overlay);
 
-            overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
-            document.addEventListener('keydown', function esc(e) { if (e.key === 'Escape') { overlay.remove(); document.removeEventListener('keydown', esc); } });
-          }
+              google.accounts.id.renderButton(document.getElementById('g-btn-container'), {
+                theme: 'filled_blue', size: 'large', width: 280, text: 'signin_with'
+              });
+
+              overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
+              document.addEventListener('keydown', function esc(e) { if (e.key === 'Escape') { overlay.remove(); document.removeEventListener('keydown', esc); } });
+            }
+          });
         });
-      });
+      }
     }
 
     async function handleGoogleResponse(response) {
