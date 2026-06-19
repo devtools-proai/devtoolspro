@@ -21,13 +21,16 @@ const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || 'YOUR_GOOGLE_CLIENT_ID'
 async function verifyGoogleToken(idToken) {
   try {
     const response = await fetch(`https://oauth2.googleapis.com/tokeninfo?id_token=${idToken}`);
-    if (!response.ok) {
-      return { valid: false, message: 'Invalid Google token' };
-    }
     const payload = await response.json();
+
+    if (!response.ok) {
+      console.error('Google tokeninfo error:', payload);
+      return { valid: false, message: 'Invalid Google token: ' + (payload.error_description || payload.error || 'unknown') };
+    }
 
     // Verify the token is for our app
     if (payload.aud !== GOOGLE_CLIENT_ID) {
+      console.error('Client ID mismatch! Token aud:', payload.aud, '| Expected:', GOOGLE_CLIENT_ID);
       return { valid: false, message: 'Token not issued for this app' };
     }
 
