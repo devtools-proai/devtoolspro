@@ -9,9 +9,6 @@
 
 require('dotenv').config();
 
-// Polyfill fetch for Node 18 DNS issues on some Linux systems
-globalThis.fetch = require('cross-fetch');
-
 const express = require('express');
 const cors = require('cors');
 const rateLimit = require('express-rate-limit');
