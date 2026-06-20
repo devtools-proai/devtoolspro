@@ -9,11 +9,6 @@
 
 require('dotenv').config();
 
-// Render's Node 18 has DNS issues — polyfill fetch only in production
-if (process.env.NODE_ENV === 'production' || process.env.RENDER) {
-  globalThis.fetch = require('cross-fetch');
-}
-
 const express = require('express');
 const cors = require('cors');
 const rateLimit = require('express-rate-limit');
