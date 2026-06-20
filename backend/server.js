@@ -209,7 +209,12 @@ app.post('/auth/register', requireAuth, async (req, res) => {
       .single();
 
     if (error) {
-      return res.status(500).json({ status: 'error', message: 'Failed to save profile' });
+      console.error('Register update error:', error);
+      return res.status(500).json({ status: 'error', message: 'Failed to save profile: ' + error.message });
+    }
+
+    if (!data) {
+      return res.status(404).json({ status: 'error', message: 'User not found' });
     }
 
     const user = {
@@ -220,7 +225,8 @@ app.post('/auth/register', requireAuth, async (req, res) => {
     res.json({ status: 'success', user });
     console.log(`📝 Registration complete: ${data.name} (${data.email})`);
   } catch (error) {
-    res.status(500).json({ status: 'error', message: 'Internal error' });
+    console.error('Register endpoint error:', error);
+    res.status(500).json({ status: 'error', message: 'Internal error: ' + error.message });
   }
 });
 
