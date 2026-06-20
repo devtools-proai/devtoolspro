@@ -196,8 +196,8 @@ app.post('/auth/update-plan', requireAuth, async (req, res) => {
 // Complete user registration with additional details (requires auth)
 app.post('/auth/register', requireAuth, async (req, res) => {
   try {
-    const { firstName, lastName, phone, source } = req.body;
-    if (!firstName || !lastName || !phone || !source) {
+    const { firstName, lastName, source } = req.body;
+    if (!firstName || !lastName || !source) {
       return res.status(400).json({ status: 'error', message: 'All fields are required' });
     }
 
@@ -208,7 +208,6 @@ app.post('/auth/register', requireAuth, async (req, res) => {
       .from('users')
       .update({
         name: fullName,
-        phone: phone.trim(),
         source: source,
         registration_complete: true
       })
@@ -225,7 +224,7 @@ app.post('/auth/register', requireAuth, async (req, res) => {
       status: 'success',
       user: {
         id: data.id, email: data.email, name: data.name, picture: data.picture,
-        phone: data.phone, currentPlan: data.current_plan, planStatus: data.plan_status,
+        currentPlan: data.current_plan, planStatus: data.plan_status,
         planStartDate: data.plan_start_date, planEndDate: data.plan_end_date, meetLink: data.meet_link
       }
     });

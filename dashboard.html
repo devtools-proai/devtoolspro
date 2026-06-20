@@ -95,10 +95,6 @@
                         <input type="email" id="reg-email" readonly class="form-input">
                     </div>
                     <div>
-                        <label class="block text-xs font-medium text-gray-400 mb-2 uppercase tracking-wide">Phone Number</label>
-                        <input type="tel" id="reg-phone" required placeholder="+91 98765 43210" class="form-input">
-                    </div>
-                    <div>
                         <label class="block text-xs font-medium text-gray-400 mb-2 uppercase tracking-wide">How did you hear about us?</label>
                         <select id="reg-source" class="form-input">
                             <option value="" disabled selected class="text-gray-500">Select an option</option>
@@ -295,7 +291,7 @@
     }
 
     function routeUser(user) {
-      if (!user.phone && !user.registrationComplete) { showView('view-register'); prefillRegForm(user); }
+      if (!user.registrationComplete) { showView('view-register'); prefillRegForm(user); }
       else if (!user.currentPlan || user.planStatus === 'none' || user.planStatus === 'cancelled' || user.planStatus === 'expired') { showView('view-plans'); }
       else { showView('view-dashboard'); renderDashboard(user); }
     }
@@ -337,16 +333,15 @@
       e.preventDefault();
       const first = document.getElementById('reg-first').value.trim();
       const last = document.getElementById('reg-last').value.trim();
-      const phone = document.getElementById('reg-phone').value.trim();
       const source = document.getElementById('reg-source').value;
       const errEl = document.getElementById('reg-error');
       errEl.classList.add('hidden');
 
-      if (!first || !last || !phone || !source) { errEl.textContent = 'All fields are required'; errEl.classList.remove('hidden'); return; }
+      if (!first || !last || !source) { errEl.textContent = 'All fields are required'; errEl.classList.remove('hidden'); return; }
 
       try {
         const token = getToken();
-        const res = await fetch(`${API_BASE}/auth/register`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify({ firstName: first, lastName: last, phone, source }) });
+        const res = await fetch(`${API_BASE}/auth/register`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify({ firstName: first, lastName: last, source }) });
         const data = await res.json();
         if (data.status === 'success') { setUser(data.user); showView('view-plans'); }
         else { errEl.textContent = data.message || 'Failed'; errEl.classList.remove('hidden'); }
