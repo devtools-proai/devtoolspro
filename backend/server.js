@@ -139,6 +139,7 @@ app.get('/auth/me', requireAuth, async (req, res) => {
         planStatus: user.plan_status,
         planStartDate: user.plan_start_date,
         planEndDate: user.plan_end_date,
+        phone: user.phone,
         utrId: user.utr_id,
         meetLink: user.meet_link,
         createdAt: user.created_at
@@ -180,6 +181,44 @@ app.post('/auth/update-plan', requireAuth, async (req, res) => {
     }
 
     res.json({ status: 'success', message: 'Plan activated', user: data });
+  } catch (error) {
+    res.status(500).json({ status: 'error', message: 'Internal error' });
+  }
+});
+
+// ─── POST /auth/register ───
+// Complete user registration with additional details (requires auth)
+app.post('/auth/register', requireAuth, async (req, res) => {
+  try {
+    const { firstName, lastName, phone, source } = req.body;
+    if (!firstName || !lastName || !phone || !source) {
+      return res.status(400).json({ status: 'error', message: 'All fields are required' });
+    }
+
+    const client = getClient();
+    const { data, error } = await client
+      .from('users')
+      .update({
+        name: `${firstName.trim()} ${lastName.trim()}`,
+        phone: phone.trim(),
+        source: source,
+        registration_complete: true
+      })
+      .eq('id', req.user.userId)
+      .select()
+      .single();
+
+    if (error) {
+      return res.status(500).json({ status: 'error', message: 'Failed to save profile' });
+    }
+
+    const user = {
+      id: data.id, email: data.email, name: data.name, picture: data.picture,
+      phone: data.phone, currentPlan: data.current_plan, planStatus: data.plan_status,
+      planStartDate: data.plan_start_date, planEndDate: data.plan_end_date
+    };
+    res.json({ status: 'success', user });
+    console.log(`📝 Registration complete: ${data.name} (${data.email})`);
   } catch (error) {
     res.status(500).json({ status: 'error', message: 'Internal error' });
   }

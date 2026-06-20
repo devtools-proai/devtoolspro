@@ -86,7 +86,6 @@
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 36 36'%3E%3Crect width='36' height='36' rx='8' fill='url(%23g)'/%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='36' y2='36'%3E%3Cstop offset='0%25' stop-color='%236366f1'/%3E%3Cstop offset='100%25' stop-color='%238b5cf6'/%3E%3C/linearGradient%3E%3C/defs%3E%3Cpath d='M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4' stroke='white' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round' fill='none' transform='translate(8,10) scale(0.8)'/%3E%3C/svg%3E">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-    <script src="https://accounts.google.com/gsi/client" async></script>
     <script>
         tailwind.config = {
             darkMode: 'class',
@@ -181,12 +180,12 @@
                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
                     Download IDE
                 </a>
-                <a href="#signup" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 rounded-lg text-sm font-semibold transition-all hover:shadow-lg hover:shadow-indigo-500/25">Get Started</a>
+                <a href="dashboard.html" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 rounded-lg text-sm font-semibold transition-all hover:shadow-lg hover:shadow-indigo-500/25">Get Started</a>
                 <a href="dashboard.html" class="px-3 py-2 border border-gray-700 hover:border-indigo-500/50 rounded-lg text-sm font-medium text-gray-400 hover:text-white transition-all">My Account</a>
             </nav>
             <!-- Mobile Menu Button -->
             <div class="flex items-center gap-3 lg:hidden">
-                <a href="#signup" class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 rounded-lg text-xs font-semibold transition-all">Get Started</a>
+                <a href="dashboard.html" class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 rounded-lg text-xs font-semibold transition-all">Get Started</a>
                 <button id="mobile-menu-btn" class="p-2 text-gray-400 hover:text-white transition-colors" aria-label="Open menu">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
                 </button>
@@ -226,7 +225,7 @@
                     Get Kiro — the AI-powered coding IDE used by thousands — at flat 50% off market price. Same models, same features, same everything. Just cheaper.
                 </p>
                 <div class="flex flex-col sm:flex-row gap-4 justify-center animate-slide-up" style="animation-delay:0.4s;">
-                    <a href="#signup" class="px-8 py-4 bg-indigo-600 hover:bg-indigo-500 rounded-xl text-lg font-semibold transition-all hover:shadow-xl hover:shadow-indigo-500/25 hover:-translate-y-1">
+                    <a href="dashboard.html" class="px-8 py-4 bg-indigo-600 hover:bg-indigo-500 rounded-xl text-lg font-semibold transition-all hover:shadow-xl hover:shadow-indigo-500/25 hover:-translate-y-1">
                         Grab Your Plan Now →
                     </a>
                     <a href="#what" class="px-8 py-4 border border-gray-700 hover:border-indigo-500 rounded-xl text-lg font-semibold text-gray-300 hover:text-white transition-all">
@@ -748,30 +747,6 @@
                 <div class="text-center mb-8">
                     <h2 class="text-3xl font-bold mb-2">Get Started <span class="gradient-text">Now</span></h2>
                     <p class="text-gray-400">Select your plan, pay, and connect on WhatsApp.</p>
-                </div>
-
-                <!-- Google Sign-In Gate (shown if not logged in) -->
-                <div id="signin-gate" class="bg-gray-900/50 border border-gray-800 rounded-2xl p-8 text-center">
-                    <div class="w-14 h-14 mx-auto mb-4 bg-indigo-500/10 border border-indigo-500/20 rounded-full flex items-center justify-center">
-                        <svg class="w-7 h-7 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
-                    </div>
-                    <h3 class="text-lg font-bold text-white mb-2">Sign in to continue</h3>
-                    <p class="text-gray-400 text-sm mb-6">Sign in with Google to access plans and manage your subscription.</p>
-                    <button id="signup-google-btn" class="inline-flex items-center gap-3 px-6 py-3 bg-white hover:bg-gray-100 text-gray-800 font-semibold rounded-xl transition-all hover:shadow-lg mx-auto">
-                        <svg class="w-5 h-5" viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
-                        Continue with Google
-                    </button>
-                    <p class="text-gray-500 text-xs mt-4">Your Google account is only used for authentication. We don't access any other data.</p>
-                </div>
-
-                <!-- Signed-in user bar (shown when logged in) -->
-                <div id="signedin-bar" class="hidden flex items-center gap-3 p-3 bg-gray-800/50 border border-gray-700/50 rounded-xl mb-6">
-                    <img id="signup-user-avatar" class="w-8 h-8 rounded-full border border-gray-600" src="" alt="">
-                    <div class="flex-1">
-                        <p id="signup-user-name" class="text-white text-sm font-medium"></p>
-                        <p id="signup-user-email" class="text-gray-500 text-xs"></p>
-                    </div>
-                    <span class="px-2 py-0.5 bg-emerald-500/10 border border-emerald-500/20 rounded text-emerald-400 text-[10px] font-bold">Signed In</span>
                 </div>
 
                 <!-- Step Indicators -->

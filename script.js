@@ -92,116 +92,14 @@ document.addEventListener('DOMContentLoaded', () => {
   const header = document.querySelector('header');
   const stepInds = [document.getElementById('step-ind-1'), document.getElementById('step-ind-2'), document.getElementById('step-ind-3')];
   const stepLines = [document.getElementById('step-line-1'), document.getElementById('step-line-2')];
-  const signinGate = document.getElementById('signin-gate');
-  const signedinBar = document.getElementById('signedin-bar');
-  const stepIndicators = document.querySelector('.flex.items-center.justify-center.gap-2.mb-8');
+  const signinGate = null;
+  const signedinBar = null;
+  const stepIndicators = null;
 
   let selectedPlan = '';
   let selectedAmount = 0;
   let currentPaymentId = null;
   let verificationPollTimer = null;
-
-  // ─── AUTH GATE: Check if user is signed in ───
-  function checkAuthState() {
-    const token = getToken();
-    const user = getStoredUser();
-
-    if (token && user) {
-      currentUser = user;
-      // Hide gate, show checkout
-      if (signinGate) signinGate.classList.add('hidden');
-      if (signedinBar) {
-        signedinBar.classList.remove('hidden');
-        document.getElementById('signup-user-avatar').src = user.picture || '';
-        document.getElementById('signup-user-name').textContent = user.name || '';
-        document.getElementById('signup-user-email').textContent = user.email || '';
-      }
-      if (step1) step1.classList.remove('hidden');
-      if (stepIndicators) stepIndicators.classList.remove('hidden');
-    } else {
-      // Show gate, hide checkout
-      if (signinGate) signinGate.classList.remove('hidden');
-      if (signedinBar) signedinBar.classList.add('hidden');
-      if (step1) step1.classList.add('hidden');
-      if (stepIndicators) stepIndicators.classList.add('hidden');
-    }
-  }
-
-  // Initialize auth state
-  checkAuthState();
-
-  // Google Sign-In button in signup section
-  const signupGoogleBtn = document.getElementById('signup-google-btn');
-  if (signupGoogleBtn) {
-    signupGoogleBtn.addEventListener('click', async () => {
-      try {
-        const r = await fetch(`${API_BASE}/auth/google-client-id`);
-        const data = await r.json();
-        const clientId = data.clientId;
-
-        if (typeof google === 'undefined' || !google.accounts) {
-          alert('Google Sign-In failed to load. Please disable ad-blockers and refresh.');
-          return;
-        }
-
-        google.accounts.id.initialize({
-          client_id: clientId,
-          callback: async (response) => {
-            // Remove popup if it exists
-            const popup = document.getElementById('google-popup-overlay');
-            if (popup) popup.remove();
-
-            try {
-              const res = await fetch(`${API_BASE}/auth/google`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ idToken: response.credential })
-              });
-              const result = await res.json();
-              if (result.status === 'success') {
-                setToken(result.token);
-                setStoredUser(result.user);
-                currentUser = result.user;
-                checkAuthState();
-              } else {
-                alert('Sign-in failed: ' + (result.message || 'Unknown error'));
-              }
-            } catch (e) {
-              console.error('Sign-in error:', e);
-              alert('Connection error. Please try again.');
-            }
-          }
-        });
-
-        // Show Google's rendered button in a centered overlay
-        const overlay = document.createElement('div');
-        overlay.id = 'google-popup-overlay';
-        overlay.style.cssText = 'position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.8);backdrop-filter:blur(4px);';
-        const box = document.createElement('div');
-        box.style.cssText = 'background:#1f2937;padding:2rem;border-radius:1rem;text-align:center;border:1px solid #374151;';
-        box.innerHTML = '<p style="color:#9ca3af;font-size:0.85rem;margin-bottom:1rem;">Select your Google account</p>';
-        const btnContainer = document.createElement('div');
-        box.appendChild(btnContainer);
-        overlay.appendChild(box);
-        document.body.appendChild(overlay);
-
-        google.accounts.id.renderButton(btnContainer, {
-          theme: 'filled_blue',
-          size: 'large',
-          width: 280,
-          text: 'signin_with'
-        });
-
-        // Close on overlay click
-        overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
-        document.addEventListener('keydown', function esc(e) { if (e.key === 'Escape') { overlay.remove(); document.removeEventListener('keydown', esc); } });
-
-      } catch (e) {
-        console.error('Failed to initialize Google Sign-In:', e);
-        alert('Could not connect to server. Please try again.');
-      }
-    });
-  }
 
   function showStep(num) {
     [step1, step2, step3, stepSuccess].forEach(el => { if (el) el.classList.add('hidden'); });
