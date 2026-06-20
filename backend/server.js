@@ -196,34 +196,32 @@ app.post('/auth/register', requireAuth, async (req, res) => {
     }
 
     const client = getClient();
-    const { data, error } = await client
-      .from('users')
-      .update({
-        name: `${firstName.trim()} ${lastName.trim()}`,
-        phone: phone.trim(),
-        source: source,
-        registration_complete: true
-      })
-      .eq('id', req.user.userId)
-      .select()
-      .single();
+    
+    // Use RPC function to bypass PostgREST schema cache issues
+    const { data, error } = await client.rpc('register_user', {
+      user_id: req.user.userId,
+      user_name: `${firstName.trim()} ${lastName.trim()}`,
+      user_phone: phone.trim(),
+      user_source: source
+    });
 
     if (error) {
-      console.error('Register update error:', error);
+      console.error('Register RPC error:', error);
       return res.status(500).json({ status: 'error', message: 'Failed to save profile: ' + error.message });
     }
 
-    if (!data) {
+    const row = data;
+    if (!row) {
       return res.status(404).json({ status: 'error', message: 'User not found' });
     }
 
     const user = {
-      id: data.id, email: data.email, name: data.name, picture: data.picture,
-      phone: data.phone, currentPlan: data.current_plan, planStatus: data.plan_status,
-      planStartDate: data.plan_start_date, planEndDate: data.plan_end_date
+      id: row.id, email: row.email, name: row.name, picture: row.picture,
+      phone: row.phone, currentPlan: row.current_plan, planStatus: row.plan_status,
+      planStartDate: row.plan_start_date, planEndDate: row.plan_end_date
     };
     res.json({ status: 'success', user });
-    console.log(`📝 Registration complete: ${data.name} (${data.email})`);
+    console.log(`📝 Registration complete: ${row.name} (${row.email})`);
   } catch (error) {
     console.error('Register endpoint error:', error);
     res.status(500).json({ status: 'error', message: 'Internal error: ' + error.message });
