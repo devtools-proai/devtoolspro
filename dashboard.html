@@ -8,13 +8,29 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script src="https://accounts.google.com/gsi/client" async></script>
-    <script>tailwind.config = { darkMode: 'class' }</script>
+    <script>tailwind.config = { darkMode: 'class', theme: { extend: { animation: { 'fade-in': 'fadeIn 0.6s ease-out forwards', 'slide-up': 'slideUp 0.5s ease-out forwards' }, keyframes: { fadeIn: { '0%': { opacity: '0' }, '100%': { opacity: '1' } }, slideUp: { '0%': { opacity: '0', transform: 'translateY(20px)' }, '100%': { opacity: '1', transform: 'translateY(0)' } } } } } }</script>
     <style>
         .gradient-text { background: linear-gradient(135deg, #818cf8, #6366f1, #a78bfa); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
         .glass { background: rgba(17,24,39,0.8); backdrop-filter: blur(16px); }
+        .form-input { width: 100%; padding: 0.75rem 1rem; background: rgba(31,41,55,0.5); border: 1px solid rgba(75,85,99,0.5); border-radius: 0.75rem; color: white; font-size: 0.875rem; transition: all 0.2s; outline: none; }
+        .form-input:focus { border-color: rgba(99,102,241,0.7); box-shadow: 0 0 0 3px rgba(99,102,241,0.1); }
+        .form-input::placeholder { color: rgba(107,114,128,0.8); }
+        .form-input:read-only { background: rgba(17,24,39,0.4); color: rgba(156,163,175,0.8); cursor: not-allowed; }
+        .card-section { background: rgba(17,24,39,0.5); border: 1px solid rgba(55,65,81,0.5); border-radius: 1.25rem; padding: 1.5rem; }
+        .plan-card { transition: all 0.25s ease; }
+        .plan-card:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(99,102,241,0.12); }
+        .plan-card.selected { border-color: rgba(99,102,241,0.8) !important; background: rgba(99,102,241,0.05); }
+        .btn-primary { width: 100%; padding: 0.875rem; background: linear-gradient(135deg, #6366f1, #7c3aed); color: white; font-weight: 700; border-radius: 0.75rem; font-size: 0.875rem; transition: all 0.2s; border: none; cursor: pointer; }
+        .btn-primary:hover { background: linear-gradient(135deg, #4f46e5, #6d28d9); box-shadow: 0 8px 20px rgba(99,102,241,0.3); transform: translateY(-1px); }
+        .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: none; }
     </style>
 </head>
-<body class="bg-gray-950 text-gray-100 font-sans antialiased min-h-screen">
+<body class="bg-gray-950 text-gray-100 font-sans antialiased min-h-screen relative overflow-x-hidden">
+    <!-- Background Glow Effects -->
+    <div class="fixed inset-0 pointer-events-none">
+        <div class="absolute top-0 left-1/4 w-96 h-96 bg-indigo-600/5 rounded-full blur-3xl"></div>
+        <div class="absolute bottom-1/4 right-1/4 w-80 h-80 bg-purple-600/5 rounded-full blur-3xl"></div>
+    </div>
     <!-- Header -->
     <header class="sticky top-0 w-full z-50 glass border-b border-gray-800/50">
         <div class="w-full px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between">
@@ -40,44 +56,50 @@
             </div>
 
             <!-- VIEW: Sign In -->
-            <div id="view-signin" class="hidden text-center py-12">
-                <div class="w-16 h-16 mx-auto mb-6 bg-gray-800 border border-gray-700 rounded-full flex items-center justify-center">
-                    <svg class="w-8 h-8 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+            <div id="view-signin" class="hidden animate-fade-in">
+                <div class="text-center py-16">
+                    <div class="w-20 h-20 mx-auto mb-6 bg-gradient-to-br from-indigo-500/10 to-purple-500/10 border border-indigo-500/20 rounded-2xl flex items-center justify-center">
+                        <svg class="w-10 h-10 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+                    </div>
+                    <h2 class="text-3xl font-bold text-white mb-3">Welcome to DevTools Pro</h2>
+                    <p class="text-gray-400 text-sm mb-10 max-w-sm mx-auto">Sign in to manage your subscription, choose a plan, and get started with AI coding.</p>
+                    <div id="google-btn-container" class="flex justify-center"></div>
+                    <p class="text-gray-600 text-xs mt-6">We only use your email and name. No other data is accessed.</p>
                 </div>
-                <h2 class="text-2xl font-bold text-white mb-2">Welcome to DevTools Pro</h2>
-                <p class="text-gray-400 text-sm mb-8">Sign in to get started with your subscription.</p>
-                <div id="google-btn-container"></div>
             </div>
 
             <!-- VIEW: Registration Form -->
-            <div id="view-register" class="hidden">
+            <div id="view-register" class="hidden animate-slide-up">
                 <div class="text-center mb-8">
+                    <div class="w-12 h-12 mx-auto mb-4 bg-indigo-500/10 border border-indigo-500/20 rounded-xl flex items-center justify-center">
+                        <svg class="w-6 h-6 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                    </div>
                     <h2 class="text-2xl font-bold text-white mb-2">Complete Your <span class="gradient-text">Profile</span></h2>
-                    <p class="text-gray-400 text-sm">Tell us a bit about yourself to get started.</p>
+                    <p class="text-gray-400 text-sm">A few details to personalize your experience.</p>
                 </div>
-                <form id="register-form" class="bg-gray-900/50 border border-gray-800 rounded-2xl p-6 sm:p-8 space-y-4" novalidate>
+                <form id="register-form" class="card-section space-y-5" novalidate>
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
-                            <label class="block text-xs font-medium text-gray-300 mb-1.5">First Name</label>
-                            <input type="text" id="reg-first" required placeholder="Your first name" class="w-full px-4 py-3 bg-gray-800/50 border border-gray-700 rounded-xl text-white text-sm placeholder-gray-500 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all">
+                            <label class="block text-xs font-medium text-gray-400 mb-2 uppercase tracking-wide">First Name</label>
+                            <input type="text" id="reg-first" required placeholder="Rishabh" class="form-input">
                         </div>
                         <div>
-                            <label class="block text-xs font-medium text-gray-300 mb-1.5">Last Name</label>
-                            <input type="text" id="reg-last" required placeholder="Your last name" class="w-full px-4 py-3 bg-gray-800/50 border border-gray-700 rounded-xl text-white text-sm placeholder-gray-500 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all">
+                            <label class="block text-xs font-medium text-gray-400 mb-2 uppercase tracking-wide">Last Name</label>
+                            <input type="text" id="reg-last" required placeholder="Kumar" class="form-input">
                         </div>
                     </div>
                     <div>
-                        <label class="block text-xs font-medium text-gray-300 mb-1.5">Email</label>
-                        <input type="email" id="reg-email" readonly class="w-full px-4 py-3 bg-gray-800/30 border border-gray-700/50 rounded-xl text-gray-400 text-sm cursor-not-allowed">
+                        <label class="block text-xs font-medium text-gray-400 mb-2 uppercase tracking-wide">Email</label>
+                        <input type="email" id="reg-email" readonly class="form-input">
                     </div>
                     <div>
-                        <label class="block text-xs font-medium text-gray-300 mb-1.5">Phone Number</label>
-                        <input type="tel" id="reg-phone" required placeholder="+91 98765 43210" class="w-full px-4 py-3 bg-gray-800/50 border border-gray-700 rounded-xl text-white text-sm placeholder-gray-500 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all">
+                        <label class="block text-xs font-medium text-gray-400 mb-2 uppercase tracking-wide">Phone Number</label>
+                        <input type="tel" id="reg-phone" required placeholder="+91 98765 43210" class="form-input">
                     </div>
                     <div>
-                        <label class="block text-xs font-medium text-gray-300 mb-1.5">How did you hear about us?</label>
-                        <select id="reg-source" class="w-full px-4 py-3 bg-gray-800/50 border border-gray-700 rounded-xl text-white text-sm focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all">
-                            <option value="" disabled selected>Select an option</option>
+                        <label class="block text-xs font-medium text-gray-400 mb-2 uppercase tracking-wide">How did you hear about us?</label>
+                        <select id="reg-source" class="form-input">
+                            <option value="" disabled selected class="text-gray-500">Select an option</option>
                             <option value="Instagram">Instagram</option>
                             <option value="LinkedIn">LinkedIn</option>
                             <option value="WhatsApp">WhatsApp</option>
@@ -88,44 +110,64 @@
                         </select>
                     </div>
                     <p id="reg-error" class="hidden text-red-400 text-xs"></p>
-                    <button type="submit" class="w-full py-3.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl transition-all hover:shadow-lg hover:shadow-indigo-500/25 text-sm mt-2">Continue</button>
+                    <button type="submit" class="btn-primary mt-4">Continue</button>
                 </form>
             </div>
 
             <!-- VIEW: Choose Plan -->
-            <div id="view-plans" class="hidden">
+            <div id="view-plans" class="hidden animate-slide-up">
                 <div class="text-center mb-8">
+                    <div class="w-12 h-12 mx-auto mb-4 bg-emerald-500/10 border border-emerald-500/20 rounded-xl flex items-center justify-center">
+                        <svg class="w-6 h-6 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                    </div>
                     <h2 class="text-2xl font-bold text-white mb-2">Choose Your <span class="gradient-text">Plan</span></h2>
-                    <p class="text-gray-400 text-sm">All plans at 50% off. Same features, same models.</p>
+                    <p class="text-gray-400 text-sm">All plans at flat 50% off. No GST. Cancel anytime.</p>
                 </div>
-                <div class="space-y-4" id="plan-cards">
-                    <div class="plan-card p-5 bg-gray-900/50 border border-gray-800 rounded-2xl cursor-pointer hover:border-indigo-500/50 transition-all" data-plan="Pro" data-amount="946" data-credits="1,000">
+                <div class="space-y-3" id="plan-cards">
+                    <div class="plan-card p-5 card-section cursor-pointer" data-plan="Pro" data-amount="946" data-credits="1,000">
                         <div class="flex items-center justify-between">
-                            <div><h3 class="text-white font-bold">Pro</h3><p class="text-gray-500 text-xs">1,000 credits/month</p></div>
-                            <p class="text-emerald-400 font-bold text-lg">₹946<span class="text-gray-500 text-xs font-normal">/mo</span></p>
+                            <div class="flex items-center gap-4">
+                                <div class="w-10 h-10 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center"><span class="text-indigo-400 font-bold text-sm">P</span></div>
+                                <div><h3 class="text-white font-bold">Pro</h3><p class="text-gray-500 text-xs mt-0.5">1,000 credits/month</p></div>
+                            </div>
+                            <div class="text-right"><p class="text-emerald-400 font-bold text-lg">₹946</p><p class="text-gray-600 text-[10px] line-through">₹1,892</p></div>
                         </div>
                     </div>
-                    <div class="plan-card p-5 bg-gray-900/50 border-2 border-indigo-500/50 rounded-2xl cursor-pointer hover:border-indigo-500 transition-all relative" data-plan="Pro+" data-amount="1892" data-credits="2,000">
-                        <span class="absolute -top-2.5 right-4 px-2 py-0.5 bg-indigo-600 rounded text-[10px] font-bold">POPULAR</span>
+                    <div class="plan-card p-5 card-section cursor-pointer border-indigo-500/40 relative" data-plan="Pro+" data-amount="1892" data-credits="2,000">
+                        <span class="absolute -top-2.5 right-4 px-3 py-0.5 bg-gradient-to-r from-indigo-600 to-purple-600 rounded-full text-[10px] font-bold text-white">MOST POPULAR</span>
                         <div class="flex items-center justify-between">
-                            <div><h3 class="text-white font-bold">Pro+</h3><p class="text-gray-500 text-xs">2,000 credits/month</p></div>
-                            <p class="text-emerald-400 font-bold text-lg">₹1,892<span class="text-gray-500 text-xs font-normal">/mo</span></p>
+                            <div class="flex items-center gap-4">
+                                <div class="w-10 h-10 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center"><span class="text-indigo-400 font-bold text-sm">P+</span></div>
+                                <div><h3 class="text-white font-bold">Pro+</h3><p class="text-gray-500 text-xs mt-0.5">2,000 credits/month</p></div>
+                            </div>
+                            <div class="text-right"><p class="text-emerald-400 font-bold text-lg">₹1,892</p><p class="text-gray-600 text-[10px] line-through">₹3,784</p></div>
                         </div>
                     </div>
-                    <div class="plan-card p-5 bg-gray-900/50 border border-gray-800 rounded-2xl cursor-pointer hover:border-indigo-500/50 transition-all" data-plan="Pro Max" data-amount="4731" data-credits="5,000">
+                    <div class="plan-card p-5 card-section cursor-pointer" data-plan="Pro Max" data-amount="4731" data-credits="5,000">
                         <div class="flex items-center justify-between">
-                            <div><h3 class="text-white font-bold">Pro Max</h3><p class="text-gray-500 text-xs">5,000 credits/month</p></div>
-                            <p class="text-emerald-400 font-bold text-lg">₹4,731<span class="text-gray-500 text-xs font-normal">/mo</span></p>
+                            <div class="flex items-center gap-4">
+                                <div class="w-10 h-10 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center"><span class="text-purple-400 font-bold text-sm">PM</span></div>
+                                <div><h3 class="text-white font-bold">Pro Max</h3><p class="text-gray-500 text-xs mt-0.5">5,000 credits/month</p></div>
+                            </div>
+                            <div class="text-right"><p class="text-emerald-400 font-bold text-lg">₹4,731</p><p class="text-gray-600 text-[10px] line-through">₹9,461</p></div>
                         </div>
                     </div>
-                    <div class="plan-card p-5 bg-gray-900/50 border border-gray-800 rounded-2xl cursor-pointer hover:border-indigo-500/50 transition-all" data-plan="Power" data-amount="9461" data-credits="10,000">
+                    <div class="plan-card p-5 card-section cursor-pointer" data-plan="Power" data-amount="9461" data-credits="10,000">
                         <div class="flex items-center justify-between">
-                            <div><h3 class="text-white font-bold">Power</h3><p class="text-gray-500 text-xs">10,000 credits/month</p></div>
-                            <p class="text-emerald-400 font-bold text-lg">₹9,461<span class="text-gray-500 text-xs font-normal">/mo</span></p>
+                            <div class="flex items-center gap-4">
+                                <div class="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center"><span class="text-amber-400 font-bold text-sm">PW</span></div>
+                                <div><h3 class="text-white font-bold">Power</h3><p class="text-gray-500 text-xs mt-0.5">10,000 credits/month</p></div>
+                            </div>
+                            <div class="text-right"><p class="text-emerald-400 font-bold text-lg">₹9,461</p><p class="text-gray-600 text-[10px] line-through">₹18,922</p></div>
                         </div>
                     </div>
                 </div>
-                <p class="text-center text-gray-500 text-xs mt-4">All plans include all premium AI models, IDE + CLI + Web, 1:1 Meet setup.</p>
+                <div class="mt-6 p-4 bg-gray-800/30 border border-gray-700/30 rounded-xl">
+                    <div class="flex items-start gap-3">
+                        <svg class="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M2.166 4.999A11.954 11.954 0 0010 1.944 11.954 11.954 0 0017.834 5c.11.65.166 1.32.166 2.001 0 5.225-3.34 9.67-8 11.317C5.34 16.67 2 12.225 2 7c0-.682.057-1.35.166-2.001zm11.541 3.708a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
+                        <p class="text-gray-400 text-xs leading-relaxed">All plans include Claude Opus, Sonnet, Auto + all premium models. IDE, CLI, Web access. 1:1 Google Meet setup. WhatsApp priority support.</p>
+                    </div>
+                </div>
             </div>
 
             <!-- VIEW: Payment -->
