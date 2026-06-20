@@ -9,6 +9,12 @@
 
 require('dotenv').config();
 
+// Render's Node 18 needs fetch polyfill for DNS resolution
+globalThis.fetch = require('cross-fetch');
+globalThis.Headers = require('cross-fetch').Headers;
+globalThis.Request = require('cross-fetch').Request;
+globalThis.Response = require('cross-fetch').Response;
+
 const express = require('express');
 const cors = require('cors');
 const rateLimit = require('express-rate-limit');
@@ -199,31 +205,38 @@ app.post('/auth/register', requireAuth, async (req, res) => {
     const client = getClient();
     const fullName = `${firstName.trim()} ${lastName.trim()}`;
 
-    const { data, error } = await client
+    // Update without returning data (avoids Premature close with cross-fetch)
+    const { error } = await client
       .from('users')
       .update({
         name: fullName,
         source: source,
         registration_complete: true
       })
-      .eq('id', req.user.userId)
-      .select()
-      .single();
+      .eq('id', req.user.userId);
 
     if (error) {
       console.error('Register error:', JSON.stringify(error));
       return res.status(500).json({ status: 'error', message: error.message });
     }
 
+    // Fetch user data separately
+    const { data } = await client
+      .from('users')
+      .select('*')
+      .eq('id', req.user.userId)
+      .single();
+
     res.json({
       status: 'success',
       user: {
-        id: data.id, email: data.email, name: data.name, picture: data.picture,
-        currentPlan: data.current_plan, planStatus: data.plan_status,
-        planStartDate: data.plan_start_date, planEndDate: data.plan_end_date, meetLink: data.meet_link
+        id: data?.id || req.user.userId, email: data?.email || req.user.email, name: data?.name || fullName,
+        picture: data?.picture, currentPlan: data?.current_plan, planStatus: data?.plan_status || 'none',
+        planStartDate: data?.plan_start_date, planEndDate: data?.plan_end_date, meetLink: data?.meet_link,
+        registrationComplete: true
       }
     });
-    console.log(`📝 Registration: ${fullName} (${data.email})`);
+    console.log(`📝 Registration: ${fullName}`);
   } catch (error) {
     console.error('Register exception:', error.message);
     res.status(500).json({ status: 'error', message: error.message });
