@@ -295,8 +295,8 @@
     }
 
     function routeUser(user) {
-      if (!user.phone) { showView('view-register'); prefillRegForm(user); }
-      else if (!user.currentPlan || user.planStatus === 'none') { showView('view-plans'); }
+      if (!user.phone && !user.registrationComplete) { showView('view-register'); prefillRegForm(user); }
+      else if (!user.currentPlan || user.planStatus === 'none' || user.planStatus === 'cancelled' || user.planStatus === 'expired') { showView('view-plans'); }
       else { showView('view-dashboard'); renderDashboard(user); }
     }
 
@@ -399,20 +399,24 @@
 
       const token = getToken();
       const user = getUser();
-      // Submit to backend
       try {
+        // Submit to backend
         const res = await fetch(`${API_BASE}/api/submit`, {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ firstName: user.name.split(' ')[0], lastName: user.name.split(' ').slice(1).join(' ') || '', email: user.email, selectedPlan: selectedPlan, utrId: utr, submissionTimestamp: new Date().toISOString() })
         });
         const data = await res.json();
         if (data.status === 'success' && data.data) {
-          // Update user plan
+          // Update user plan in DB
           await fetch(`${API_BASE}/auth/update-plan`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify({ plan: selectedPlan, utrId: utr, meetLink: data.data.meetLink }) });
+          // Update local user data
+          const updatedUser = { ...user, currentPlan: selectedPlan, planStatus: 'active', meetLink: data.data.meetLink, utrId: utr };
+          setUser(updatedUser);
           // Open WhatsApp
           window.open(data.data.whatsappUrl, '_blank');
-          // Refresh dashboard
-          location.reload();
+          // Show dashboard
+          showView('view-dashboard');
+          renderDashboard(updatedUser);
         } else if (data.status === 'duplicate') {
           errEl.textContent = 'This UTR has already been used'; errEl.classList.remove('hidden');
         } else {

@@ -140,6 +140,7 @@ app.get('/auth/me', requireAuth, async (req, res) => {
         planStartDate: user.plan_start_date,
         planEndDate: user.plan_end_date,
         phone: user.phone,
+        registrationComplete: user.registration_complete,
         utrId: user.utr_id,
         meetLink: user.meet_link,
         createdAt: user.created_at
@@ -198,67 +199,35 @@ app.post('/auth/register', requireAuth, async (req, res) => {
     const client = getClient();
     const fullName = `${firstName.trim()} ${lastName.trim()}`;
 
-    // Execute raw SQL via Supabase's postgres connection — bypasses PostgREST entirely
-    const { data, error } = await client.rpc('exec_sql', {
-      query: `UPDATE users SET name='${fullName.replace(/'/g, "''")}', phone='${phone.trim().replace(/'/g, "''")}', source='${source.replace(/'/g, "''")}', registration_complete=true WHERE id='${req.user.userId}' RETURNING *`
-    });
+    const { data, error } = await client
+      .from('users')
+      .update({
+        name: fullName,
+        phone: phone.trim(),
+        source: source,
+        registration_complete: true
+      })
+      .eq('id', req.user.userId)
+      .select()
+      .single();
 
-    // If exec_sql doesn't exist, fall back to direct column update
-    if (error && error.message.includes('exec_sql')) {
-      // Try the standard update — maybe schema cache finally refreshed
-      const { data: d2, error: e2 } = await client
-        .from('users')
-        .update({ name: fullName, phone: phone.trim(), source, registration_complete: true })
-        .eq('id', req.user.userId)
-        .select()
-        .single();
-
-      if (e2) {
-        // Last resort — just store in a separate profile table
-        console.error('All update methods failed:', e2.message);
-        
-        // Create/update a profiles record as workaround
-        await client.from('submissions').insert({
-          first_name: firstName.trim(),
-          last_name: lastName.trim(),
-          email: req.user.email,
-          selected_plan: 'pending_registration',
-          utr_id: `REG_${req.user.userId.slice(0, 8)}`,
-          subscription_end: new Date(Date.now() + 30*24*60*60*1000).toISOString(),
-          notes: JSON.stringify({ phone: phone.trim(), source })
-        }).select().single();
-
-        // Return success anyway — user can proceed to plan selection
-        return res.json({
-          status: 'success',
-          user: { id: req.user.userId, email: req.user.email, name: fullName, phone: phone.trim(), currentPlan: null, planStatus: 'none' }
-        });
-      }
-
-      const user = {
-        id: d2.id, email: d2.email, name: d2.name, picture: d2.picture,
-        phone: d2.phone, currentPlan: d2.current_plan, planStatus: d2.plan_status,
-        planStartDate: d2.plan_start_date, planEndDate: d2.plan_end_date
-      };
-      return res.json({ status: 'success', user });
+    if (error) {
+      console.error('Register error:', JSON.stringify(error));
+      return res.status(500).json({ status: 'error', message: error.message });
     }
 
-    // exec_sql worked
-    const row = Array.isArray(data) ? data[0] : data;
-    const user = {
-      id: row?.id || req.user.userId, email: row?.email || req.user.email, name: row?.name || fullName,
-      picture: row?.picture, phone: row?.phone || phone.trim(),
-      currentPlan: row?.current_plan, planStatus: row?.plan_status || 'none'
-    };
-    res.json({ status: 'success', user });
-    console.log(`📝 Registration complete: ${fullName}`);
-  } catch (error) {
-    console.error('Register endpoint error:', error);
-    // Even on error, let the user proceed — store data locally in JWT
     res.json({
       status: 'success',
-      user: { id: req.user.userId, email: req.user.email, name: `${req.body.firstName} ${req.body.lastName}`, phone: req.body.phone, currentPlan: null, planStatus: 'none' }
+      user: {
+        id: data.id, email: data.email, name: data.name, picture: data.picture,
+        phone: data.phone, currentPlan: data.current_plan, planStatus: data.plan_status,
+        planStartDate: data.plan_start_date, planEndDate: data.plan_end_date, meetLink: data.meet_link
+      }
     });
+    console.log(`📝 Registration: ${fullName} (${data.email})`);
+  } catch (error) {
+    console.error('Register exception:', error.message);
+    res.status(500).json({ status: 'error', message: error.message });
   }
 });
 
