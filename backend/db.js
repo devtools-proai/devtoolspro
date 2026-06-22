@@ -12,12 +12,43 @@ const SUPABASE_KEY = process.env.SUPABASE_KEY;
 
 let supabase;
 
+/**
+ * Resilient fetch wrapper.
+ * Retries on transient network errors ("Premature close", "fetch failed",
+ * "ECONNRESET", "socket hang up") that happen when Render's idle keep-alive
+ * connections are dropped by Supabase's load balancer.
+ */
+async function resilientFetch(url, options = {}, attempt = 1) {
+  const MAX_ATTEMPTS = 3;
+  // Don't reuse a stale connection — ask the remote to close after this request
+  const headers = { ...(options.headers || {}), connection: 'close' };
+  try {
+    return await fetch(url, { ...options, headers });
+  } catch (err) {
+    const msg = String(err && (err.message || err));
+    const cause = String((err && err.cause && err.cause.message) || '');
+    const transient = /Premature close|fetch failed|ECONNRESET|socket hang up|ETIMEDOUT|EAI_AGAIN|other side closed/i
+      .test(msg + ' ' + cause);
+
+    if (transient && attempt < MAX_ATTEMPTS) {
+      const backoff = 200 * attempt; // 200ms, 400ms
+      console.warn(`Supabase fetch transient error (attempt ${attempt}/${MAX_ATTEMPTS}): ${msg}. Retrying in ${backoff}ms...`);
+      await new Promise(r => setTimeout(r, backoff));
+      return resilientFetch(url, options, attempt + 1);
+    }
+    throw err;
+  }
+}
+
 function getClient() {
   if (!supabase) {
     if (!SUPABASE_URL || !SUPABASE_KEY) {
       throw new Error('SUPABASE_URL and SUPABASE_KEY must be set in environment variables');
     }
-    supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+    supabase = createClient(SUPABASE_URL, SUPABASE_KEY, {
+      global: { fetch: resilientFetch },
+      auth: { persistSession: false }
+    });
   }
   return supabase;
 }

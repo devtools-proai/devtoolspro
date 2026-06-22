@@ -68,19 +68,28 @@ async function verifyGoogleToken(idToken) {
  * Create or update user in Supabase and return user record
  */
 async function findOrCreateUser(client, googleUser) {
-  // Check if user exists
-  const { data: existing } = await client
+  // Check if user exists. Use maybeSingle() so "no rows" is data:null (not an error),
+  // and any other error surfaces so we can fail loudly instead of double-inserting.
+  const { data: existing, error: lookupError } = await client
     .from('users')
     .select('*')
     .eq('google_id', googleUser.googleId)
-    .single();
+    .maybeSingle();
+
+  if (lookupError) {
+    console.error('Lookup user error:', lookupError.message || lookupError);
+    return null;
+  }
 
   if (existing) {
-    // Update last login
-    await client
+    // Update last login (best-effort — don't fail login if this update hiccups)
+    const { error: updateError } = await client
       .from('users')
       .update({ last_login: new Date().toISOString(), picture: googleUser.picture })
       .eq('id', existing.id);
+    if (updateError) {
+      console.warn('Update last_login warning:', updateError.message || updateError);
+    }
     return existing;
   }
 
@@ -100,7 +109,7 @@ async function findOrCreateUser(client, googleUser) {
     .single();
 
   if (error) {
-    console.error('Create user error:', error.message);
+    console.error('Create user error:', error.message || error);
     return null;
   }
 
