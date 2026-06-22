@@ -95,29 +95,114 @@
 
         /* Hide scrollbar in QR overlay */
         #dash-qr canvas, #dash-qr img { display: block; }
+
+        /* ═══════════════════════════════════════════════════════════════
+           2026 SaaS — Flagship Welcome (scoped to #view-signin + bg + nav)
+           ═══════════════════════════════════════════════════════════════ */
+
+        /* Cinematic ambient orbs (drifting) — replaces the static glow div on body */
+        @keyframes orb-drift {
+            0%, 100% { transform: translate(0, 0) scale(1); }
+            33%      { transform: translate(40px, -30px) scale(1.06); }
+            66%      { transform: translate(-30px, 35px) scale(0.96); }
+        }
+        .ambient-bg { position: fixed; inset: 0; pointer-events: none; z-index: -10; overflow: hidden;
+            background:
+                radial-gradient(ellipse 70% 55% at 50% 0%, rgba(168,85,247,0.16), transparent 60%),
+                radial-gradient(ellipse 55% 45% at 100% 100%, rgba(236,72,153,0.12), transparent 60%),
+                radial-gradient(ellipse 55% 45% at 0% 100%, rgba(99,102,241,0.10), transparent 60%);
+        }
+        .ambient-bg .orb { position: absolute; border-radius: 50%; filter: blur(80px); opacity: 0.55; mix-blend-mode: screen; animation: orb-drift 24s ease-in-out infinite; }
+        .ambient-bg .orb.o1 { width: 540px; height: 540px; left: -120px; top: -140px; background: radial-gradient(circle, rgba(168,85,247,0.50), transparent 65%); }
+        .ambient-bg .orb.o2 { width: 620px; height: 620px; right: -160px; top: 6%;   background: radial-gradient(circle, rgba(236,72,153,0.36), transparent 65%); animation-delay: -7s;  animation-duration: 28s; }
+        .ambient-bg .orb.o3 { width: 480px; height: 480px; left: 35%;    bottom: -180px; background: radial-gradient(circle, rgba(129,140,248,0.42), transparent 65%); animation-delay: -14s; animation-duration: 26s; }
+        .ambient-bg .grain  { position: absolute; inset: 0; opacity: 0.05; mix-blend-mode: overlay;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0.6 0'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)' opacity='0.55'/%3E%3C/svg%3E");
+        }
+        .ambient-bg .vignette { position: absolute; inset: 0; background: radial-gradient(ellipse 90% 80% at 50% 50%, transparent 50%, rgba(0,0,0,0.55) 100%); }
+
+        /* Header chrome additions (additive — existing IDs untouched) */
+        .nav-shortcut { font-size: 11px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: rgb(156,163,175); transition: color .2s ease; }
+        .nav-shortcut:hover { color: rgb(243,244,246); }
+        .nav-icon-btn { width: 34px; height: 34px; display: inline-flex; align-items: center; justify-content: center; border-radius: 10px; border: 1px solid rgba(255,255,255,0.07); background: rgba(255,255,255,0.02); color: rgb(203,199,224); cursor: pointer; transition: all .2s ease; }
+        .nav-icon-btn:hover { background: rgba(255,255,255,0.06); border-color: rgba(255,255,255,0.14); color: white; }
+        .nav-fallback-avatar { width: 30px; height: 30px; border-radius: 50%; background: linear-gradient(135deg,#f59e0b,#ec4899); display: inline-flex; align-items: center; justify-content: center; font-size: 13px; border: 2px solid rgba(255,255,255,0.12); }
+
+        /* Flagship sign-in panes — bigger, deeper glass with 1px inner highlight */
+        .welcome-pane { position: relative; padding: 3.25rem 3rem; border-radius: 1.75rem; background: linear-gradient(180deg, rgba(28,22,56,0.55) 0%, rgba(14,10,30,0.65) 100%); backdrop-filter: blur(22px) saturate(140%); -webkit-backdrop-filter: blur(22px) saturate(140%); border: 1px solid rgba(255,255,255,0.07); box-shadow: 0 30px 80px -30px rgba(0,0,0,0.7), 0 8px 24px -8px rgba(0,0,0,0.5); overflow: hidden; min-height: 540px; display: flex; flex-direction: column; justify-content: center; opacity: 0; transform: translateY(20px); animation: welcome-in .8s cubic-bezier(.2,.8,.2,1) forwards; }
+        .welcome-pane.left  { animation-delay: .05s; }
+        .welcome-pane.right { animation-delay: .18s; }
+        .welcome-pane::before { content: ''; position: absolute; inset: 0; border-radius: inherit; padding: 1px; background: linear-gradient(180deg, rgba(255,255,255,0.18), rgba(255,255,255,0.03) 30%, transparent 60%); -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude; pointer-events: none; }
+        .welcome-pane::after  { content: ''; position: absolute; top: -100px; right: -100px; width: 360px; height: 360px; background: radial-gradient(circle, rgba(168,85,247,0.18), transparent 60%); pointer-events: none; }
+        @keyframes welcome-in { to { opacity: 1; transform: translateY(0); } }
+
+        /* Pills */
+        .welcome-pill { display: inline-flex; align-items: center; padding: 6px 12px; border-radius: 9999px; font-size: 10px; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase; }
+        .welcome-pill.violet { color: #c4b5fd; background: rgba(168,85,247,0.12); border: 1px solid rgba(168,85,247,0.28); }
+        .welcome-pill.amber  { color: #fde047; background: rgba(244,200,66,0.10); border: 1px solid rgba(244,200,66,0.28); }
+
+        /* Welcome typography */
+        .welcome-h1 { font-size: 56px; font-weight: 800; line-height: 1.04; letter-spacing: -0.035em; margin: 22px 0 18px; color: #f5f3ff; }
+        .welcome-h1 .accent { display: block; background: linear-gradient(135deg,#c084fc 0%,#ec4899 60%,#f472b6 100%); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+        .welcome-lede { font-size: 16px; line-height: 1.65; color: rgb(139,134,168); max-width: 460px; margin: 0 0 36px; }
+        .welcome-h2 { font-size: 36px; font-weight: 800; line-height: 1.1; letter-spacing: -0.028em; margin: 18px 0 32px; color: #f5f3ff; }
+
+        /* GSI button shell — wraps Google's renderButton output to give it the white pill look */
+        .gsi-shell { width: 100%; max-width: 460px; margin-bottom: 18px; }
+        .gsi-shell #google-btn-container { width: 100%; display: block; }
+        .gsi-shell #google-btn-container > div,
+        .gsi-shell #google-btn-container iframe { width: 100% !important; max-width: 100% !important; }
+        .welcome-legal { font-size: 12px; color: rgb(93,88,120); max-width: 460px; line-height: 1.6; text-align: center; margin: 0 auto; }
+
+        /* Feature list (right pane) */
+        .welcome-features { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 22px; }
+        .welcome-features li { display: grid; grid-template-columns: 28px 1fr; gap: 16px; align-items: start; }
+        .welcome-check { width: 26px; height: 26px; border-radius: 50%; background: rgba(34,197,94,0.12); border: 1px solid rgba(34,197,94,0.35); display: inline-flex; align-items: center; justify-content: center; color: #4ade80; margin-top: 2px; box-shadow: 0 0 14px rgba(34,197,94,0.22); }
+        .welcome-feat-title { display: block; font-size: 15px; font-weight: 700; color: #f5f3ff; margin-bottom: 4px; letter-spacing: -0.01em; }
+        .welcome-feat-desc  { display: block; font-size: 13.5px; color: rgb(139,134,168); line-height: 1.55; }
+
+        @media (max-width: 1080px) { .welcome-pane { padding: 2.5rem 2.25rem; } .welcome-h1 { font-size: 46px; } }
+        @media (max-width: 880px)  { .welcome-pane { padding: 2rem 1.75rem; min-height: auto; } .welcome-h1 { font-size: 36px; } .welcome-h2 { font-size: 26px; } }
     </style>
 </head>
 <body class="bg-gray-950 text-gray-100 antialiased min-h-screen relative overflow-x-hidden">
-    <!-- Background Glow -->
-    <div class="fixed inset-0 pointer-events-none -z-10">
-        <div class="absolute top-[-10%] left-1/4 w-[32rem] h-[32rem] bg-indigo-600/8 rounded-full blur-[120px]"></div>
-        <div class="absolute bottom-1/4 right-[-8%] w-[28rem] h-[28rem] bg-purple-600/8 rounded-full blur-[120px]"></div>
-        <div class="absolute top-1/3 left-[-10%] w-[24rem] h-[24rem] bg-fuchsia-600/5 rounded-full blur-[120px]"></div>
+    <!-- Cinematic Ambient Background -->
+    <div class="ambient-bg" aria-hidden="true">
+        <span class="orb o1"></span>
+        <span class="orb o2"></span>
+        <span class="orb o3"></span>
+        <span class="grain"></span>
+        <span class="vignette"></span>
     </div>
 
     <!-- Header -->
     <header class="sticky top-0 w-full z-40 glass border-b border-gray-800/60">
-        <div class="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between">
-            <a href="index.html" class="inline-flex items-center gap-2.5 text-xl font-extrabold">
+        <div class="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between gap-4">
+            <a href="index.html" class="inline-flex items-center gap-2.5 text-xl font-extrabold flex-shrink-0">
                 <span class="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-[0_4px_14px_rgba(99,102,241,0.35)]">
                     <svg class="w-4.5 h-4.5 text-white" width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"/></svg>
                 </span>
                 <span class="gradient-text">DevTools Pro</span>
             </a>
-            <div id="header-user" class="hidden items-center gap-3">
-                <img id="header-avatar" class="w-8 h-8 rounded-full border border-gray-700 object-cover" src="" alt="">
-                <span id="header-name" class="text-sm text-gray-300 hidden sm:block"></span>
-                <button id="logout-btn" class="px-3 py-1.5 text-xs text-gray-400 hover:text-white border border-gray-700/70 hover:border-gray-500 rounded-lg transition-all">Sign Out</button>
+            <nav class="hidden md:flex items-center gap-7 ml-2">
+                <a href="index.html#models" class="nav-shortcut">Tools</a>
+                <a href="index.html#pricing" class="nav-shortcut">Pricing</a>
+                <a href="index.html#reseller" class="nav-shortcut">Reseller</a>
+                <a href="index.html#faq" class="nav-shortcut">Support</a>
+            </nav>
+            <div class="flex items-center gap-3 ml-auto">
+                <button class="nav-icon-btn hidden sm:inline-flex" aria-label="Notifications" title="Notifications">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
+                </button>
+                <button class="nav-icon-btn hidden sm:inline-flex" aria-label="Settings" title="Settings">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h0a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v0a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+                </button>
+                <span id="header-anon-avatar" class="nav-fallback-avatar" aria-hidden="true">👤</span>
+                <div id="header-user" class="hidden items-center gap-3">
+                    <img id="header-avatar" class="w-8 h-8 rounded-full border border-gray-700 object-cover" src="" alt="">
+                    <span id="header-name" class="text-sm text-gray-300 hidden sm:block"></span>
+                    <button id="logout-btn" class="px-3 py-1.5 text-xs text-gray-400 hover:text-white border border-gray-700/70 hover:border-gray-500 rounded-lg transition-all">Sign Out</button>
+                </div>
             </div>
         </div>
     </header>
@@ -134,28 +219,63 @@
                 <p class="mt-6 text-sm text-gray-400">Loading your workspace…</p>
             </div>
 
-            <!-- VIEW: Sign In (centered, two-column hero on desktop) -->
+            <!-- VIEW: Sign In (2026 flagship welcome) -->
             <div id="view-signin" class="hidden animate-fade-in">
-                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center max-w-5xl mx-auto pt-6">
-                    <div class="pane">
-                        <span class="eyebrow">Get started</span>
-                        <h1 class="mt-3 text-3xl sm:text-4xl font-extrabold text-white leading-tight">Welcome to <span class="gradient-text">DevTools Pro</span></h1>
-                        <p class="mt-4 text-gray-400 text-sm leading-relaxed">Sign in to manage your subscription, choose a plan, and get instant access to AI coding tools.</p>
-                        <div class="mt-8">
-                            <div id="google-btn-container" class="flex"></div>
-                            <p class="text-gray-600 text-xs mt-4">We only use your email and name. No other data is accessed.</p>
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-7 max-w-6xl mx-auto pt-2">
+                    <section class="welcome-pane left">
+                        <span class="welcome-pill violet">Get Started</span>
+                        <h1 class="welcome-h1">
+                            Welcome to
+                            <span class="accent">DevTools Pro</span>
+                        </h1>
+                        <p class="welcome-lede">Sign in to manage your subscription, choose a plan, and get instant access to AI coding tools.</p>
+
+                        <div class="gsi-shell">
+                            <div id="google-btn-container"></div>
                         </div>
-                    </div>
-                    <aside class="pane hidden lg:block">
-                        <span class="eyebrow">What you get</span>
-                        <h3 class="mt-3 text-lg font-bold text-white mb-4">Everything in one place</h3>
-                        <div class="space-y-1">
-                            <div class="feature-row"><svg fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg><span>Claude Opus, Sonnet & all premium models</span></div>
-                            <div class="feature-row"><svg fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg><span>IDE, CLI, and Web access</span></div>
-                            <div class="feature-row"><svg fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg><span>1:1 Google Meet onboarding</span></div>
-                            <div class="feature-row"><svg fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg><span>Priority support on WhatsApp</span></div>
-                            <div class="feature-row"><svg fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg><span>Cancel anytime — no GST, no hidden fees</span></div>
-                        </div>
+                        <p class="welcome-legal">We only use your email and name. No other data is accessed. By continuing, you agree to our terms of service.</p>
+                    </section>
+
+                    <aside class="welcome-pane right hidden lg:flex">
+                        <span class="welcome-pill amber">What You Get</span>
+                        <h2 class="welcome-h2">Everything in one place</h2>
+                        <ul class="welcome-features">
+                            <li>
+                                <span class="welcome-check"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>
+                                <div>
+                                    <span class="welcome-feat-title">Claude Opus, Sonnet &amp; all premium models</span>
+                                    <span class="welcome-feat-desc">The latest state-of-the-art models for superior reasoning and coding.</span>
+                                </div>
+                            </li>
+                            <li>
+                                <span class="welcome-check"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>
+                                <div>
+                                    <span class="welcome-feat-title">IDE, CLI, and Web access</span>
+                                    <span class="welcome-feat-desc">Seamless integration wherever you work — terminal, editor, or browser.</span>
+                                </div>
+                            </li>
+                            <li>
+                                <span class="welcome-check"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>
+                                <div>
+                                    <span class="welcome-feat-title">1:1 Google Meet onboarding</span>
+                                    <span class="welcome-feat-desc">Personalized setup session to maximize your development workflow.</span>
+                                </div>
+                            </li>
+                            <li>
+                                <span class="welcome-check"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>
+                                <div>
+                                    <span class="welcome-feat-title">Priority support on WhatsApp</span>
+                                    <span class="welcome-feat-desc">Get help instantly from real developers who understand your code.</span>
+                                </div>
+                            </li>
+                            <li>
+                                <span class="welcome-check"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>
+                                <div>
+                                    <span class="welcome-feat-title">Cancel anytime — no GST, no hidden fees</span>
+                                    <span class="welcome-feat-desc">Transparent pricing with zero long-term commitment required.</span>
+                                </div>
+                            </li>
+                        </ul>
                     </aside>
                 </div>
             </div>
@@ -560,6 +680,9 @@
         wrap.classList.add('flex');
         document.getElementById('header-avatar').src = user.picture || '';
         document.getElementById('header-name').textContent = user.name || '';
+        // Hide the anonymous placeholder once the real user chrome is shown
+        const anon = document.getElementById('header-anon-avatar');
+        if (anon) anon.style.display = 'none';
     }
 
     /* ─── Google Sign-In ─── */
@@ -567,7 +690,8 @@
         fetch(`${API_BASE}/auth/google-client-id`).then(r => r.json()).then(data => {
             if (typeof google !== 'undefined' && google.accounts) {
                 google.accounts.id.initialize({ client_id: data.clientId, callback: handleGoogleAuth });
-                google.accounts.id.renderButton(document.getElementById('google-btn-container'), { theme: 'filled_blue', size: 'large', width: 300, text: 'signin_with' });
+                const w = Math.max(280, Math.min(460, document.querySelector('.gsi-shell')?.offsetWidth || 420));
+                google.accounts.id.renderButton(document.getElementById('google-btn-container'), { theme: 'filled_white', size: 'large', shape: 'pill', text: 'signin_with', logo_alignment: 'center', width: w });
             }
         }).catch(() => {});
     }
