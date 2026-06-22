@@ -255,6 +255,16 @@
         .plans-sub { font-size: 16px; color: rgb(155,150,180); margin: 0; }
         .plans-sub-accent { color: #fde047; font-weight: 700; }
 
+        /* Currency toggle (segmented pill) */
+        .curr-toggle { display: inline-flex; padding: 4px; gap: 0; border-radius: 999px; background: rgba(15,10,28,0.6); border: 1px solid rgba(255,255,255,0.08); margin-top: 1.5rem; }
+        .curr-toggle button { padding: 8px 22px; border: none; background: transparent; color: rgb(155,150,180); font-size: 12px; font-weight: 700; letter-spacing: 0.06em; cursor: pointer; border-radius: 999px; transition: background .2s, color .2s, box-shadow .2s; font-family: inherit; }
+        .curr-toggle button:hover { color: #f5f3ff; }
+        .curr-toggle button.active { background: linear-gradient(135deg, #d8b4fe, #a855f7); color: #1e1b4b; box-shadow: 0 4px 12px -2px rgba(168,85,247,0.4); }
+
+        /* Currency-aware visibility — driven by .plans-stage[data-curr] */
+        .plans-stage[data-curr="USD"] [data-curr-show="INR"] { display: none; }
+        .plans-stage[data-curr="INR"] [data-curr-show="USD"] { display: none; }
+
         .plans-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1.5rem; }
 
         /* Plan card — overrides the legacy .plan-card / .pane-flat styling above */
@@ -525,11 +535,15 @@
 
             <!-- VIEW: Choose Plan (4-up grid + sticky summary bar) -->
             <div id="view-plans" class="hidden animate-slide-up">
-                <div class="plans-stage">
+                <div class="plans-stage" data-curr="INR">
                     <header class="plans-head">
                         <span class="plans-eyebrow">Step 2 of 2</span>
                         <h1 class="plans-title">Choose your plan</h1>
                         <p class="plans-sub">All plans at flat <span class="plans-sub-accent">50% off</span> · No GST · Cancel anytime</p>
+                        <div class="curr-toggle" role="tablist" aria-label="Currency">
+                            <button id="curr-inr" type="button" class="active" aria-pressed="true">INR ₹</button>
+                            <button id="curr-usd" type="button" aria-pressed="false">USD $</button>
+                        </div>
                     </header>
 
                     <div class="plans-grid" id="plan-cards">
@@ -548,7 +562,11 @@
                                 </svg>
                             </span>
                             <h3 class="plan-name">Pro</h3>
-                            <div class="plan-price"><span class="plan-price-old">₹1,892</span><span class="plan-price-new">₹946</span><span class="plan-price-cycle">/mo</span></div>
+                            <div class="plan-price">
+                                <span class="plan-price-old"><span data-curr-show="INR">₹1,892</span><span data-curr-show="USD">$20</span></span>
+                                <span class="plan-price-new"><span data-curr-show="INR">₹946</span><span data-curr-show="USD">$10</span></span>
+                                <span class="plan-price-cycle">/mo</span>
+                            </div>
                             <span class="plan-save">SAVE 50%</span>
                             <ul class="plan-features">
                                 <li><svg fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>1,000 credits / month</li>
@@ -576,7 +594,11 @@
                                 </svg>
                             </span>
                             <h3 class="plan-name">Pro+</h3>
-                            <div class="plan-price"><span class="plan-price-old">₹3,784</span><span class="plan-price-new">₹1,892</span><span class="plan-price-cycle">/mo</span></div>
+                            <div class="plan-price">
+                                <span class="plan-price-old"><span data-curr-show="INR">₹3,784</span><span data-curr-show="USD">$40</span></span>
+                                <span class="plan-price-new"><span data-curr-show="INR">₹1,892</span><span data-curr-show="USD">$20</span></span>
+                                <span class="plan-price-cycle">/mo</span>
+                            </div>
                             <span class="plan-save">SAVE 50%</span>
                             <ul class="plan-features">
                                 <li><svg fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>2,000 credits / month</li>
@@ -602,7 +624,11 @@
                                 </svg>
                             </span>
                             <h3 class="plan-name">Pro Max</h3>
-                            <div class="plan-price"><span class="plan-price-old">₹9,461</span><span class="plan-price-new">₹4,731</span><span class="plan-price-cycle">/mo</span></div>
+                            <div class="plan-price">
+                                <span class="plan-price-old"><span data-curr-show="INR">₹9,461</span><span data-curr-show="USD">$100</span></span>
+                                <span class="plan-price-new"><span data-curr-show="INR">₹4,731</span><span data-curr-show="USD">$50</span></span>
+                                <span class="plan-price-cycle">/mo</span>
+                            </div>
                             <span class="plan-save">SAVE 50%</span>
                             <ul class="plan-features">
                                 <li><svg fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>5,000 credits / month</li>
@@ -626,7 +652,11 @@
                                 </svg>
                             </span>
                             <h3 class="plan-name">Power</h3>
-                            <div class="plan-price"><span class="plan-price-old">₹18,922</span><span class="plan-price-new">₹9,461</span><span class="plan-price-cycle">/mo</span></div>
+                            <div class="plan-price">
+                                <span class="plan-price-old"><span data-curr-show="INR">₹18,922</span><span data-curr-show="USD">$200</span></span>
+                                <span class="plan-price-new"><span data-curr-show="INR">₹9,461</span><span data-curr-show="USD">$100</span></span>
+                                <span class="plan-price-cycle">/mo</span>
+                            </div>
                             <span class="plan-save">SAVE 50%</span>
                             <ul class="plan-features">
                                 <li><svg fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>10,000 credits / month</li>
@@ -674,12 +704,19 @@
                                     <span class="plans-bar-divider"></span>
                                     <div class="plans-bar-info">
                                         <span class="plans-bar-label">Today's total · <span id="sum-days">—</span> days</span>
-                                        <span class="plans-bar-value plans-bar-total">₹<span id="sum-prorated">0</span></span>
+                                        <span class="plans-bar-value plans-bar-total">
+                                            <span data-curr-show="INR">₹<span id="sum-prorated">0</span></span>
+                                            <span data-curr-show="USD">$<span id="sum-prorated-usd">0</span></span>
+                                        </span>
                                     </div>
                                     <span class="plans-bar-divider"></span>
                                     <div class="plans-bar-info">
                                         <span class="plans-bar-label">From next month</span>
-                                        <span class="plans-bar-value">₹<span id="sum-monthly">0</span><span class="plans-bar-cycle">/mo</span></span>
+                                        <span class="plans-bar-value">
+                                            <span data-curr-show="INR">₹<span id="sum-monthly">0</span></span>
+                                            <span data-curr-show="USD">$<span id="sum-monthly-usd">0</span></span>
+                                            <span class="plans-bar-cycle">/mo</span>
+                                        </span>
                                     </div>
                                     <!-- preserved for JS contract; used below in note -->
                                     <span style="display:none" id="sum-credits"></span>
@@ -691,7 +728,7 @@
                             </div>
                             <p class="plans-bar-note">
                                 <svg class="info-icon" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><circle cx="12" cy="8" r="0.6" fill="currentColor"/></svg>
-                                <span>Prorated billing — you're only charged for the <strong><span id="sum-days-note">—</span> days</strong> remaining this month, not the full month. From the 1st of next month onwards you'll be billed the full <strong>₹<span id="sum-monthly-note">0</span>/mo</strong>. Cancel anytime, no GST.</span>
+                                <span>Prorated billing — you're only charged for the <strong><span id="sum-days-note">—</span> days</strong> remaining this month, not the full month. From the 1st of next month onwards you'll be billed the full <strong data-curr-show="INR">₹<span id="sum-monthly-note">0</span>/mo</strong><strong data-curr-show="USD">$<span id="sum-monthly-note-usd">0</span>/mo</strong>. Cancel anytime, no GST. <span data-curr-show="USD" style="color:rgb(155,150,180)">USD shown is a conversion; actual billing happens in INR via UPI.</span></span>
                             </p>
                         </div>
                     </div>
@@ -1016,11 +1053,34 @@
         if (daysNote) daysNote.textContent = remaining;
         const monthlyNote = document.getElementById('sum-monthly-note');
         if (monthlyNote) monthlyNote.textContent = selectedAmount.toLocaleString('en-IN');
+        // USD mirrors (display only — actual billing/QR uses INR amount)
+        const USD_RATE = 94.61;
+        const proratedUsd = Math.max(1, Math.round(prorated / USD_RATE));
+        const monthlyUsd  = Math.max(1, Math.round(selectedAmount / USD_RATE));
+        const proUsd = document.getElementById('sum-prorated-usd');
+        if (proUsd) proUsd.textContent = proratedUsd.toLocaleString('en-US');
+        const monUsd = document.getElementById('sum-monthly-usd');
+        if (monUsd) monUsd.textContent = monthlyUsd.toLocaleString('en-US');
+        const monNoteUsd = document.getElementById('sum-monthly-note-usd');
+        if (monNoteUsd) monNoteUsd.textContent = monthlyUsd.toLocaleString('en-US');
         document.getElementById('plan-summary-empty').classList.add('hidden');
         document.getElementById('plan-summary-filled').classList.remove('hidden');
     }
 
     document.querySelectorAll('.plan-card').forEach(card => card.addEventListener('click', () => selectPlanCard(card)));
+
+    /* ─── Currency toggle (display only — payment/QR always use INR) ─── */
+    function setCurrency(c) {
+        const stage = document.querySelector('.plans-stage');
+        if (!stage) return;
+        stage.dataset.curr = c;
+        const inrBtn = document.getElementById('curr-inr');
+        const usdBtn = document.getElementById('curr-usd');
+        if (inrBtn) { inrBtn.classList.toggle('active', c === 'INR'); inrBtn.setAttribute('aria-pressed', c === 'INR'); }
+        if (usdBtn) { usdBtn.classList.toggle('active', c === 'USD'); usdBtn.setAttribute('aria-pressed', c === 'USD'); }
+    }
+    document.getElementById('curr-inr')?.addEventListener('click', () => setCurrency('INR'));
+    document.getElementById('curr-usd')?.addEventListener('click', () => setCurrency('USD'));
 
     document.getElementById('plan-continue').addEventListener('click', () => {
         if (!selectedPlan) return;
