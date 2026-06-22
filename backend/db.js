@@ -20,8 +20,14 @@ let supabase;
  */
 async function resilientFetch(url, options = {}, attempt = 1) {
   const MAX_ATTEMPTS = 3;
-  // Don't reuse a stale connection — ask the remote to close after this request
-  const headers = { ...(options.headers || {}), connection: 'close' };
+
+  // Merge headers safely. supabase-js may pass a Headers instance, a plain
+  // object, or an array of [k,v] pairs — `new Headers(...)` handles all three.
+  // (A naive `{ ...options.headers }` silently drops everything when the
+  // input is a Headers instance, which strips apikey/Authorization.)
+  const headers = new Headers(options.headers || {});
+  headers.set('connection', 'close');
+
   try {
     return await fetch(url, { ...options, headers });
   } catch (err) {
