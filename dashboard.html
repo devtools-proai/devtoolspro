@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard — DevTools Pro</title>
+    <title>DevTools Pro · Dashboard</title>
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 36 36'%3E%3Crect width='36' height='36' rx='8' fill='url(%23g)'/%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='36' y2='36'%3E%3Cstop offset='0%25' stop-color='%236366f1'/%3E%3Cstop offset='100%25' stop-color='%238b5cf6'/%3E%3C/linearGradient%3E%3C/defs%3E%3Cpath d='M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4' stroke='white' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round' fill='none' transform='translate(8,10) scale(0.8)'/%3E%3C/svg%3E">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
@@ -327,7 +327,10 @@
         /* ═══════════════════════════════════════════════════════════════
            2026 SaaS — Payment / UPI (#view-payment)
            ═══════════════════════════════════════════════════════════════ */
-        .pay-stage { max-width: 1280px; margin: 0 auto; padding: 0.25rem 0 0; }
+        .pay-stage { max-width: 1280px; margin: 0 auto; padding: 1rem 0; min-height: calc(100vh - 64px); display: flex; flex-direction: column; justify-content: center; }
+        /* Cancel <main>'s pt-8/pb-16 only on the payment view, so the page is
+           exactly 100vh tall and the content sits in the visual middle. */
+        #view-payment { margin-top: -2rem; margin-bottom: -4rem; }
         .pay-grid { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: 3rem; align-items: start; }
 
         .pay-left { padding-top: 0.5rem; }
@@ -388,7 +391,7 @@
         .pay-trust-item span { font-size: 9.5px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; }
 
         @media (max-width: 1080px) { .pay-grid { gap: 2rem; } .pay-title { font-size: 44px; } }
-        @media (max-width: 880px)  { .pay-grid { grid-template-columns: 1fr; gap: 2rem; } .pay-title { font-size: 36px; } .pay-summary { padding: 1.75rem 1.5rem; } .pay-steps { grid-template-columns: 1fr; } }
+        @media (max-width: 880px)  { .pay-grid { grid-template-columns: 1fr; gap: 2rem; } .pay-title { font-size: 36px; } .pay-summary { padding: 1.75rem 1.5rem; } .pay-steps { grid-template-columns: 1fr; } .pay-stage { min-height: auto; padding: 1.5rem 0; } #view-payment { margin: 0; } }
     </style>
 </head>
 <body class="bg-gray-950 text-gray-100 antialiased min-h-screen relative overflow-x-hidden">
@@ -460,7 +463,7 @@
                                 <span class="welcome-check"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>
                                 <div>
                                     <span class="welcome-feat-title">IDE, CLI, and Web access</span>
-                                    <span class="welcome-feat-desc">Seamless integration wherever you work — terminal, editor, or browser.</span>
+                                    <span class="welcome-feat-desc">Seamless integration wherever you work: terminal, editor, or browser.</span>
                                 </div>
                             </li>
                             <li>
@@ -480,7 +483,7 @@
                             <li>
                                 <span class="welcome-check"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>
                                 <div>
-                                    <span class="welcome-feat-title">Cancel anytime — no GST, no hidden fees</span>
+                                    <span class="welcome-feat-title">Cancel anytime, no GST, no hidden fees</span>
                                     <span class="welcome-feat-desc">Transparent pricing with zero long-term commitment required.</span>
                                 </div>
                             </li>
@@ -765,11 +768,11 @@
                                     </span>
                                     <div class="plans-bar-info">
                                         <span class="plans-bar-label">Selected plan</span>
-                                        <span class="plans-bar-value"><span id="sum-plan-name">—</span></span>
+                                        <span class="plans-bar-value"><span id="sum-plan-name">…</span></span>
                                     </div>
                                     <span class="plans-bar-divider"></span>
                                     <div class="plans-bar-info">
-                                        <span class="plans-bar-label">Today's total · <span id="sum-days">—</span> days</span>
+                                        <span class="plans-bar-label">Today's total · <span id="sum-days">…</span> days</span>
                                         <span class="plans-bar-value plans-bar-total">
                                             <span data-curr-show="INR">₹<span id="sum-prorated">0</span></span>
                                             <span data-curr-show="USD">$<span id="sum-prorated-usd">0</span></span>
@@ -794,7 +797,7 @@
                             </div>
                             <p class="plans-bar-note">
                                 <svg class="info-icon" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><circle cx="12" cy="8" r="0.6" fill="currentColor"/></svg>
-                                <span>Prorated billing — you're only charged for the <strong><span id="sum-days-note">—</span> days</strong> remaining this month, not the full month. From the 1st of next month onwards you'll be billed the full <strong data-curr-show="INR">₹<span id="sum-monthly-note">0</span>/mo</strong><strong data-curr-show="USD">$<span id="sum-monthly-note-usd">0</span>/mo</strong>. Cancel anytime, no GST. <span data-curr-show="USD" style="color:rgb(155,150,180)">USD shown is a conversion; actual billing happens in INR via UPI.</span></span>
+                                <span>Prorated billing. You're only charged for the <strong><span id="sum-days-note">…</span> days</strong> remaining this month, not the full month. From the 1st of next month onwards you'll be billed the full <strong data-curr-show="INR">₹<span id="sum-monthly-note">0</span>/mo</strong><strong data-curr-show="USD">$<span id="sum-monthly-note-usd">0</span>/mo</strong>. Cancel anytime, no GST. <span data-curr-show="USD" style="color:rgb(155,150,180)">USD shown is a conversion; actual billing happens in INR via UPI.</span></span>
                             </p>
                         </div>
                     </div>
@@ -808,7 +811,7 @@
                         <!-- Left: QR + UPI ID + steps -->
                         <section class="pay-left">
                             <h1 class="pay-title">Scan to pay</h1>
-                            <p class="pay-sub">Use any UPI app — GPay, PhonePe, Paytm, BHIM. We auto-verify the moment you confirm.</p>
+                            <p class="pay-sub">Use any UPI app: GPay, PhonePe, Paytm, BHIM. We auto-verify the moment you confirm.</p>
 
                             <div class="pay-qr-card">
                                 <div id="dash-qr" class="pay-qr-canvas">
@@ -835,7 +838,7 @@
                                 </div>
                                 <div class="pay-step">
                                     <span class="pay-step-num">Step 3</span>
-                                    <p class="pay-step-text">Confirm — we'll verify the transfer next.</p>
+                                    <p class="pay-step-text">Confirm. We'll verify the transfer next.</p>
                                 </div>
                             </div>
 
@@ -848,8 +851,8 @@
                         <!-- Right: order summary glass card -->
                         <aside class="pay-summary">
                             <span class="pay-summary-eyebrow">Current selection</span>
-                            <h2 class="pay-summary-plan"><span id="pay-plan-name">—</span></h2>
-                            <p class="pay-summary-meta">Billed monthly · Pro-rated for the days remaining this cycle</p>
+                            <h2 class="pay-summary-plan"><span id="pay-plan-name">…</span></h2>
+                            <p class="pay-summary-meta">Billed monthly. Pro-rated for the days remaining this cycle.</p>
 
                             <div class="pay-summary-hero">
                                 <span class="pay-summary-amt" id="pay-amount">₹0</span>
@@ -859,21 +862,21 @@
                             <div class="pay-summary-rows">
                                 <div class="pay-summary-row">
                                     <span class="k">Today's prorated amount</span>
-                                    <span class="v" id="pay-prorated">—</span>
+                                    <span class="v" id="pay-prorated">…</span>
                                 </div>
                                 <div class="pay-summary-row">
                                     <span class="k">From next month onward</span>
-                                    <span class="v" id="pay-full">—</span>
+                                    <span class="v" id="pay-full">…</span>
                                 </div>
                                 <div class="pay-summary-row total">
                                     <span class="k">Total today</span>
-                                    <span class="v" id="pay-total">—</span>
+                                    <span class="v" id="pay-total">…</span>
                                 </div>
                             </div>
 
-                            <button id="pay-done" class="pay-cta" type="button" data-label="I've Paid — Enter UTR">
-                                <span>I've Paid — Enter UTR</span>
-                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+                            <button id="pay-done" class="pay-cta" type="button" data-label="I've Paid · Enter UTR">
+                                <span>I've Paid · Enter UTR</span>
+                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.2"><path stroke-linecap="round" stroke-linejoin="round" d="M5 12h14M13 6l6 6-6 6"/></svg>
                             </button>
                             <p class="pay-cta-note">Secure UPI · No card details stored · No GST</p>
 
@@ -930,7 +933,7 @@
                         <ol class="mt-4 space-y-3">
                             <li class="flex gap-3 text-sm text-gray-300"><span class="w-6 h-6 shrink-0 rounded-full bg-indigo-500/15 border border-indigo-500/30 text-indigo-300 text-xs flex items-center justify-center font-bold">1</span><span>Open the UPI app you paid from (GPay, PhonePe, Paytm).</span></li>
                             <li class="flex gap-3 text-sm text-gray-300"><span class="w-6 h-6 shrink-0 rounded-full bg-indigo-500/15 border border-indigo-500/30 text-indigo-300 text-xs flex items-center justify-center font-bold">2</span><span>Tap on the latest transaction to <code class="text-indigo-300">DevTools Pro</code>.</span></li>
-                            <li class="flex gap-3 text-sm text-gray-300"><span class="w-6 h-6 shrink-0 rounded-full bg-indigo-500/15 border border-indigo-500/30 text-indigo-300 text-xs flex items-center justify-center font-bold">3</span><span>Look for <strong class="text-white">UTR / Transaction ID</strong> — it's a 12-digit number.</span></li>
+                            <li class="flex gap-3 text-sm text-gray-300"><span class="w-6 h-6 shrink-0 rounded-full bg-indigo-500/15 border border-indigo-500/30 text-indigo-300 text-xs flex items-center justify-center font-bold">3</span><span>Look for <strong class="text-white">UTR / Transaction ID</strong>, a 12-digit number.</span></li>
                             <li class="flex gap-3 text-sm text-gray-300"><span class="w-6 h-6 shrink-0 rounded-full bg-indigo-500/15 border border-indigo-500/30 text-indigo-300 text-xs flex items-center justify-center font-bold">4</span><span>Paste it on the left and submit.</span></li>
                         </ol>
                         <div class="divider my-5"></div>
@@ -952,10 +955,10 @@
                             <span id="dash-badge" class="badge badge-success">Active</span>
                         </div>
                         <div class="grid grid-cols-2 gap-3 mb-5">
-                            <div class="pane-flat"><p class="eyebrow">Plan</p><p id="dash-plan" class="text-white font-bold mt-1">—</p></div>
-                            <div class="pane-flat"><p class="eyebrow">Credits</p><p id="dash-credits" class="text-emerald-400 font-bold mt-1">—</p></div>
-                            <div class="pane-flat"><p class="eyebrow">Started</p><p id="dash-start" class="text-white text-sm mt-1">—</p></div>
-                            <div class="pane-flat"><p class="eyebrow">Renews</p><p id="dash-end" class="text-white text-sm mt-1">—</p></div>
+                            <div class="pane-flat"><p class="eyebrow">Plan</p><p id="dash-plan" class="text-white font-bold mt-1">…</p></div>
+                            <div class="pane-flat"><p class="eyebrow">Credits</p><p id="dash-credits" class="text-emerald-400 font-bold mt-1">…</p></div>
+                            <div class="pane-flat"><p class="eyebrow">Started</p><p id="dash-start" class="text-white text-sm mt-1">…</p></div>
+                            <div class="pane-flat"><p class="eyebrow">Renews</p><p id="dash-end" class="text-white text-sm mt-1">…</p></div>
                         </div>
                         <div class="flex flex-wrap gap-2">
                             <button id="btn-upgrade" class="btn btn-primary flex-1 min-w-[120px]" data-label="Upgrade">Upgrade</button>
@@ -995,10 +998,10 @@
                         </div>
                     </div>
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-1">
-                        <div class="info-row"><span class="k">Name</span><span id="dash-name" class="v">—</span></div>
-                        <div class="info-row"><span class="k">Email</span><span id="dash-email" class="v truncate max-w-[60%]" title="">—</span></div>
-                        <div class="info-row"><span class="k">Phone</span><span id="dash-phone" class="v">—</span></div>
-                        <div class="info-row"><span class="k">UTR</span><span id="dash-utr" class="v font-mono text-xs">—</span></div>
+                        <div class="info-row"><span class="k">Name</span><span id="dash-name" class="v">…</span></div>
+                        <div class="info-row"><span class="k">Email</span><span id="dash-email" class="v truncate max-w-[60%]" title="">…</span></div>
+                        <div class="info-row"><span class="k">Phone</span><span id="dash-phone" class="v">…</span></div>
+                        <div class="info-row"><span class="k">UTR</span><span id="dash-utr" class="v font-mono text-xs">…</span></div>
                     </div>
                 </div>
             </div>
