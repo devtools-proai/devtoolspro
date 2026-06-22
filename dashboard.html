@@ -131,10 +131,13 @@
         .nav-fallback-avatar { width: 30px; height: 30px; border-radius: 50%; background: linear-gradient(135deg,#f59e0b,#ec4899); display: inline-flex; align-items: center; justify-content: center; font-size: 13px; border: 2px solid rgba(255,255,255,0.12); }
 
         /* Vertical-centering wrapper for sign-in only (other views unaffected) */
-        .signin-stage { min-height: calc(100vh - 70px); display: flex; align-items: center; justify-content: center; padding: 1.25rem 0; }
+        .signin-stage { min-height: calc(100vh - 64px); display: flex; align-items: center; justify-content: center; padding: 0; }
+        /* Cancel <main>'s pt-8/pb-16 only when the sign-in view is rendered, so the
+           page is exactly 100vh tall and never scrolls. Other views keep main's padding. */
+        #view-signin { margin-top: -2rem; margin-bottom: -4rem; }
 
         /* Flagship sign-in panes — bigger, deeper glass with 1px inner highlight */
-        .welcome-pane { position: relative; padding: 4rem 3.75rem; border-radius: 1.75rem; background: linear-gradient(180deg, rgba(28,22,56,0.55) 0%, rgba(14,10,30,0.65) 100%); backdrop-filter: blur(22px) saturate(140%); -webkit-backdrop-filter: blur(22px) saturate(140%); border: 1px solid rgba(255,255,255,0.07); box-shadow: 0 30px 80px -30px rgba(0,0,0,0.7), 0 8px 24px -8px rgba(0,0,0,0.5); overflow: hidden; min-height: 640px; display: flex; flex-direction: column; justify-content: center; opacity: 0; transform: translateY(20px); animation: welcome-in .8s cubic-bezier(.2,.8,.2,1) forwards; }
+        .welcome-pane { position: relative; padding: 4rem 3.75rem; border-radius: 1.75rem; background: linear-gradient(180deg, rgba(28,22,56,0.55) 0%, rgba(14,10,30,0.65) 100%); backdrop-filter: blur(22px) saturate(140%); -webkit-backdrop-filter: blur(22px) saturate(140%); border: 1px solid rgba(255,255,255,0.07); box-shadow: 0 30px 80px -30px rgba(0,0,0,0.7), 0 8px 24px -8px rgba(0,0,0,0.5); overflow: hidden; min-height: 520px; display: flex; flex-direction: column; justify-content: center; opacity: 0; transform: translateY(20px); animation: welcome-in .8s cubic-bezier(.2,.8,.2,1) forwards; }
         .welcome-pane.left  { animation-delay: .05s; }
         .welcome-pane.right { animation-delay: .18s; }
         .welcome-pane::before { content: ''; position: absolute; inset: 0; border-radius: inherit; padding: 1px; background: linear-gradient(180deg, rgba(255,255,255,0.18), rgba(255,255,255,0.03) 30%, transparent 60%); -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude; pointer-events: none; }
@@ -167,7 +170,7 @@
         .welcome-feat-desc  { display: block; font-size: 13.5px; color: rgb(139,134,168); line-height: 1.55; }
 
         @media (max-width: 1080px) { .welcome-pane { padding: 3rem 2.5rem; } .welcome-h1 { font-size: 52px; } }
-        @media (max-width: 880px)  { .welcome-pane { padding: 2.25rem 1.75rem; min-height: auto; } .welcome-h1 { font-size: 40px; } .welcome-h2 { font-size: 26px; } .signin-stage { min-height: auto; padding: 1rem 0; } }
+        @media (max-width: 880px)  { .welcome-pane { padding: 2.25rem 1.75rem; min-height: auto; } .welcome-h1 { font-size: 40px; } .welcome-h2 { font-size: 26px; } .signin-stage { min-height: auto; padding: 1rem 0; } #view-signin { margin: 0; } }
     </style>
 </head>
 <body class="bg-gray-950 text-gray-100 antialiased min-h-screen relative overflow-x-hidden">
