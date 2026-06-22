@@ -323,6 +323,72 @@
 
         @media (max-width: 1080px) { .plans-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .plans-title { font-size: 44px; } }
         @media (max-width: 660px)  { .plans-grid { grid-template-columns: 1fr; gap: 1rem; } .plans-title { font-size: 32px; } .plans-bar-main { flex-direction: column; align-items: stretch; gap: 1rem; } .plans-bar-left { flex-wrap: wrap; gap: 0.85rem; } .plans-bar-divider { display: none; } .plans-cta { width: 100%; justify-content: center; } }
+
+        /* ═══════════════════════════════════════════════════════════════
+           2026 SaaS — Payment / UPI (#view-payment)
+           ═══════════════════════════════════════════════════════════════ */
+        .pay-stage { max-width: 1280px; margin: 0 auto; padding: 0.25rem 0 0; }
+        .pay-grid { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: 3rem; align-items: start; }
+
+        .pay-left { padding-top: 0.5rem; }
+        .pay-title { font-size: 56px; font-weight: 800; line-height: 1.0; letter-spacing: -0.035em; color: #f5f3ff; margin: 0 0 0.85rem; }
+        .pay-sub { font-size: 16px; color: rgb(155,150,180); margin: 0 0 2.25rem; max-width: 460px; line-height: 1.5; }
+
+        /* QR card with subtle scan-line animation */
+        .pay-qr-card { display: inline-block; padding: 18px; background: white; border-radius: 22px; box-shadow: 0 25px 60px -20px rgba(168,85,247,0.45); margin: 0 0 1.25rem; position: relative; overflow: hidden; }
+        .pay-qr-card::after { content: ''; position: absolute; left: 16px; right: 16px; top: 0; height: 2px; background: linear-gradient(90deg, transparent, rgba(168,85,247,0.85), transparent); box-shadow: 0 0 14px rgba(168,85,247,0.6); border-radius: 2px; pointer-events: none; animation: qr-scan 2.6s cubic-bezier(.45,.05,.55,.95) infinite; }
+        @keyframes qr-scan { 0% { transform: translateY(0); opacity: 0; } 12% { opacity: 1; } 50% { transform: translateY(200px); opacity: 1; } 88% { opacity: 1; } 100% { transform: translateY(0); opacity: 0; } }
+        .pay-qr-canvas { width: 200px; height: 200px; display: flex; align-items: center; justify-content: center; }
+        .pay-qr-canvas canvas, .pay-qr-canvas img { display: block; width: 100% !important; height: 100% !important; }
+
+        .pay-upi { display: inline-flex; align-items: center; gap: 10px; padding: 9px 14px; background: rgba(15,10,28,0.6); border: 1px solid rgba(255,255,255,0.06); border-radius: 12px; margin: 0 0 1.75rem; }
+        .pay-upi-label { font-size: 11px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: rgb(120,115,145); }
+        .pay-upi-id { color: #c4b5fd; font-family: ui-monospace, 'Cascadia Code', 'Source Code Pro', monospace; font-size: 13px; }
+        .pay-upi-copy { background: transparent; border: none; cursor: pointer; color: rgb(155,150,180); padding: 2px; transition: color .2s; }
+        .pay-upi-copy:hover { color: #f5f3ff; }
+
+        .pay-steps { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; }
+        .pay-step { padding: 1rem 1.1rem; border-radius: 12px; background: rgba(15,10,28,0.5); border: 1px solid rgba(255,255,255,0.05); }
+        .pay-step-num { display: block; font-size: 10px; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase; color: #c4b5fd; margin-bottom: 0.4rem; }
+        .pay-step-text { font-size: 12.5px; color: rgb(195,190,215); line-height: 1.45; margin: 0; }
+
+        .pay-back-link { display: inline-flex; align-items: center; gap: 6px; padding: 10px 0; font-size: 12.5px; color: rgb(155,150,180); background: transparent; border: none; cursor: pointer; font-family: inherit; transition: color .2s; margin-top: 1.25rem; }
+        .pay-back-link:hover { color: #f5f3ff; }
+
+        /* Right: order summary glass card */
+        .pay-summary { position: relative; padding: 2.25rem 2rem; border-radius: 24px; background: linear-gradient(180deg, rgba(28,22,56,0.55) 0%, rgba(14,10,30,0.7) 100%); backdrop-filter: blur(22px) saturate(140%); -webkit-backdrop-filter: blur(22px) saturate(140%); border: 1px solid rgba(255,255,255,0.07); overflow: hidden; }
+        .pay-summary::before { content: ''; position: absolute; inset: 0; border-radius: inherit; padding: 1px; background: linear-gradient(180deg, rgba(255,255,255,0.18), rgba(255,255,255,0.02) 30%, transparent 60%); -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude; pointer-events: none; }
+        .pay-summary::after { content: ''; position: absolute; right: -100px; top: -80px; width: 280px; height: 280px; background: radial-gradient(circle, rgba(168,85,247,0.18), transparent 60%); pointer-events: none; }
+
+        .pay-summary-eyebrow { display: block; font-size: 10px; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase; color: rgb(120,115,145); position: relative; }
+        .pay-summary-plan { font-size: 30px; font-weight: 800; letter-spacing: -0.025em; background: linear-gradient(135deg, #c084fc 0%, #ec4899 60%, #f472b6 100%); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; margin: 6px 0 4px; line-height: 1.05; position: relative; }
+        .pay-summary-meta { font-size: 13px; color: rgb(155,150,180); margin: 0 0 1.5rem; position: relative; }
+
+        .pay-summary-hero { display: flex; align-items: baseline; gap: 0.7rem; margin-bottom: 1.25rem; flex-wrap: wrap; position: relative; }
+        .pay-summary-amt { font-size: 42px; font-weight: 800; color: #4ade80; letter-spacing: -0.03em; line-height: 1; }
+        .pay-summary-pill { display: inline-flex; padding: 4px 11px; border-radius: 999px; background: rgba(168,85,247,0.18); color: #c4b5fd; font-size: 9.5px; font-weight: 700; letter-spacing: 0.18em; align-self: center; }
+
+        .pay-summary-rows { display: flex; flex-direction: column; gap: 0.95rem; padding: 1.1rem 0; border-top: 1px solid rgba(255,255,255,0.06); border-bottom: 1px solid rgba(255,255,255,0.06); position: relative; }
+        .pay-summary-row { display: flex; justify-content: space-between; align-items: baseline; }
+        .pay-summary-row .k { font-size: 13.5px; color: rgb(180,175,200); }
+        .pay-summary-row .v { font-size: 14.5px; color: #f5f3ff; font-weight: 600; }
+        .pay-summary-row.total { padding-top: 0.4rem; border-top: 1px dashed rgba(255,255,255,0.06); }
+        .pay-summary-row.total .k { color: #f5f3ff; font-weight: 700; font-size: 15px; }
+        .pay-summary-row.total .v { color: #f5f3ff; font-weight: 800; font-size: 17px; }
+
+        .pay-cta { width: 100%; padding: 1.1rem 1.5rem; margin-top: 1.5rem; background: linear-gradient(135deg, #10b981 0%, #059669 100%); border: none; border-radius: 14px; color: white; font-size: 15px; font-weight: 700; font-family: inherit; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 10px; box-shadow: 0 16px 40px -10px rgba(16,185,129,0.55), inset 0 1px 0 rgba(255,255,255,0.18); transition: transform .18s, box-shadow .18s, background .2s; position: relative; }
+        .pay-cta:hover:not(:disabled) { transform: translateY(-1px); background: linear-gradient(135deg, #059669 0%, #047857 100%); box-shadow: 0 22px 50px -10px rgba(16,185,129,0.7); }
+        .pay-cta:disabled { opacity: 0.7; cursor: progress; }
+        .pay-cta svg { width: 18px; height: 18px; }
+        .pay-cta-note { font-size: 9.5px; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase; color: rgb(120,115,145); text-align: center; margin: 1rem 0 0; position: relative; }
+
+        .pay-trust { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid rgba(255,255,255,0.06); position: relative; }
+        .pay-trust-item { display: flex; flex-direction: column; align-items: center; gap: 6px; color: rgb(155,150,180); }
+        .pay-trust-item svg { width: 18px; height: 18px; color: #c4b5fd; }
+        .pay-trust-item span { font-size: 9.5px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; }
+
+        @media (max-width: 1080px) { .pay-grid { gap: 2rem; } .pay-title { font-size: 44px; } }
+        @media (max-width: 880px)  { .pay-grid { grid-template-columns: 1fr; gap: 2rem; } .pay-title { font-size: 36px; } .pay-summary { padding: 1.75rem 1.5rem; } .pay-steps { grid-template-columns: 1fr; } }
     </style>
 </head>
 <body class="bg-gray-950 text-gray-100 antialiased min-h-screen relative overflow-x-hidden">
@@ -735,55 +801,98 @@
                 </div>
             </div>
 
-            <!-- VIEW: Payment (left = QR, right = breakdown + CTA) -->
+            <!-- VIEW: Payment (Scan-to-pay + glass order summary) -->
             <div id="view-payment" class="hidden animate-slide-up">
-                <div class="pane-grid two">
-                    <div class="pane">
-                        <div class="pane-header">
-                            <div>
-                                <span class="eyebrow">Payment</span>
-                                <h2 class="text-xl font-bold text-white mt-1">Scan to <span class="gradient-text">pay</span></h2>
-                                <p class="pane-sub">Use any UPI app — GPay, PhonePe, Paytm.</p>
-                            </div>
-                            <span class="badge badge-success">Secure UPI</span>
-                        </div>
-                        <div class="flex flex-col items-center text-center">
-                            <div class="bg-white p-4 rounded-2xl shadow-[0_20px_60px_-15px_rgba(99,102,241,0.45)] mb-5">
-                                <div id="dash-qr" class="w-48 h-48 flex items-center justify-center">
+                <div class="pay-stage">
+                    <div class="pay-grid">
+                        <!-- Left: QR + UPI ID + steps -->
+                        <section class="pay-left">
+                            <h1 class="pay-title">Scan to pay</h1>
+                            <p class="pay-sub">Use any UPI app — GPay, PhonePe, Paytm, BHIM. We auto-verify the moment you confirm.</p>
+
+                            <div class="pay-qr-card">
+                                <div id="dash-qr" class="pay-qr-canvas">
                                     <span class="brand-spinner md"></span>
                                 </div>
                             </div>
-                            <div class="inline-flex items-center gap-2">
-                                <span class="text-gray-400 text-xs uppercase tracking-wider">UPI ID</span>
-                                <div class="inline-flex items-center gap-2 px-3 py-1.5 bg-gray-800/70 border border-gray-700/60 rounded-lg">
-                                    <code class="text-indigo-300 text-sm font-mono">devtoolpro@ybl</code>
-                                    <button id="dash-copy-upi" class="text-gray-400 hover:text-white transition-colors" title="Copy UPI ID">
-                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
-                                    </button>
+
+                            <div class="pay-upi">
+                                <span class="pay-upi-label">UPI ID</span>
+                                <code class="pay-upi-id">devtoolpro@ybl</code>
+                                <button id="dash-copy-upi" class="pay-upi-copy" title="Copy UPI ID" type="button">
+                                    <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+                                </button>
+                            </div>
+
+                            <div class="pay-steps">
+                                <div class="pay-step">
+                                    <span class="pay-step-num">Step 1</span>
+                                    <p class="pay-step-text">Open your preferred UPI app on mobile.</p>
+                                </div>
+                                <div class="pay-step">
+                                    <span class="pay-step-num">Step 2</span>
+                                    <p class="pay-step-text">Scan the QR or paste the UPI ID manually.</p>
+                                </div>
+                                <div class="pay-step">
+                                    <span class="pay-step-num">Step 3</span>
+                                    <p class="pay-step-text">Confirm — we'll verify the transfer next.</p>
                                 </div>
                             </div>
-                        </div>
+
+                            <button id="pay-back" class="pay-back-link" type="button">
+                                <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
+                                Back to plans
+                            </button>
+                        </section>
+
+                        <!-- Right: order summary glass card -->
+                        <aside class="pay-summary">
+                            <span class="pay-summary-eyebrow">Current selection</span>
+                            <h2 class="pay-summary-plan"><span id="pay-plan-name">—</span></h2>
+                            <p class="pay-summary-meta">Billed monthly · Pro-rated for the days remaining this cycle</p>
+
+                            <div class="pay-summary-hero">
+                                <span class="pay-summary-amt" id="pay-amount">₹0</span>
+                                <span class="pay-summary-pill">Prorated</span>
+                            </div>
+
+                            <div class="pay-summary-rows">
+                                <div class="pay-summary-row">
+                                    <span class="k">Today's prorated amount</span>
+                                    <span class="v" id="pay-prorated">—</span>
+                                </div>
+                                <div class="pay-summary-row">
+                                    <span class="k">From next month onward</span>
+                                    <span class="v" id="pay-full">—</span>
+                                </div>
+                                <div class="pay-summary-row total">
+                                    <span class="k">Total today</span>
+                                    <span class="v" id="pay-total">—</span>
+                                </div>
+                            </div>
+
+                            <button id="pay-done" class="pay-cta" type="button" data-label="I've Paid — Enter UTR">
+                                <span>I've Paid — Enter UTR</span>
+                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+                            </button>
+                            <p class="pay-cta-note">Secure UPI · No card details stored · No GST</p>
+
+                            <div class="pay-trust">
+                                <div class="pay-trust-item">
+                                    <svg fill="none" stroke="currentColor" stroke-width="1.6" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+                                    <span>SSL Secure</span>
+                                </div>
+                                <div class="pay-trust-item">
+                                    <svg fill="none" stroke="currentColor" stroke-width="1.6" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.6 4.5A9 9 0 1112 21a9 9 0 008.6-6.5z"/></svg>
+                                    <span>UPI Verified</span>
+                                </div>
+                                <div class="pay-trust-item">
+                                    <svg fill="none" stroke="currentColor" stroke-width="1.6" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                                    <span>Refundable</span>
+                                </div>
+                            </div>
+                        </aside>
                     </div>
-                    <aside class="pane self-start">
-                        <span class="eyebrow">Order</span>
-                        <div class="flex items-baseline justify-between mt-2">
-                            <h3 class="text-white text-lg font-bold">Plan: <span id="pay-plan-name" class="gradient-text">—</span></h3>
-                        </div>
-                        <div class="mt-4 p-4 rounded-xl bg-gradient-to-br from-indigo-500/10 to-purple-500/10 border border-indigo-500/20">
-                            <p class="text-xs text-gray-400 uppercase tracking-wider">Pay today</p>
-                            <p id="pay-amount" class="text-2xl font-extrabold text-emerald-400 mt-1">₹0</p>
-                        </div>
-                        <div class="divider my-5"></div>
-                        <span class="eyebrow">Billing breakdown</span>
-                        <div class="mt-2">
-                            <div class="info-row"><span class="k">Today to end of month</span><span class="v text-emerald-400" id="pay-prorated">—</span></div>
-                            <div class="info-row"><span class="k">Next month onward</span><span class="v" id="pay-full">—</span></div>
-                        </div>
-                        <div class="flex gap-3 mt-6">
-                            <button id="pay-back" class="btn btn-ghost">Back</button>
-                            <button id="pay-done" class="btn btn-success btn-lg flex-1" data-label="I've Paid — Enter UTR">I've Paid — Enter UTR</button>
-                        </div>
-                    </aside>
                 </div>
             </div>
 
@@ -1100,6 +1209,9 @@
         document.getElementById('pay-amount').textContent = `₹${prorated.toLocaleString('en-IN')}`;
         document.getElementById('pay-prorated').textContent = `₹${prorated.toLocaleString('en-IN')} (${remaining} days)`;
         document.getElementById('pay-full').textContent = `₹${amount.toLocaleString('en-IN')}/mo`;
+        // Total today mirrors the prorated value (no tax / no GST is added)
+        const totalEl = document.getElementById('pay-total');
+        if (totalEl) totalEl.textContent = `₹${prorated.toLocaleString('en-IN')}`;
 
         const qrEl = document.getElementById('dash-qr');
         qrEl.innerHTML = '<span class="brand-spinner md"></span>';
