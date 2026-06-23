@@ -483,6 +483,8 @@
 
         /* Sidebar */
         .dash-sidebar { display: flex; flex-direction: column; gap: 1.25rem; padding: 1.25rem 0.85rem; min-height: calc(100vh - 2.5rem); position: sticky; top: 1.25rem; }
+        .dash-brand-row { display: inline-flex; align-items: center; padding: 4px 6px 6px; text-decoration: none; }
+        .dash-brand-row .brand-mark { font-size: 18px; }
         .dash-profile-card { display: flex; align-items: center; gap: 0.7rem; padding: 0.85rem; border-radius: 14px; background: rgba(20,16,42,0.5); border: 1px solid rgba(255,255,255,0.06); }
         .dash-profile-icon { width: 36px; height: 36px; border-radius: 10px; background: rgba(168,85,247,0.18); border: 1px solid rgba(168,85,247,0.3); display: inline-flex; align-items: center; justify-content: center; color: #c4b5fd; flex-shrink: 0; }
         .dash-profile-icon svg { width: 18px; height: 18px; }
@@ -517,6 +519,17 @@
         .dash-status-pill { display: inline-flex; align-items: center; gap: 6px; padding: 4px 11px; border-radius: 999px; background: rgba(34,197,94,0.12); border: 1px solid rgba(34,197,94,0.3); color: #4ade80; font-size: 11px; font-weight: 700; }
         .dash-status-pill::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: currentColor; box-shadow: 0 0 6px currentColor; }
         .dash-status-pill.warn { background: rgba(245,158,11,0.12); border-color: rgba(245,158,11,0.3); color: #f59e0b; }
+        .dash-status-pill.processing { background: rgba(99,102,241,0.14); border-color: rgba(129,140,248,0.35); color: #a5b4fc; }
+        .dash-status-pill.processing::before { animation: status-pulse 1.4s ease-in-out infinite; }
+        @keyframes status-pulse { 0%,100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.45; transform: scale(0.85); } }
+
+        /* Credits info help icon + tooltip */
+        .dash-info-help { display: inline-flex; vertical-align: middle; margin-left: 5px; position: relative; cursor: help; color: rgb(140,135,165); outline: none; }
+        .dash-info-help svg { width: 12px; height: 12px; }
+        .dash-info-help:hover, .dash-info-help:focus-visible { color: #c4b5fd; }
+        .dash-tooltip { display: none; position: absolute; left: 50%; top: calc(100% + 10px); transform: translateX(-50%); width: 240px; padding: 9px 12px; background: rgba(8,5,18,0.97); border: 1px solid rgba(168,85,247,0.32); border-radius: 10px; font-size: 12px; line-height: 1.5; color: rgb(205,200,225); letter-spacing: normal; text-transform: none; font-weight: 500; z-index: 50; box-shadow: 0 14px 32px -8px rgba(0,0,0,0.7); pointer-events: none; }
+        .dash-tooltip::before { content: ''; position: absolute; left: 50%; top: -5px; transform: translateX(-50%) rotate(45deg); width: 9px; height: 9px; background: rgba(8,5,18,0.97); border-left: 1px solid rgba(168,85,247,0.32); border-top: 1px solid rgba(168,85,247,0.32); }
+        .dash-info-help:hover .dash-tooltip, .dash-info-help:focus-visible .dash-tooltip, .dash-info-help:focus-within .dash-tooltip { display: block; }
 
         .dash-info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.85rem; margin-bottom: 1.5rem; position: relative; }
         .dash-info-tile { padding: 1.05rem 1.15rem; border-radius: 14px; background: rgba(15,10,28,0.55); border: 1px solid rgba(255,255,255,0.05); }
@@ -559,9 +572,35 @@
         .dash-quick-icon-wrap { width: 36px; height: 36px; border-radius: 10px; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; }
         .dash-quick-icon-wrap--violet { background: rgba(168,85,247,0.16); border: 1px solid rgba(168,85,247,0.3); color: #d8b4fe; }
         .dash-quick-icon-wrap--amber { background: rgba(245,158,11,0.12); border: 1px solid rgba(245,158,11,0.28); color: #fbbf24; }
+        .dash-quick-icon-wrap--green { background: rgba(34,197,94,0.14); border: 1px solid rgba(34,197,94,0.32); color: #4ade80; }
         .dash-quick-icon-wrap svg { width: 18px; height: 18px; }
         .dash-quick-title { display: block; font-size: 13px; font-weight: 700; color: #f5f3ff; }
         .dash-quick-sub { display: block; font-size: 11px; color: rgb(140,135,165); margin-top: 2px; }
+
+        /* Disabled meet button (active = onboarding done) */
+        .dash-btn-disabled { background: rgba(255,255,255,0.04) !important; color: rgb(155,150,180) !important; box-shadow: none !important; cursor: not-allowed; pointer-events: none; border-color: rgba(255,255,255,0.06) !important; }
+
+        /* AI Pulse / news showcase card */
+        .dash-news-card { padding: 1.25rem; }
+        .dash-news-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.85rem; }
+        .dash-news-live { display: inline-flex; align-items: center; gap: 6px; font-size: 9.5px; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase; color: #4ade80; }
+        .dash-news-dot { width: 6px; height: 6px; border-radius: 50%; background: #4ade80; box-shadow: 0 0 6px #4ade80; animation: status-pulse 1.4s ease-in-out infinite; }
+        .dash-news-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 0.85rem; }
+        .dash-news-list li { display: grid; grid-template-rows: auto auto auto; gap: 4px; padding-bottom: 0.85rem; border-bottom: 1px solid rgba(255,255,255,0.04); }
+        .dash-news-list li:last-child { border-bottom: 0; padding-bottom: 0; }
+        .dash-news-tag { display: inline-block; align-self: start; padding: 2px 8px; border-radius: 5px; font-size: 9px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; }
+        .dash-news-tag.tag-violet { background: rgba(168,85,247,0.16); color: #d8b4fe; border: 1px solid rgba(168,85,247,0.3); }
+        .dash-news-tag.tag-amber { background: rgba(245,158,11,0.13); color: #fbbf24; border: 1px solid rgba(245,158,11,0.3); }
+        .dash-news-tag.tag-pink { background: rgba(236,72,153,0.13); color: #f472b6; border: 1px solid rgba(236,72,153,0.3); }
+        .dash-news-title { font-size: 12.5px; font-weight: 600; color: #f5f3ff; line-height: 1.45; }
+        .dash-news-meta { font-size: 10.5px; color: rgb(140,135,165); }
+
+        /* Tips card */
+        .dash-tips-card { padding: 1.25rem; }
+        .dash-tips-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 0.65rem; }
+        .dash-tips-list li { display: grid; grid-template-columns: 18px 1fr; gap: 9px; align-items: start; font-size: 12px; color: rgb(195,190,215); line-height: 1.55; }
+        .dash-tips-list strong { color: #f5f3ff; font-weight: 700; }
+        .dash-tip-bullet { color: #c4b5fd; font-size: 12px; line-height: 1.55; }
 
         /* Membership card with 3D flip */
         .dash-membership-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; position: relative; }
@@ -1222,6 +1261,10 @@
                 <div class="dash-shell">
                     <!-- Sidebar -->
                     <aside class="dash-sidebar">
+                        <a href="index.html" class="dash-brand-row" aria-label="DevTools Pro home">
+                            <span class="brand-mark">DevTools Pro</span>
+                        </a>
+
                         <div class="dash-profile-card">
                             <span class="dash-profile-icon" aria-hidden="true">
                                 <svg fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.6 4.5A9 9 0 1112 21a9 9 0 008.6-6.5z"/></svg>
@@ -1273,8 +1316,14 @@
                                     </div>
                                     <div class="dash-info-tile">
                                         <div class="dash-info-tile-head">
-                                            <span class="dash-info-label">Available credits</span>
-                                            <span class="dash-info-credits-num" id="dash-credits">…</span>
+                                            <span class="dash-info-label">
+                                                Credits used
+                                                <span class="dash-info-help" tabindex="0" aria-label="Where to see live credit usage">
+                                                    <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><circle cx="12" cy="8" r="0.8" fill="currentColor"/></svg>
+                                                    <span class="dash-tooltip">Live credit usage is shown inside the Kiro IDE at the bottom-right corner.</span>
+                                                </span>
+                                            </span>
+                                            <span class="dash-info-credits-num" id="dash-credits">0</span>
                                         </div>
                                         <div class="dash-progress" aria-hidden="true"><div class="dash-progress-fill" id="dash-credits-fill" style="width:0"></div></div>
                                     </div>
@@ -1324,14 +1373,61 @@
                                         </div>
                                     </a>
                                     <a href="https://api.whatsapp.com/send?phone=919019879108&text=Hi%2C%20I%20need%20help" target="_blank" rel="noopener" class="dash-quick-item">
-                                        <span class="dash-quick-icon-wrap dash-quick-icon-wrap--amber">
-                                            <svg fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.5M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9 5.25h.008v.008H12v-.008z"/></svg>
+                                        <span class="dash-quick-icon-wrap dash-quick-icon-wrap--green">
+                                            <svg fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
                                         </span>
                                         <div>
-                                            <span class="dash-quick-title">Priority Support</span>
+                                            <span class="dash-quick-title">WhatsApp Support</span>
                                             <span class="dash-quick-sub">Average response: 5m</span>
                                         </div>
                                     </a>
+                                </div>
+
+                                <!-- AI Pulse showcase card -->
+                                <div class="dash-card dash-news-card">
+                                    <div class="dash-news-head">
+                                        <span class="dash-quick-eyebrow">AI Pulse</span>
+                                        <span class="dash-news-live"><span class="dash-news-dot"></span>Live</span>
+                                    </div>
+                                    <ul class="dash-news-list">
+                                        <li>
+                                            <span class="dash-news-tag tag-violet">Release</span>
+                                            <span class="dash-news-title">Claude Opus 4.8 ships with extended 1M context window</span>
+                                            <span class="dash-news-meta">2h ago · Anthropic</span>
+                                        </li>
+                                        <li>
+                                            <span class="dash-news-tag tag-amber">Update</span>
+                                            <span class="dash-news-title">Kiro IDE 2.4 adds spec mode, hooks &amp; agentic tasks</span>
+                                            <span class="dash-news-meta">1d ago · Kiro</span>
+                                        </li>
+                                        <li>
+                                            <span class="dash-news-tag tag-pink">Insight</span>
+                                            <span class="dash-news-title">Sonnet 4.6 hits 96% on SWE-Bench Verified</span>
+                                            <span class="dash-news-meta">3d ago · Anthropic</span>
+                                        </li>
+                                    </ul>
+                                </div>
+
+                                <!-- Tips card -->
+                                <div class="dash-card dash-tips-card">
+                                    <div class="dash-news-head">
+                                        <span class="dash-quick-eyebrow">Power user tips</span>
+                                        <span class="dash-news-tag tag-violet" style="letter-spacing:.16em">Pro</span>
+                                    </div>
+                                    <ul class="dash-tips-list">
+                                        <li>
+                                            <span class="dash-tip-bullet">✦</span>
+                                            <span><strong>#File</strong> in chat to scope context to a single file or folder.</span>
+                                        </li>
+                                        <li>
+                                            <span class="dash-tip-bullet">✦</span>
+                                            <span>Spec mode generates structured tasks with traceable requirements.</span>
+                                        </li>
+                                        <li>
+                                            <span class="dash-tip-bullet">✦</span>
+                                            <span>Hooks run on save, lint, or test, automatically.</span>
+                                        </li>
+                                    </ul>
                                 </div>
                             </aside>
                         </div>
@@ -1455,7 +1551,10 @@
 
     function routeUser(user) {
         if (!user.registrationComplete) { showView('view-register'); prefillRegForm(user); }
-        else if (!user.currentPlan || user.planStatus === 'none' || user.planStatus === 'cancelled' || user.planStatus === 'expired') { showView('view-plans'); }
+        // Existing users with a plan (any non-terminal status — processing, active, etc.)
+        // go straight to the dashboard. Only force the plan picker if they truly have
+        // no plan, or their plan was cancelled / expired.
+        else if (!user.currentPlan || user.planStatus === 'cancelled' || user.planStatus === 'expired') { showView('view-plans'); }
         else { showView('view-dashboard'); renderDashboard(user); }
     }
 
@@ -1664,7 +1763,8 @@
             const data = await res.json();
             if (data.status === 'success' && data.data) {
                 await fetch(`${API_BASE}/auth/update-plan`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify({ plan: selectedPlan, utrId: utr, meetLink: data.data.meetLink }) });
-                const updatedUser = { ...user, currentPlan: selectedPlan, planStatus: 'active', meetLink: data.data.meetLink, utrId: utr };
+
+                const updatedUser = { ...user, currentPlan: selectedPlan, planStatus: 'processing', meetLink: data.data.meetLink, utrId: utr };
                 setUser(updatedUser);
                 window.open(data.data.whatsappUrl, '_blank');
                 showView('view-dashboard');
@@ -1690,9 +1790,11 @@
     const PLAN_TIER_LABEL = { 'Pro': 'Pro Subscriber', 'Pro+': 'Pro+ Subscriber', 'Pro Max': 'Pro Max Subscriber', 'Power': 'Power User' };
     function setText(id, value) { const el = document.getElementById(id); if (el) el.textContent = value; }
     function deriveHandle(user) {
-        if (user.email) return '@' + user.email.split('@')[0].toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
-        if (user.name) return '@' + user.name.toLowerCase().replace(/\s+/g, '_');
-        return '@member';
+        const local = (user.email||'').split('@')[0].toLowerCase().replace(/[^a-z0-9]+/g, '');
+        // user.id is the Supabase UUID — stable per user, gives us a deterministic suffix
+        const idStr = String(user.id || '').replace(/-/g, '');
+        const suffix = idStr.slice(0, 4) || 'pro';
+        return '@' + local + '_' + suffix;
     }
     function renderDashboard(user) {
         const totalCredits = PLAN_CREDITS[user.currentPlan] || 0;
@@ -1701,7 +1803,8 @@
         const endDate = user.planEndDate ? new Date(user.planEndDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '—';
 
         setText('dash-plan', user.currentPlan || '—');
-        setText('dash-credits', totalCredits ? `${totalCreditsStr} / ${totalCreditsStr}` : '—');
+        // Credits stay at 0 always — live usage is tracked inside the Kiro IDE
+        setText('dash-credits', totalCredits ? `0 / ${totalCreditsStr}` : '0');
         setText('dash-start', startDate);
         setText('dash-end', endDate);
 
@@ -1715,43 +1818,60 @@
         // Sidebar tier sub
         setText('dash-tier', PLAN_TIER_LABEL[user.currentPlan] || 'DevTools Pro Member');
 
-        // Credit progress bar — fresh sub starts with 100% available
+        // Credit progress bar — 0% always (we don't track usage here; live in IDE)
         const fillEl = document.getElementById('dash-credits-fill');
-        if (fillEl) requestAnimationFrame(() => { fillEl.style.width = totalCredits ? '100%' : '0'; });
+        if (fillEl) requestAnimationFrame(() => { fillEl.style.width = '0%'; });
 
-        // Membership card
+        // Membership card — name + stable handle (deterministic from email + user.id)
+        const handle = deriveHandle(user);
         setText('dash-card-name', user.name || 'DevTools Member');
-        setText('dash-card-handle', deriveHandle(user));
+        setText('dash-card-handle', handle);
         setText('dash-card-since', startDate);
         setText('dash-card-tier-front', (PLAN_TIER_LABEL[user.currentPlan] || 'Enterprise Access').toUpperCase());
+        // Persist the generated handle so legacy code paths can read it back later
+        try { user.handle = handle; localStorage.setItem('dt_user', JSON.stringify(user)); } catch {}
 
-        // Meet button + pill
+        // ─── Status pill: Processing (default), Active (admin-set), Cancelled ───
+        const status = (user.planStatus || 'processing').toLowerCase();
+        const badge = document.getElementById('dash-badge');
+        if (badge) {
+            badge.classList.remove('warn', 'processing');
+            if (status === 'cancelled') { badge.textContent = 'Cancelled'; badge.classList.add('warn'); }
+            else if (status === 'active') { badge.textContent = 'Active'; }
+            else { badge.textContent = 'Processing'; badge.classList.add('processing'); }
+        }
+
+        // ─── Meet button: ENABLED while processing (onboarding pending),
+        //     DISABLED once active (use WhatsApp for any further queries) ───
         const meetEl = document.getElementById('dash-meet');
         const meetLabel = document.getElementById('dash-meet-label');
         const meetPill = document.getElementById('dash-meet-pill');
         if (meetEl && meetLabel) {
-            if (user.meetLink) {
-                meetEl.href = user.meetLink;
-                meetEl.classList.remove('dash-btn-outline');
+            meetEl.classList.remove('dash-btn-primary', 'dash-btn-outline', 'dash-btn-disabled');
+            if (meetPill) meetPill.classList.remove('ready', 'done');
+
+            if (status === 'active') {
+                // Onboarding done — disable & nudge them to WhatsApp
+                meetEl.classList.add('dash-btn-disabled');
+                meetEl.removeAttribute('href');
+                meetEl.setAttribute('aria-disabled', 'true');
+                meetLabel.textContent = 'Onboarding complete';
+                if (meetPill) { meetPill.textContent = 'Done'; meetPill.classList.add('done'); }
+            } else if (user.meetLink) {
+                // Processing + we have a Meet link — ready to join
                 meetEl.classList.add('dash-btn-primary');
+                meetEl.href = user.meetLink;
                 meetEl.removeAttribute('aria-disabled');
                 meetLabel.textContent = 'Open Meet Link';
                 if (meetPill) { meetPill.textContent = 'Ready'; meetPill.classList.add('ready'); }
             } else {
+                // Processing, no link yet — keep enabled-looking but pending
+                meetEl.classList.add('dash-btn-primary');
                 meetEl.href = '#';
-                meetEl.classList.remove('dash-btn-primary');
-                meetEl.classList.add('dash-btn-outline');
                 meetEl.setAttribute('aria-disabled', 'true');
                 meetLabel.textContent = 'Meet link pending';
-                if (meetPill) { meetPill.textContent = 'Upcoming'; meetPill.classList.remove('ready'); }
+                if (meetPill) meetPill.textContent = 'Upcoming';
             }
-        }
-
-        // Status pill — Active vs Cancelled
-        const badge = document.getElementById('dash-badge');
-        if (badge) {
-            if (user.planStatus === 'cancelled') { badge.textContent = 'Cancelled'; badge.classList.add('warn'); }
-            else { badge.textContent = 'Active'; badge.classList.remove('warn'); }
         }
     }
 
@@ -1761,8 +1881,30 @@
     }
 
     /* ─── Subscription actions ─── */
-    document.getElementById('btn-upgrade').addEventListener('click', () => showView('view-plans'));
-    document.getElementById('btn-renew').addEventListener('click', () => showView('view-plans'));
+    // Shared helper: any "go pick a plan" entry point should start clean — clear any
+    // prior selection, clear the UTR input, and clear the in-memory utrId. That way
+    // a returning user (upgrade / renew) doesn't see a pre-filled stale UTR.
+    function startUpgradeFlow() {
+        selectedPlan = ''; selectedAmount = 0; selectedCredits = '';
+        document.querySelectorAll('.plan-card').forEach(c => c.classList.remove('selected'));
+        document.getElementById('plan-summary-empty')?.classList.remove('hidden');
+        document.getElementById('plan-summary-filled')?.classList.add('hidden');
+        const utrInput = document.getElementById('pay-utr');
+        if (utrInput) utrInput.value = '';
+        const utrErr = document.getElementById('utr-error');
+        if (utrErr) { utrErr.textContent = ''; utrErr.classList.add('hidden'); }
+        const utrStatus = document.getElementById('utr-status');
+        if (utrStatus) { utrStatus.textContent = ''; utrStatus.classList.add('hidden'); }
+        // Drop the stored utrId on the local user copy so renderDashboard, etc. don't
+        // re-surface it. The backend will overwrite when a new UTR is submitted.
+        try {
+            const u = getUser();
+            if (u) { u.utrId = null; setUser(u); }
+        } catch {}
+        showView('view-plans');
+    }
+    document.getElementById('btn-upgrade').addEventListener('click', startUpgradeFlow);
+    document.getElementById('btn-renew').addEventListener('click', startUpgradeFlow);
     document.getElementById('btn-cancel').addEventListener('click', async (e) => {
         if (!confirm('Cancel your subscription? It stays active until the end of the billing cycle.')) return;
         const btn = e.currentTarget;
@@ -1782,7 +1924,7 @@
 
     /* ─── Dashboard sidebar + flip card wiring ─── */
     document.getElementById('logout-btn-side')?.addEventListener('click', () => { clearSession(); location.reload(); });
-    document.getElementById('btn-upgrade-side')?.addEventListener('click', () => showView('view-plans'));
+    document.getElementById('btn-upgrade-side')?.addEventListener('click', startUpgradeFlow);
     document.getElementById('dash-flip')?.addEventListener('click', () => {
         document.getElementById('dash-card-inner')?.classList.toggle('flipped');
     });

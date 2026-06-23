@@ -173,7 +173,7 @@ app.post('/auth/update-plan', requireAuth, async (req, res) => {
       .from('users')
       .update({
         current_plan: plan,
-        plan_status: 'active',
+        plan_status: 'processing',
         plan_start_date: now.toISOString(),
         plan_end_date: endDate.toISOString(),
         utr_id: utrId || null,
