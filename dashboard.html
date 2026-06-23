@@ -471,6 +471,138 @@
         @media (max-width: 1180px) { .utr-title { font-size: 46px; } .utr-pane { padding: 2.5rem 2rem; } .utr-phone { width: 220px; height: 440px; } }
         @media (max-width: 1080px) { .utr-grid { grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr); gap: 1.5rem; } .utr-guide-grid { grid-template-columns: 1fr; gap: 1.75rem; } .utr-phone-wrap { display: none; } }
         @media (max-width: 880px)  { .utr-grid { grid-template-columns: 1fr; gap: 1.5rem; } .utr-stage { min-height: auto; padding: 1rem 0; } #view-utr { margin: 0; } .utr-title { font-size: 36px; } .utr-pane { padding: 2rem 1.5rem; } }
+
+        /* ═══════════════════════════════════════════════════════════════
+           2026 SaaS — Active Dashboard (#view-dashboard)
+           ═══════════════════════════════════════════════════════════════ */
+        /* Hide global header on dashboard view (sidebar takes over) */
+        body[data-active-view="dashboard"] header.sticky { display: none; }
+        #view-dashboard { margin-top: -2rem; margin-bottom: -4rem; }
+
+        .dash-shell { display: grid; grid-template-columns: 232px minmax(0, 1fr); gap: 1.5rem; max-width: 1480px; margin: 0 auto; padding: 1.25rem 0.25rem; }
+
+        /* Sidebar */
+        .dash-sidebar { display: flex; flex-direction: column; gap: 1.25rem; padding: 1.25rem 0.85rem; min-height: calc(100vh - 2.5rem); position: sticky; top: 1.25rem; }
+        .dash-profile-card { display: flex; align-items: center; gap: 0.7rem; padding: 0.85rem; border-radius: 14px; background: rgba(20,16,42,0.5); border: 1px solid rgba(255,255,255,0.06); }
+        .dash-profile-icon { width: 36px; height: 36px; border-radius: 10px; background: rgba(168,85,247,0.18); border: 1px solid rgba(168,85,247,0.3); display: inline-flex; align-items: center; justify-content: center; color: #c4b5fd; flex-shrink: 0; }
+        .dash-profile-icon svg { width: 18px; height: 18px; }
+        .dash-profile-info { display: flex; flex-direction: column; min-width: 0; }
+        .dash-profile-title { font-size: 13px; font-weight: 700; color: #f5f3ff; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .dash-profile-sub { font-size: 11px; color: rgb(155,150,180); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+        .dash-nav { display: flex; flex-direction: column; gap: 4px; }
+        .dash-nav-item { display: flex; align-items: center; gap: 11px; padding: 11px 14px; border-radius: 11px; background: transparent; border: none; cursor: pointer; color: rgb(180,175,200); font-family: inherit; font-size: 13.5px; font-weight: 600; text-align: left; transition: background .2s, color .2s; width: 100%; text-decoration: none; }
+        .dash-nav-item:hover { background: rgba(255,255,255,0.04); color: #f5f3ff; }
+        .dash-nav-item.active { background: linear-gradient(135deg, #a855f7, #9333ea); color: white; box-shadow: 0 8px 22px -8px rgba(168,85,247,0.55); }
+        .dash-nav-item svg { width: 18px; height: 18px; flex-shrink: 0; }
+
+        .dash-side-foot { margin-top: auto; display: flex; flex-direction: column; gap: 0.45rem; }
+        .dash-side-cta { display: inline-flex; align-items: center; justify-content: center; padding: 11px 1rem; border-radius: 11px; background: linear-gradient(135deg, #a855f7, #9333ea); color: white; font-size: 13px; font-weight: 700; border: none; cursor: pointer; box-shadow: 0 12px 30px -8px rgba(168,85,247,0.5); transition: transform .18s, box-shadow .18s; font-family: inherit; }
+        .dash-side-cta:hover { transform: translateY(-1px); box-shadow: 0 18px 40px -10px rgba(168,85,247,0.7); }
+        .dash-side-signout { display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 9px; border-radius: 11px; background: transparent; color: rgb(170,165,195); font-size: 13px; font-weight: 600; border: none; cursor: pointer; font-family: inherit; transition: color .2s; }
+        .dash-side-signout:hover { color: #f5f3ff; }
+        .dash-side-signout svg { width: 16px; height: 16px; }
+
+        /* Main content */
+        .dash-main { display: flex; flex-direction: column; gap: 1.5rem; padding-bottom: 1.5rem; }
+        .dash-main-grid { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); gap: 1.5rem; align-items: start; }
+
+        /* Card base */
+        .dash-card { position: relative; padding: 1.75rem; border-radius: 22px; background: linear-gradient(180deg, rgba(28,22,56,0.45) 0%, rgba(14,10,30,0.6) 100%); border: 1px solid rgba(255,255,255,0.06); overflow: hidden; }
+        .dash-card::before { content: ''; position: absolute; inset: 0; border-radius: inherit; padding: 1px; background: linear-gradient(180deg, rgba(255,255,255,0.12), rgba(255,255,255,0.02) 30%, transparent 60%); -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude; pointer-events: none; }
+
+        /* Plan card */
+        .dash-card-head { display: flex; align-items: center; gap: 0.85rem; margin-bottom: 1.5rem; position: relative; }
+        .dash-card-title { font-size: 28px; font-weight: 800; color: #f5f3ff; margin: 0; letter-spacing: -0.02em; }
+        .dash-status-pill { display: inline-flex; align-items: center; gap: 6px; padding: 4px 11px; border-radius: 999px; background: rgba(34,197,94,0.12); border: 1px solid rgba(34,197,94,0.3); color: #4ade80; font-size: 11px; font-weight: 700; }
+        .dash-status-pill::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: currentColor; box-shadow: 0 0 6px currentColor; }
+        .dash-status-pill.warn { background: rgba(245,158,11,0.12); border-color: rgba(245,158,11,0.3); color: #f59e0b; }
+
+        .dash-info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.85rem; margin-bottom: 1.5rem; position: relative; }
+        .dash-info-tile { padding: 1.05rem 1.15rem; border-radius: 14px; background: rgba(15,10,28,0.55); border: 1px solid rgba(255,255,255,0.05); }
+        .dash-info-label { display: block; font-size: 10.5px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: rgb(140,135,165); margin-bottom: 8px; }
+        .dash-info-value { display: block; font-size: 18px; font-weight: 700; color: #f5f3ff; letter-spacing: -0.01em; }
+        .dash-info-value--accent { background: linear-gradient(135deg, #c084fc, #ec4899); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+        .dash-info-tile-head { display: flex; align-items: baseline; justify-content: space-between; gap: 0.5rem; margin-bottom: 10px; }
+        .dash-info-tile-head .dash-info-label { margin-bottom: 0; }
+        .dash-info-credits-num { font-size: 13px; font-weight: 700; color: #f5f3ff; white-space: nowrap; }
+        .dash-progress { width: 100%; height: 6px; border-radius: 999px; background: rgba(255,255,255,0.06); overflow: hidden; }
+        .dash-progress-fill { height: 100%; background: linear-gradient(90deg, #a855f7, #c084fc); border-radius: 999px; transition: width .9s cubic-bezier(.2,.8,.2,1); }
+
+        .dash-actions { display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center; position: relative; }
+        .dash-btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 0.75rem 1.15rem; border-radius: 11px; font-size: 13px; font-weight: 700; font-family: inherit; cursor: pointer; transition: transform .18s, box-shadow .18s, background .2s, color .2s; border: 1px solid transparent; text-decoration: none; }
+        .dash-btn:disabled { opacity: 0.65; cursor: not-allowed; }
+        .dash-btn-primary { background: linear-gradient(135deg, #a855f7 0%, #9333ea 100%); color: white; box-shadow: 0 12px 28px -8px rgba(168,85,247,0.5), inset 0 1px 0 rgba(255,255,255,0.15); }
+        .dash-btn-primary:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 16px 36px -10px rgba(168,85,247,0.65); }
+        .dash-btn-outline { background: transparent; color: #f5f3ff; border-color: rgba(255,255,255,0.12); }
+        .dash-btn-outline:hover:not(:disabled) { background: rgba(255,255,255,0.04); border-color: rgba(255,255,255,0.2); }
+        .dash-btn-ghost { background: transparent; color: rgb(170,165,195); }
+        .dash-btn-ghost:hover:not(:disabled) { color: #f87171; }
+        .dash-btn svg { width: 14px; height: 14px; }
+
+        /* Right column */
+        .dash-side-col { display: flex; flex-direction: column; gap: 1rem; }
+        .dash-meet-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem; }
+        .dash-meet-icon { width: 44px; height: 44px; border-radius: 11px; background: linear-gradient(135deg, rgba(168,85,247,0.28), rgba(147,51,234,0.18)); border: 1px solid rgba(168,85,247,0.35); display: inline-flex; align-items: center; justify-content: center; color: #d8b4fe; }
+        .dash-meet-icon svg { width: 22px; height: 22px; }
+        .dash-meet-pill { padding: 4px 10px; border-radius: 999px; background: rgba(168,85,247,0.12); border: 1px solid rgba(168,85,247,0.28); color: #c4b5fd; font-size: 9.5px; font-weight: 700; letter-spacing: 0.18em; }
+        .dash-meet-pill.ready { background: rgba(34,197,94,0.12); border-color: rgba(34,197,94,0.3); color: #4ade80; }
+        .dash-meet-title { font-size: 18px; font-weight: 800; color: #f5f3ff; margin: 0 0 0.5rem; letter-spacing: -0.015em; }
+        .dash-meet-desc { font-size: 12.5px; color: rgb(170,165,195); line-height: 1.55; margin: 0 0 1rem; }
+        .dash-meet-btn { width: 100%; padding: 0.85rem 1.15rem; }
+
+        .dash-quick-card { padding: 1.25rem; }
+        .dash-quick-eyebrow { display: block; font-size: 10px; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase; color: rgb(140,135,165); margin-bottom: 0.85rem; }
+        .dash-quick-item { display: flex; align-items: center; gap: 12px; padding: 10px; border-radius: 12px; text-decoration: none; transition: background .2s; }
+        .dash-quick-item:hover { background: rgba(255,255,255,0.03); }
+        .dash-quick-item + .dash-quick-item { margin-top: 4px; }
+        .dash-quick-icon-wrap { width: 36px; height: 36px; border-radius: 10px; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; }
+        .dash-quick-icon-wrap--violet { background: rgba(168,85,247,0.16); border: 1px solid rgba(168,85,247,0.3); color: #d8b4fe; }
+        .dash-quick-icon-wrap--amber { background: rgba(245,158,11,0.12); border: 1px solid rgba(245,158,11,0.28); color: #fbbf24; }
+        .dash-quick-icon-wrap svg { width: 18px; height: 18px; }
+        .dash-quick-title { display: block; font-size: 13px; font-weight: 700; color: #f5f3ff; }
+        .dash-quick-sub { display: block; font-size: 11px; color: rgb(140,135,165); margin-top: 2px; }
+
+        /* Membership card with 3D flip */
+        .dash-membership-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; position: relative; }
+        .dash-membership-title { display: inline-flex; align-items: center; gap: 14px; font-size: 22px; font-weight: 800; color: #f5f3ff; margin: 0; letter-spacing: -0.02em; }
+        .dash-membership-bar { width: 4px; height: 22px; border-radius: 2px; background: linear-gradient(180deg, #c084fc, #a855f7); box-shadow: 0 0 12px rgba(168,85,247,0.5); }
+        .dash-flip-btn { display: inline-flex; align-items: center; gap: 8px; padding: 8px 14px; border-radius: 999px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1); color: rgb(195,190,215); font-size: 11px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; cursor: pointer; font-family: inherit; transition: all .2s; }
+        .dash-flip-btn:hover { background: rgba(255,255,255,0.08); color: #f5f3ff; border-color: rgba(255,255,255,0.18); }
+        .dash-flip-btn svg { width: 14px; height: 14px; }
+
+        .dash-card-3d { perspective: 1500px; max-width: 480px; margin: 1.25rem auto 0.5rem; }
+        .dash-card-3d-inner { position: relative; width: 100%; aspect-ratio: 1.586; transform-style: preserve-3d; transition: transform .8s cubic-bezier(.2,.8,.2,1); }
+        .dash-card-3d-inner.flipped { transform: rotateY(180deg); }
+        .dash-card-3d-face { position: absolute; inset: 0; backface-visibility: hidden; -webkit-backface-visibility: hidden; padding: 1.4rem 1.6rem; border-radius: 18px; background: linear-gradient(135deg, rgba(48,28,90,0.85) 0%, rgba(20,14,40,0.95) 100%); border: 1px solid rgba(168,85,247,0.25); box-shadow: 0 30px 60px -20px rgba(0,0,0,0.7), 0 0 60px rgba(168,85,247,0.15); display: flex; flex-direction: column; justify-content: space-between; overflow: hidden; }
+        .dash-card-3d-face::after { content: ''; position: absolute; right: -80px; top: -80px; width: 280px; height: 280px; background: radial-gradient(circle, rgba(168,85,247,0.22), transparent 60%); pointer-events: none; }
+        .dash-card-3d-back { transform: rotateY(180deg); }
+        .dash-card-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; position: relative; z-index: 1; }
+        .dash-card-row.bottom { align-items: flex-end; }
+        .dash-card-brand { display: block; font-size: 14.5px; font-weight: 800; letter-spacing: 0.18em; color: #f5f3ff; }
+        .dash-card-tier { display: block; font-size: 9.5px; font-weight: 700; letter-spacing: 0.22em; text-transform: uppercase; color: rgb(170,165,195); margin-top: 4px; }
+        .dash-card-shield { width: 38px; height: 38px; border-radius: 10px; background: rgba(168,85,247,0.28); border: 1px solid rgba(168,85,247,0.45); display: inline-flex; align-items: center; justify-content: center; color: #d8b4fe; flex-shrink: 0; }
+        .dash-card-shield svg { width: 18px; height: 18px; }
+        .dash-card-label { display: block; font-size: 9.5px; font-weight: 700; letter-spacing: 0.22em; text-transform: uppercase; color: rgb(155,150,180); margin-bottom: 6px; }
+        .dash-card-name { display: block; font-size: 24px; font-weight: 800; color: #f5f3ff; letter-spacing: -0.012em; line-height: 1.1; }
+        .dash-card-handle { display: block; font-size: 22px; font-weight: 800; color: #c4b5fd; font-family: ui-monospace, monospace; letter-spacing: 0.02em; margin: 0.5rem 0; position: relative; z-index: 1; }
+        .dash-card-back-label { display: block; font-size: 11px; color: rgb(155,150,180); margin-top: auto; position: relative; z-index: 1; }
+        .dash-card-chip { width: 38px; height: 28px; border-radius: 6px; background: linear-gradient(135deg, #fde047, #f59e0b); box-shadow: inset 0 1px 0 rgba(255,255,255,0.3), inset 0 -1px 0 rgba(0,0,0,0.2); flex-shrink: 0; }
+
+        @media (max-width: 1080px) {
+            .dash-shell { grid-template-columns: 1fr; }
+            .dash-sidebar { position: relative; min-height: auto; flex-direction: row; flex-wrap: wrap; gap: 0.75rem; padding: 0.85rem; align-items: center; }
+            .dash-profile-card { flex: 1 0 200px; }
+            .dash-nav { flex-direction: row; flex-wrap: wrap; flex: 1 0 auto; }
+            .dash-nav-item { padding: 9px 12px; }
+            .dash-side-foot { margin-top: 0; flex-direction: row; gap: 0.5rem; }
+            .dash-main-grid { grid-template-columns: 1fr; }
+        }
+        @media (max-width: 660px) {
+            .dash-info-grid { grid-template-columns: 1fr; }
+            .dash-card-3d { max-width: 100%; }
+            .dash-card-name { font-size: 20px; }
+        }
     </style>
 </head>
 <body class="bg-gray-950 text-gray-100 antialiased min-h-screen relative overflow-x-hidden">
@@ -1085,67 +1217,179 @@
                 </div>
             </div>
 
-            <!-- VIEW: Active Dashboard -->
-            <div id="view-dashboard" class="hidden animate-fade-in space-y-5">
-                <div class="pane-grid two">
-                    <!-- Subscription pane -->
-                    <div class="pane">
-                        <div class="pane-header">
-                            <div>
-                                <span class="eyebrow">Subscription</span>
-                                <h2 class="text-xl font-bold text-white mt-1">Your <span class="gradient-text">plan</span></h2>
+            <!-- VIEW: Active Dashboard (sidebar + cards + flip membership card) -->
+            <div id="view-dashboard" class="hidden animate-fade-in">
+                <div class="dash-shell">
+                    <!-- Sidebar -->
+                    <aside class="dash-sidebar">
+                        <div class="dash-profile-card">
+                            <span class="dash-profile-icon" aria-hidden="true">
+                                <svg fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.6 4.5A9 9 0 1112 21a9 9 0 008.6-6.5z"/></svg>
+                            </span>
+                            <div class="dash-profile-info">
+                                <span class="dash-profile-title">Pro User Profile</span>
+                                <span class="dash-profile-sub" id="dash-tier">DevTools Pro Member</span>
                             </div>
-                            <span id="dash-badge" class="badge badge-success">Active</span>
                         </div>
-                        <div class="grid grid-cols-2 gap-3 mb-5">
-                            <div class="pane-flat"><p class="eyebrow">Plan</p><p id="dash-plan" class="text-white font-bold mt-1">…</p></div>
-                            <div class="pane-flat"><p class="eyebrow">Credits</p><p id="dash-credits" class="text-emerald-400 font-bold mt-1">…</p></div>
-                            <div class="pane-flat"><p class="eyebrow">Started</p><p id="dash-start" class="text-white text-sm mt-1">…</p></div>
-                            <div class="pane-flat"><p class="eyebrow">Renews</p><p id="dash-end" class="text-white text-sm mt-1">…</p></div>
-                        </div>
-                        <div class="flex flex-wrap gap-2">
-                            <button id="btn-upgrade" class="btn btn-primary flex-1 min-w-[120px]" data-label="Upgrade">Upgrade</button>
-                            <button id="btn-renew" class="btn btn-success flex-1 min-w-[120px]" data-label="Renew">Renew</button>
-                            <button id="btn-cancel" class="btn btn-danger-ghost" data-label="Cancel">Cancel</button>
-                        </div>
-                    </div>
-                    <!-- Meet + Quick Actions pane -->
-                    <aside class="pane self-start">
-                        <span class="eyebrow">Onboarding call</span>
-                        <h3 class="mt-2 text-base font-semibold text-white">1:1 Google Meet</h3>
-                        <p class="text-gray-400 text-xs mt-1">Get personalized setup &amp; tips.</p>
-                        <a id="dash-meet" href="#" target="_blank" rel="noopener" class="btn btn-primary btn-block btn-lg mt-4">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
-                            <span id="dash-meet-label">Open Meet Link</span>
-                        </a>
-                        <div class="divider my-5"></div>
-                        <span class="eyebrow">Quick actions</span>
-                        <div class="grid grid-cols-2 gap-2 mt-3">
-                            <a href="https://kiro.dev/downloads/" target="_blank" class="btn btn-soft">
-                                <svg class="w-4 h-4 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
-                                Download IDE
-                            </a>
-                            <a href="https://api.whatsapp.com/send?phone=919019879108&text=Hi%2C%20I%20need%20help" target="_blank" class="btn btn-soft">
-                                <svg class="w-4 h-4 text-emerald-400" fill="currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
-                                Support
-                            </a>
+
+                        <nav class="dash-nav">
+                            <button type="button" class="dash-nav-item active">
+                                <svg fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h6v6H4zM14 6h6v3h-6zM14 13h6v5h-6zM4 15h6v3H4z"/></svg>
+                                Dashboard
+                            </button>
+                            <button type="button" class="dash-nav-item" id="nav-history">
+                                <svg fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 10h2l1-7M12 8v4l3 2M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                History
+                            </button>
+                            <button type="button" class="dash-nav-item" id="nav-settings">
+                                <svg fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path stroke-linecap="round" stroke-linejoin="round" d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h0a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v0a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+                                Settings
+                            </button>
+                        </nav>
+
+                        <div class="dash-side-foot">
+                            <button type="button" class="dash-side-cta" id="btn-upgrade-side">Upgrade to Power</button>
+                            <button type="button" class="dash-side-signout" id="logout-btn-side">
+                                <svg fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+                                Sign Out
+                            </button>
                         </div>
                     </aside>
-                </div>
-                <!-- Account pane (full width) -->
-                <div class="pane">
-                    <div class="pane-header">
-                        <div>
-                            <span class="eyebrow">Profile</span>
-                            <h2 class="text-xl font-bold text-white mt-1">Account details</h2>
+
+                    <!-- Main content -->
+                    <div class="dash-main">
+                        <div class="dash-main-grid">
+                            <!-- Your plan -->
+                            <section class="dash-card">
+                                <header class="dash-card-head">
+                                    <h2 class="dash-card-title">Your plan</h2>
+                                    <span id="dash-badge" class="dash-status-pill">Active</span>
+                                </header>
+
+                                <div class="dash-info-grid">
+                                    <div class="dash-info-tile">
+                                        <span class="dash-info-label">Plan name</span>
+                                        <span class="dash-info-value dash-info-value--accent" id="dash-plan">…</span>
+                                    </div>
+                                    <div class="dash-info-tile">
+                                        <div class="dash-info-tile-head">
+                                            <span class="dash-info-label">Available credits</span>
+                                            <span class="dash-info-credits-num" id="dash-credits">…</span>
+                                        </div>
+                                        <div class="dash-progress" aria-hidden="true"><div class="dash-progress-fill" id="dash-credits-fill" style="width:0"></div></div>
+                                    </div>
+                                    <div class="dash-info-tile">
+                                        <span class="dash-info-label">Subscription started</span>
+                                        <span class="dash-info-value" id="dash-start">…</span>
+                                    </div>
+                                    <div class="dash-info-tile">
+                                        <span class="dash-info-label">Next renewal</span>
+                                        <span class="dash-info-value" id="dash-end">…</span>
+                                    </div>
+                                </div>
+
+                                <div class="dash-actions">
+                                    <button id="btn-upgrade" class="dash-btn dash-btn-primary" type="button" data-label="Upgrade Plan">Upgrade Plan</button>
+                                    <button id="btn-renew" class="dash-btn dash-btn-outline" type="button" data-label="Renew Now">Renew Now</button>
+                                    <button id="btn-cancel" class="dash-btn dash-btn-ghost" type="button" data-label="Cancel">Cancel Subscription</button>
+                                </div>
+                            </section>
+
+                            <!-- Right column: Meet + Quick access -->
+                            <aside class="dash-side-col">
+                                <div class="dash-card">
+                                    <div class="dash-meet-head">
+                                        <span class="dash-meet-icon" aria-hidden="true">
+                                            <svg fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+                                        </span>
+                                        <span class="dash-meet-pill" id="dash-meet-pill">Upcoming</span>
+                                    </div>
+                                    <h3 class="dash-meet-title">1:1 Google Meet</h3>
+                                    <p class="dash-meet-desc">Schedule your onboarding session with a dedicated DevTools Pro engineer to optimize your workflow.</p>
+                                    <a id="dash-meet" href="#" target="_blank" rel="noopener" class="dash-btn dash-btn-primary dash-meet-btn">
+                                        <span id="dash-meet-label">Open Meet Link</span>
+                                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.2"><path stroke-linecap="round" stroke-linejoin="round" d="M5 12h14M13 6l6 6-6 6"/></svg>
+                                    </a>
+                                </div>
+
+                                <div class="dash-card dash-quick-card">
+                                    <span class="dash-quick-eyebrow">Quick access</span>
+                                    <a href="https://kiro.dev/downloads/" target="_blank" rel="noopener" class="dash-quick-item">
+                                        <span class="dash-quick-icon-wrap dash-quick-icon-wrap--violet">
+                                            <svg fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 9l3 3-3 3m5 0h3M5 5h14a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2z"/></svg>
+                                        </span>
+                                        <div>
+                                            <span class="dash-quick-title">Download IDE</span>
+                                            <span class="dash-quick-sub">Latest stable build</span>
+                                        </div>
+                                    </a>
+                                    <a href="https://api.whatsapp.com/send?phone=919019879108&text=Hi%2C%20I%20need%20help" target="_blank" rel="noopener" class="dash-quick-item">
+                                        <span class="dash-quick-icon-wrap dash-quick-icon-wrap--amber">
+                                            <svg fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.5M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9 5.25h.008v.008H12v-.008z"/></svg>
+                                        </span>
+                                        <div>
+                                            <span class="dash-quick-title">Priority Support</span>
+                                            <span class="dash-quick-sub">Average response: 5m</span>
+                                        </div>
+                                    </a>
+                                </div>
+                            </aside>
                         </div>
+
+                        <!-- Membership identity (full-width with flip card) -->
+                        <section class="dash-card">
+                            <header class="dash-membership-head">
+                                <h2 class="dash-membership-title"><span class="dash-membership-bar" aria-hidden="true"></span>Membership identity</h2>
+                                <button id="dash-flip" class="dash-flip-btn" type="button">
+                                    <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                                    Flip card
+                                </button>
+                            </header>
+                            <div class="dash-card-3d">
+                                <div class="dash-card-3d-inner" id="dash-card-inner">
+                                    <div class="dash-card-3d-face dash-card-3d-front">
+                                        <div class="dash-card-row top">
+                                            <div>
+                                                <span class="dash-card-brand">DEVTOOLS PRO</span>
+                                                <span class="dash-card-tier" id="dash-card-tier-front">Enterprise Access</span>
+                                            </div>
+                                            <span class="dash-card-shield" aria-hidden="true">
+                                                <svg fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.6 4.5A9 9 0 1112 21a9 9 0 008.6-6.5z"/></svg>
+                                            </span>
+                                        </div>
+                                        <div class="dash-card-row bottom">
+                                            <div>
+                                                <span class="dash-card-label">Member name</span>
+                                                <span class="dash-card-name" id="dash-card-name">…</span>
+                                            </div>
+                                            <span class="dash-card-chip" aria-hidden="true"></span>
+                                        </div>
+                                    </div>
+                                    <div class="dash-card-3d-face dash-card-3d-back">
+                                        <div class="dash-card-row top">
+                                            <div>
+                                                <span class="dash-card-brand">DEVTOOLS PRO</span>
+                                                <span class="dash-card-tier">Public handle</span>
+                                            </div>
+                                            <span class="dash-card-shield" aria-hidden="true">
+                                                <svg fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.6 4.5A9 9 0 1112 21a9 9 0 008.6-6.5z"/></svg>
+                                            </span>
+                                        </div>
+                                        <span class="dash-card-handle" id="dash-card-handle">@…</span>
+                                        <span class="dash-card-back-label">Member since <span id="dash-card-since">…</span></span>
+                                    </div>
+                                </div>
+                            </div>
+                        </section>
                     </div>
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-1">
-                        <div class="info-row"><span class="k">Name</span><span id="dash-name" class="v">…</span></div>
-                        <div class="info-row"><span class="k">Email</span><span id="dash-email" class="v truncate max-w-[60%]" title="">…</span></div>
-                        <div class="info-row"><span class="k">Phone</span><span id="dash-phone" class="v">…</span></div>
-                        <div class="info-row"><span class="k">UTR</span><span id="dash-utr" class="v font-mono text-xs">…</span></div>
-                    </div>
+                </div>
+
+                <!-- Hidden spans preserved so legacy JS textContent assignments don't crash -->
+                <div style="display:none" aria-hidden="true">
+                    <span id="dash-name"></span>
+                    <span id="dash-email" title=""></span>
+                    <span id="dash-phone"></span>
+                    <span id="dash-utr"></span>
                 </div>
             </div>
 
@@ -1166,6 +1410,8 @@
         views.forEach(v => document.getElementById(v).classList.add('hidden'));
         const el = document.getElementById(id);
         el.classList.remove('hidden');
+        // Tag the body so view-scoped CSS (e.g. hide global header on dashboard) can react
+        document.body.dataset.activeView = id.replace('view-', '');
         // re-trigger entrance animation
         el.classList.remove('animate-fade-in','animate-slide-up');
         void el.offsetWidth;
@@ -1439,41 +1685,73 @@
     });
 
     /* ─── Active dashboard render ─── */
+    /* ─── Active dashboard render ─── */
+    const PLAN_CREDITS = { 'Pro': 1000, 'Pro+': 2000, 'Pro Max': 5000, 'Power': 10000 };
+    const PLAN_TIER_LABEL = { 'Pro': 'Pro Subscriber', 'Pro+': 'Pro+ Subscriber', 'Pro Max': 'Pro Max Subscriber', 'Power': 'Power User' };
+    function setText(id, value) { const el = document.getElementById(id); if (el) el.textContent = value; }
+    function deriveHandle(user) {
+        if (user.email) return '@' + user.email.split('@')[0].toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
+        if (user.name) return '@' + user.name.toLowerCase().replace(/\s+/g, '_');
+        return '@member';
+    }
     function renderDashboard(user) {
-        document.getElementById('dash-plan').textContent = user.currentPlan || '—';
-        document.getElementById('dash-credits').textContent = getCreditsByPlan(user.currentPlan);
-        document.getElementById('dash-start').textContent = user.planStartDate ? new Date(user.planStartDate).toLocaleDateString('en-IN') : '—';
-        document.getElementById('dash-end').textContent = user.planEndDate ? new Date(user.planEndDate).toLocaleDateString('en-IN') : '—';
-        document.getElementById('dash-name').textContent = user.name || '—';
-        const emailEl = document.getElementById('dash-email');
-        emailEl.textContent = user.email || '—';
-        emailEl.title = user.email || '';
-        document.getElementById('dash-phone').textContent = user.phone || '—';
-        document.getElementById('dash-utr').textContent = user.utrId || '—';
+        const totalCredits = PLAN_CREDITS[user.currentPlan] || 0;
+        const totalCreditsStr = totalCredits ? totalCredits.toLocaleString('en-IN') : '—';
+        const startDate = user.planStartDate ? new Date(user.planStartDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '—';
+        const endDate = user.planEndDate ? new Date(user.planEndDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '—';
 
+        setText('dash-plan', user.currentPlan || '—');
+        setText('dash-credits', totalCredits ? `${totalCreditsStr} / ${totalCreditsStr}` : '—');
+        setText('dash-start', startDate);
+        setText('dash-end', endDate);
+
+        // Hidden spans (kept so legacy JS contracts don't crash)
+        setText('dash-name', user.name || '');
+        const emailEl = document.getElementById('dash-email');
+        if (emailEl) { emailEl.textContent = user.email || ''; emailEl.title = user.email || ''; }
+        setText('dash-phone', user.phone || '');
+        setText('dash-utr', user.utrId || '');
+
+        // Sidebar tier sub
+        setText('dash-tier', PLAN_TIER_LABEL[user.currentPlan] || 'DevTools Pro Member');
+
+        // Credit progress bar — fresh sub starts with 100% available
+        const fillEl = document.getElementById('dash-credits-fill');
+        if (fillEl) requestAnimationFrame(() => { fillEl.style.width = totalCredits ? '100%' : '0'; });
+
+        // Membership card
+        setText('dash-card-name', user.name || 'DevTools Member');
+        setText('dash-card-handle', deriveHandle(user));
+        setText('dash-card-since', startDate);
+        setText('dash-card-tier-front', (PLAN_TIER_LABEL[user.currentPlan] || 'Enterprise Access').toUpperCase());
+
+        // Meet button + pill
         const meetEl = document.getElementById('dash-meet');
         const meetLabel = document.getElementById('dash-meet-label');
-        if (user.meetLink) {
-            meetEl.href = user.meetLink;
-            meetEl.classList.remove('btn-soft');
-            meetEl.classList.add('btn-primary');
-            meetLabel.textContent = 'Open Meet Link';
-            meetEl.removeAttribute('aria-disabled');
-        } else {
-            meetEl.href = '#';
-            meetEl.classList.remove('btn-primary');
-            meetEl.classList.add('btn-soft');
-            meetLabel.textContent = 'Meet link pending';
-            meetEl.setAttribute('aria-disabled', 'true');
+        const meetPill = document.getElementById('dash-meet-pill');
+        if (meetEl && meetLabel) {
+            if (user.meetLink) {
+                meetEl.href = user.meetLink;
+                meetEl.classList.remove('dash-btn-outline');
+                meetEl.classList.add('dash-btn-primary');
+                meetEl.removeAttribute('aria-disabled');
+                meetLabel.textContent = 'Open Meet Link';
+                if (meetPill) { meetPill.textContent = 'Ready'; meetPill.classList.add('ready'); }
+            } else {
+                meetEl.href = '#';
+                meetEl.classList.remove('dash-btn-primary');
+                meetEl.classList.add('dash-btn-outline');
+                meetEl.setAttribute('aria-disabled', 'true');
+                meetLabel.textContent = 'Meet link pending';
+                if (meetPill) { meetPill.textContent = 'Upcoming'; meetPill.classList.remove('ready'); }
+            }
         }
 
+        // Status pill — Active vs Cancelled
         const badge = document.getElementById('dash-badge');
-        if (user.planStatus === 'cancelled') {
-            badge.textContent = 'Cancelled';
-            badge.className = 'badge badge-warn';
-        } else {
-            badge.textContent = 'Active';
-            badge.className = 'badge badge-success';
+        if (badge) {
+            if (user.planStatus === 'cancelled') { badge.textContent = 'Cancelled'; badge.classList.add('warn'); }
+            else { badge.textContent = 'Active'; badge.classList.remove('warn'); }
         }
     }
 
@@ -1501,6 +1779,13 @@
     });
 
     document.getElementById('logout-btn').addEventListener('click', () => { clearSession(); location.reload(); });
+
+    /* ─── Dashboard sidebar + flip card wiring ─── */
+    document.getElementById('logout-btn-side')?.addEventListener('click', () => { clearSession(); location.reload(); });
+    document.getElementById('btn-upgrade-side')?.addEventListener('click', () => showView('view-plans'));
+    document.getElementById('dash-flip')?.addEventListener('click', () => {
+        document.getElementById('dash-card-inner')?.classList.toggle('flipped');
+    });
 
     init();
     </script>
