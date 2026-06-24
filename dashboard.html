@@ -479,15 +479,20 @@
         body[data-active-view="dashboard"] header.sticky { display: none; }
         #view-dashboard { margin-top: -2rem; margin-bottom: -4rem; }
 
-        .dash-shell { display: grid; grid-template-columns: 232px minmax(0, 1fr); gap: 1.5rem; max-width: 1480px; margin: 0 auto; padding: 1.25rem 0.25rem; }
+        /* Top navbar — full-width brand bar above the sidebar+main area */
+        .dash-topbar { display: flex; align-items: center; justify-content: space-between; padding: 0.95rem 1.75rem; border-bottom: 1px solid rgba(255,255,255,0.06); backdrop-filter: blur(18px) saturate(140%); -webkit-backdrop-filter: blur(18px) saturate(140%); background: rgba(10,7,22,0.55); position: sticky; top: 0; z-index: 30; }
+        .dash-topbar-brand { display: inline-flex; align-items: center; text-decoration: none; }
+        .dash-topbar-brand .brand-mark { font-size: 22px; }
+
+        /* Shell: pinned to the left edge (no centering), grid for sidebar + main */
+        .dash-shell { display: grid; grid-template-columns: 232px minmax(0, 1fr); gap: 1.5rem; max-width: none; margin: 0; padding: 1.25rem 1.75rem 1.75rem; }
 
         /* Sidebar */
-        .dash-sidebar { display: flex; flex-direction: column; gap: 1.25rem; padding: 1.25rem 0.85rem; min-height: calc(100vh - 2.5rem); position: sticky; top: 1.25rem; }
-        .dash-brand-row { display: inline-flex; align-items: center; padding: 4px 6px 6px; text-decoration: none; }
-        .dash-brand-row .brand-mark { font-size: 18px; }
+        .dash-sidebar { display: flex; flex-direction: column; gap: 1.25rem; padding: 1.25rem 0.85rem; min-height: calc(100vh - 4.75rem); position: sticky; top: 4.5rem; }
         .dash-profile-card { display: flex; align-items: center; gap: 0.7rem; padding: 0.85rem; border-radius: 14px; background: rgba(20,16,42,0.5); border: 1px solid rgba(255,255,255,0.06); }
-        .dash-profile-icon { width: 36px; height: 36px; border-radius: 10px; background: rgba(168,85,247,0.18); border: 1px solid rgba(168,85,247,0.3); display: inline-flex; align-items: center; justify-content: center; color: #c4b5fd; flex-shrink: 0; }
-        .dash-profile-icon svg { width: 18px; height: 18px; }
+        .dash-profile-icon { width: 38px; height: 38px; border-radius: 50%; background: linear-gradient(135deg, rgba(168,85,247,0.32), rgba(147,51,234,0.18)); border: 1px solid rgba(168,85,247,0.38); display: inline-flex; align-items: center; justify-content: center; color: #d8b4fe; flex-shrink: 0; overflow: hidden; }
+        .dash-profile-icon svg { width: 20px; height: 20px; }
+        .dash-profile-icon img { width: 100%; height: 100%; object-fit: cover; }
         .dash-profile-info { display: flex; flex-direction: column; min-width: 0; }
         .dash-profile-title { font-size: 13px; font-weight: 700; color: #f5f3ff; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .dash-profile-sub { font-size: 11px; color: rgb(155,150,180); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -508,6 +513,8 @@
         /* Main content */
         .dash-main { display: flex; flex-direction: column; gap: 1.5rem; padding-bottom: 1.5rem; }
         .dash-main-grid { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); gap: 1.5rem; align-items: start; }
+        /* Left column: stacks plan card + membership card */
+        .dash-main-left { display: flex; flex-direction: column; gap: 1.25rem; min-width: 0; }
 
         /* Card base */
         .dash-card { position: relative; padding: 1.75rem; border-radius: 22px; background: linear-gradient(180deg, rgba(28,22,56,0.45) 0%, rgba(14,10,30,0.6) 100%); border: 1px solid rgba(255,255,255,0.06); overflow: hidden; }
@@ -560,6 +567,7 @@
         .dash-meet-icon svg { width: 22px; height: 22px; }
         .dash-meet-pill { padding: 4px 10px; border-radius: 999px; background: rgba(168,85,247,0.12); border: 1px solid rgba(168,85,247,0.28); color: #c4b5fd; font-size: 9.5px; font-weight: 700; letter-spacing: 0.18em; }
         .dash-meet-pill.ready { background: rgba(34,197,94,0.12); border-color: rgba(34,197,94,0.3); color: #4ade80; }
+        .dash-meet-pill.done  { background: rgba(255,255,255,0.04); border-color: rgba(255,255,255,0.08); color: rgb(155,150,180); }
         .dash-meet-title { font-size: 18px; font-weight: 800; color: #f5f3ff; margin: 0 0 0.5rem; letter-spacing: -0.015em; }
         .dash-meet-desc { font-size: 12.5px; color: rgb(170,165,195); line-height: 1.55; margin: 0 0 1rem; }
         .dash-meet-btn { width: 100%; padding: 0.85rem 1.15rem; }
@@ -588,7 +596,7 @@
         .dash-news-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 0.85rem; }
         .dash-news-list li { display: grid; grid-template-rows: auto auto auto; gap: 4px; padding-bottom: 0.85rem; border-bottom: 1px solid rgba(255,255,255,0.04); }
         .dash-news-list li:last-child { border-bottom: 0; padding-bottom: 0; }
-        .dash-news-tag { display: inline-block; align-self: start; padding: 2px 8px; border-radius: 5px; font-size: 9px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; }
+        .dash-news-tag { display: inline-block; justify-self: start; width: fit-content; padding: 2px 8px; border-radius: 5px; font-size: 9px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; }
         .dash-news-tag.tag-violet { background: rgba(168,85,247,0.16); color: #d8b4fe; border: 1px solid rgba(168,85,247,0.3); }
         .dash-news-tag.tag-amber { background: rgba(245,158,11,0.13); color: #fbbf24; border: 1px solid rgba(245,158,11,0.3); }
         .dash-news-tag.tag-pink { background: rgba(236,72,153,0.13); color: #f472b6; border: 1px solid rgba(236,72,153,0.3); }
@@ -1258,20 +1266,23 @@
 
             <!-- VIEW: Active Dashboard (sidebar + cards + flip membership card) -->
             <div id="view-dashboard" class="hidden animate-fade-in">
+                <!-- Top navbar (full-width brand bar) -->
+                <nav class="dash-topbar" aria-label="Dashboard top navigation">
+                    <a href="index.html" class="dash-topbar-brand" aria-label="DevTools Pro home">
+                        <span class="brand-mark">DevTools Pro</span>
+                    </a>
+                </nav>
+
                 <div class="dash-shell">
                     <!-- Sidebar -->
                     <aside class="dash-sidebar">
-                        <a href="index.html" class="dash-brand-row" aria-label="DevTools Pro home">
-                            <span class="brand-mark">DevTools Pro</span>
-                        </a>
-
                         <div class="dash-profile-card">
-                            <span class="dash-profile-icon" aria-hidden="true">
-                                <svg fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.6 4.5A9 9 0 1112 21a9 9 0 008.6-6.5z"/></svg>
+                            <span class="dash-profile-icon" id="dash-profile-icon" aria-hidden="true">
+                                <svg fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
                             </span>
                             <div class="dash-profile-info">
-                                <span class="dash-profile-title">Pro User Profile</span>
-                                <span class="dash-profile-sub" id="dash-tier">DevTools Pro Member</span>
+                                <span class="dash-profile-title" id="dash-profile-name">Member</span>
+                                <span class="dash-profile-sub" id="dash-profile-email">…</span>
                             </div>
                         </div>
 
@@ -1302,6 +1313,8 @@
                     <!-- Main content -->
                     <div class="dash-main">
                         <div class="dash-main-grid">
+                            <!-- Left column: plan + membership -->
+                            <div class="dash-main-left">
                             <!-- Your plan -->
                             <section class="dash-card">
                                 <header class="dash-card-head">
@@ -1343,6 +1356,53 @@
                                     <button id="btn-cancel" class="dash-btn dash-btn-ghost" type="button" data-label="Cancel">Cancel Subscription</button>
                                 </div>
                             </section>
+
+                            <!-- Membership identity (flip card, sits inside the left column) -->
+                            <section class="dash-card">
+                                <header class="dash-membership-head">
+                                    <h2 class="dash-membership-title"><span class="dash-membership-bar" aria-hidden="true"></span>Membership identity</h2>
+                                    <button id="dash-flip" class="dash-flip-btn" type="button">
+                                        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                                        Flip card
+                                    </button>
+                                </header>
+                                <div class="dash-card-3d">
+                                    <div class="dash-card-3d-inner" id="dash-card-inner">
+                                        <div class="dash-card-3d-face dash-card-3d-front">
+                                            <div class="dash-card-row top">
+                                                <div>
+                                                    <span class="dash-card-brand">DEVTOOLS PRO</span>
+                                                    <span class="dash-card-tier" id="dash-card-tier-front">Enterprise Access</span>
+                                                </div>
+                                                <span class="dash-card-shield" aria-hidden="true">
+                                                    <svg fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.6 4.5A9 9 0 1112 21a9 9 0 008.6-6.5z"/></svg>
+                                                </span>
+                                            </div>
+                                            <div class="dash-card-row bottom">
+                                                <div>
+                                                    <span class="dash-card-label">Member name</span>
+                                                    <span class="dash-card-name" id="dash-card-name">…</span>
+                                                </div>
+                                                <span class="dash-card-chip" aria-hidden="true"></span>
+                                            </div>
+                                        </div>
+                                        <div class="dash-card-3d-face dash-card-3d-back">
+                                            <div class="dash-card-row top">
+                                                <div>
+                                                    <span class="dash-card-brand">DEVTOOLS PRO</span>
+                                                    <span class="dash-card-tier">Public handle</span>
+                                                </div>
+                                                <span class="dash-card-shield" aria-hidden="true">
+                                                    <svg fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.6 4.5A9 9 0 1112 21a9 9 0 008.6-6.5z"/></svg>
+                                                </span>
+                                            </div>
+                                            <span class="dash-card-handle" id="dash-card-handle">@…</span>
+                                            <span class="dash-card-back-label">Member since <span id="dash-card-since">…</span></span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </section>
+                            </div>
 
                             <!-- Right column: Meet + Quick access -->
                             <aside class="dash-side-col">
@@ -1431,52 +1491,6 @@
                                 </div>
                             </aside>
                         </div>
-
-                        <!-- Membership identity (full-width with flip card) -->
-                        <section class="dash-card">
-                            <header class="dash-membership-head">
-                                <h2 class="dash-membership-title"><span class="dash-membership-bar" aria-hidden="true"></span>Membership identity</h2>
-                                <button id="dash-flip" class="dash-flip-btn" type="button">
-                                    <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
-                                    Flip card
-                                </button>
-                            </header>
-                            <div class="dash-card-3d">
-                                <div class="dash-card-3d-inner" id="dash-card-inner">
-                                    <div class="dash-card-3d-face dash-card-3d-front">
-                                        <div class="dash-card-row top">
-                                            <div>
-                                                <span class="dash-card-brand">DEVTOOLS PRO</span>
-                                                <span class="dash-card-tier" id="dash-card-tier-front">Enterprise Access</span>
-                                            </div>
-                                            <span class="dash-card-shield" aria-hidden="true">
-                                                <svg fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.6 4.5A9 9 0 1112 21a9 9 0 008.6-6.5z"/></svg>
-                                            </span>
-                                        </div>
-                                        <div class="dash-card-row bottom">
-                                            <div>
-                                                <span class="dash-card-label">Member name</span>
-                                                <span class="dash-card-name" id="dash-card-name">…</span>
-                                            </div>
-                                            <span class="dash-card-chip" aria-hidden="true"></span>
-                                        </div>
-                                    </div>
-                                    <div class="dash-card-3d-face dash-card-3d-back">
-                                        <div class="dash-card-row top">
-                                            <div>
-                                                <span class="dash-card-brand">DEVTOOLS PRO</span>
-                                                <span class="dash-card-tier">Public handle</span>
-                                            </div>
-                                            <span class="dash-card-shield" aria-hidden="true">
-                                                <svg fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.6 4.5A9 9 0 1112 21a9 9 0 008.6-6.5z"/></svg>
-                                            </span>
-                                        </div>
-                                        <span class="dash-card-handle" id="dash-card-handle">@…</span>
-                                        <span class="dash-card-back-label">Member since <span id="dash-card-since">…</span></span>
-                                    </div>
-                                </div>
-                            </div>
-                        </section>
                     </div>
                 </div>
 
@@ -1815,7 +1829,14 @@
         setText('dash-phone', user.phone || '');
         setText('dash-utr', user.utrId || '');
 
-        // Sidebar tier sub
+        // Sidebar profile (replaces the old "Pro User Profile / tier" text)
+        setText('dash-profile-name', user.name || 'Member');
+        setText('dash-profile-email', user.email || '');
+        const profileIcon = document.getElementById('dash-profile-icon');
+        if (profileIcon && user.picture) {
+            profileIcon.innerHTML = `<img src="${user.picture}" alt="" referrerpolicy="no-referrer">`;
+        }
+        // Legacy tier span (no longer in sidebar; setText is a safe no-op if missing)
         setText('dash-tier', PLAN_TIER_LABEL[user.currentPlan] || 'DevTools Pro Member');
 
         // Credit progress bar — 0% always (we don't track usage here; live in IDE)
