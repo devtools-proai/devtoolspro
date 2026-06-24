@@ -477,18 +477,20 @@
            ═══════════════════════════════════════════════════════════════ */
         /* Hide global header on dashboard view (sidebar takes over) */
         body[data-active-view="dashboard"] header.sticky { display: none; }
-        #view-dashboard { margin-top: -2rem; margin-bottom: -4rem; }
+        /* Lock the dashboard view to a single viewport — no page scroll */
+        body[data-active-view="dashboard"] { overflow: hidden; }
+        #view-dashboard { margin-top: -2rem; margin-bottom: -4rem; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
 
         /* Top navbar — full-width brand bar above the sidebar+main area */
-        .dash-topbar { display: flex; align-items: center; justify-content: space-between; padding: 0.95rem 1.75rem; border-bottom: 1px solid rgba(255,255,255,0.06); backdrop-filter: blur(18px) saturate(140%); -webkit-backdrop-filter: blur(18px) saturate(140%); background: rgba(10,7,22,0.55); position: sticky; top: 0; z-index: 30; }
+        .dash-topbar { display: flex; align-items: center; justify-content: space-between; padding: 0.75rem 1.75rem; border-bottom: 1px solid rgba(255,255,255,0.06); backdrop-filter: blur(18px) saturate(140%); -webkit-backdrop-filter: blur(18px) saturate(140%); background: rgba(10,7,22,0.55); flex-shrink: 0; }
         .dash-topbar-brand { display: inline-flex; align-items: center; text-decoration: none; }
-        .dash-topbar-brand .brand-mark { font-size: 22px; }
+        .dash-topbar-brand .brand-mark { font-size: 20px; }
 
         /* Shell: pinned to the left edge (no centering), grid for sidebar + main */
-        .dash-shell { display: grid; grid-template-columns: 232px minmax(0, 1fr); gap: 1.5rem; max-width: none; margin: 0; padding: 1.25rem 1.75rem 1.75rem; }
+        .dash-shell { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 1.1rem; max-width: none; margin: 0; padding: 0.85rem 1.5rem 1rem; flex: 1; min-height: 0; overflow: hidden; }
 
         /* Sidebar */
-        .dash-sidebar { display: flex; flex-direction: column; gap: 1.25rem; padding: 1.25rem 0.85rem; min-height: calc(100vh - 4.75rem); position: sticky; top: 4.5rem; }
+        .dash-sidebar { display: flex; flex-direction: column; gap: 0.85rem; padding: 0.85rem 0.5rem; overflow-y: auto; min-height: 0; }
         .dash-profile-card { display: flex; align-items: center; gap: 0.7rem; padding: 0.85rem; border-radius: 14px; background: rgba(20,16,42,0.5); border: 1px solid rgba(255,255,255,0.06); }
         .dash-profile-icon { width: 38px; height: 38px; border-radius: 50%; background: linear-gradient(135deg, rgba(168,85,247,0.32), rgba(147,51,234,0.18)); border: 1px solid rgba(168,85,247,0.38); display: inline-flex; align-items: center; justify-content: center; color: #d8b4fe; flex-shrink: 0; overflow: hidden; }
         .dash-profile-icon svg { width: 20px; height: 20px; }
@@ -511,18 +513,18 @@
         .dash-side-signout svg { width: 16px; height: 16px; }
 
         /* Main content */
-        .dash-main { display: flex; flex-direction: column; gap: 1.5rem; padding-bottom: 1.5rem; }
-        .dash-main-grid { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); gap: 1.5rem; align-items: start; }
+        .dash-main { display: flex; flex-direction: column; gap: 1rem; padding-bottom: 0.25rem; overflow-y: auto; min-height: 0; }
+        .dash-main-grid { display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr); gap: 1rem; align-items: start; }
         /* Left column: stacks plan card + membership card */
-        .dash-main-left { display: flex; flex-direction: column; gap: 1.25rem; min-width: 0; }
+        .dash-main-left { display: flex; flex-direction: column; gap: 0.85rem; min-width: 0; }
 
         /* Card base */
-        .dash-card { position: relative; padding: 1.75rem; border-radius: 22px; background: linear-gradient(180deg, rgba(28,22,56,0.45) 0%, rgba(14,10,30,0.6) 100%); border: 1px solid rgba(255,255,255,0.06); overflow: hidden; }
+        .dash-card { position: relative; padding: 1.25rem 1.4rem; border-radius: 18px; background: linear-gradient(180deg, rgba(28,22,56,0.45) 0%, rgba(14,10,30,0.6) 100%); border: 1px solid rgba(255,255,255,0.06); overflow: hidden; }
         .dash-card::before { content: ''; position: absolute; inset: 0; border-radius: inherit; padding: 1px; background: linear-gradient(180deg, rgba(255,255,255,0.12), rgba(255,255,255,0.02) 30%, transparent 60%); -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude; pointer-events: none; }
 
         /* Plan card */
-        .dash-card-head { display: flex; align-items: center; gap: 0.85rem; margin-bottom: 1.5rem; position: relative; }
-        .dash-card-title { font-size: 28px; font-weight: 800; color: #f5f3ff; margin: 0; letter-spacing: -0.02em; }
+        .dash-card-head { display: flex; align-items: center; gap: 0.85rem; margin-bottom: 1rem; position: relative; }
+        .dash-card-title { font-size: 24px; font-weight: 800; color: #f5f3ff; margin: 0; letter-spacing: -0.02em; }
         .dash-status-pill { display: inline-flex; align-items: center; gap: 6px; padding: 4px 11px; border-radius: 999px; background: rgba(34,197,94,0.12); border: 1px solid rgba(34,197,94,0.3); color: #4ade80; font-size: 11px; font-weight: 700; }
         .dash-status-pill::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: currentColor; box-shadow: 0 0 6px currentColor; }
         .dash-status-pill.warn { background: rgba(245,158,11,0.12); border-color: rgba(245,158,11,0.3); color: #f59e0b; }
@@ -538,10 +540,10 @@
         .dash-tooltip::before { content: ''; position: absolute; left: 50%; top: -5px; transform: translateX(-50%) rotate(45deg); width: 9px; height: 9px; background: rgba(8,5,18,0.97); border-left: 1px solid rgba(168,85,247,0.32); border-top: 1px solid rgba(168,85,247,0.32); }
         .dash-info-help:hover .dash-tooltip, .dash-info-help:focus-visible .dash-tooltip, .dash-info-help:focus-within .dash-tooltip { display: block; }
 
-        .dash-info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.85rem; margin-bottom: 1.5rem; position: relative; }
-        .dash-info-tile { padding: 1.05rem 1.15rem; border-radius: 14px; background: rgba(15,10,28,0.55); border: 1px solid rgba(255,255,255,0.05); }
-        .dash-info-label { display: block; font-size: 10.5px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: rgb(140,135,165); margin-bottom: 8px; }
-        .dash-info-value { display: block; font-size: 18px; font-weight: 700; color: #f5f3ff; letter-spacing: -0.01em; }
+        .dash-info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.7rem; margin-bottom: 1.1rem; position: relative; }
+        .dash-info-tile { padding: 0.85rem 1rem; border-radius: 12px; background: rgba(15,10,28,0.55); border: 1px solid rgba(255,255,255,0.05); }
+        .dash-info-label { display: block; font-size: 10.5px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: rgb(140,135,165); margin-bottom: 6px; }
+        .dash-info-value { display: block; font-size: 16px; font-weight: 700; color: #f5f3ff; letter-spacing: -0.01em; }
         .dash-info-value--accent { background: linear-gradient(135deg, #c084fc, #ec4899); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
         .dash-info-tile-head { display: flex; align-items: baseline; justify-content: space-between; gap: 0.5rem; margin-bottom: 10px; }
         .dash-info-tile-head .dash-info-label { margin-bottom: 0; }
@@ -561,7 +563,7 @@
         .dash-btn svg { width: 14px; height: 14px; }
 
         /* Right column */
-        .dash-side-col { display: flex; flex-direction: column; gap: 1rem; }
+        .dash-side-col { display: flex; flex-direction: column; gap: 0.85rem; }
         .dash-meet-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem; }
         .dash-meet-icon { width: 44px; height: 44px; border-radius: 11px; background: linear-gradient(135deg, rgba(168,85,247,0.28), rgba(147,51,234,0.18)); border: 1px solid rgba(168,85,247,0.35); display: inline-flex; align-items: center; justify-content: center; color: #d8b4fe; }
         .dash-meet-icon svg { width: 22px; height: 22px; }
@@ -587,6 +589,15 @@
 
         /* Disabled meet button (active = onboarding done) */
         .dash-btn-disabled { background: rgba(255,255,255,0.04) !important; color: rgb(155,150,180) !important; box-shadow: none !important; cursor: not-allowed; pointer-events: none; border-color: rgba(255,255,255,0.06) !important; }
+
+        /* Prorated info row — only shown when first cycle was billed mid-month */
+        .dash-prorated-row { display: flex; align-items: flex-start; gap: 8px; margin: -0.4rem 0 1.1rem; padding: 0.55rem 0.85rem; border-radius: 10px; background: rgba(168,85,247,0.06); border: 1px solid rgba(168,85,247,0.10); font-size: 11.5px; line-height: 1.5; color: rgb(180,175,200); position: relative; }
+        .dash-prorated-row.hidden { display: none; }
+        .dash-prorated-row .info-icon { width: 14px; height: 14px; flex-shrink: 0; color: #c4b5fd; margin-top: 2px; cursor: help; }
+        .dash-prorated-row strong { color: #f5f3ff; font-weight: 700; }
+        .dash-prorated-row .dash-prorated-tooltip { position: absolute; bottom: calc(100% + 6px); left: 0; max-width: 320px; padding: 8px 12px; border-radius: 8px; background: rgba(20,16,42,0.98); border: 1px solid rgba(168,85,247,0.3); font-size: 11px; line-height: 1.5; color: #f5f3ff; box-shadow: 0 14px 30px -10px rgba(0,0,0,0.7); opacity: 0; visibility: hidden; transition: opacity .2s, visibility .2s, transform .2s; transform: translateY(4px); pointer-events: none; z-index: 50; }
+        .dash-prorated-row .info-icon:hover ~ .dash-prorated-tooltip,
+        .dash-prorated-row .info-icon:focus ~ .dash-prorated-tooltip { opacity: 1; visibility: visible; transform: translateY(0); }
 
         /* AI Pulse / news showcase card */
         .dash-news-card { padding: 1.25rem; }
@@ -618,7 +629,7 @@
         .dash-flip-btn:hover { background: rgba(255,255,255,0.08); color: #f5f3ff; border-color: rgba(255,255,255,0.18); }
         .dash-flip-btn svg { width: 14px; height: 14px; }
 
-        .dash-card-3d { perspective: 1500px; max-width: 480px; margin: 1.25rem auto 0.5rem; }
+        .dash-card-3d { perspective: 1500px; max-width: 420px; margin: 0.5rem auto 0.25rem; }
         .dash-card-3d-inner { position: relative; width: 100%; aspect-ratio: 1.586; transform-style: preserve-3d; transition: transform .8s cubic-bezier(.2,.8,.2,1); }
         .dash-card-3d-inner.flipped { transform: rotateY(180deg); }
         .dash-card-3d-face { position: absolute; inset: 0; backface-visibility: hidden; -webkit-backface-visibility: hidden; padding: 1.4rem 1.6rem; border-radius: 18px; background: linear-gradient(135deg, rgba(48,28,90,0.85) 0%, rgba(20,14,40,0.95) 100%); border: 1px solid rgba(168,85,247,0.25); box-shadow: 0 30px 60px -20px rgba(0,0,0,0.7), 0 0 60px rgba(168,85,247,0.15); display: flex; flex-direction: column; justify-content: space-between; overflow: hidden; }
@@ -1302,7 +1313,6 @@
                         </nav>
 
                         <div class="dash-side-foot">
-                            <button type="button" class="dash-side-cta" id="btn-upgrade-side">Upgrade to Power</button>
                             <button type="button" class="dash-side-signout" id="logout-btn-side">
                                 <svg fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
                                 Sign Out
@@ -1348,6 +1358,13 @@
                                         <span class="dash-info-label">Next renewal</span>
                                         <span class="dash-info-value" id="dash-end">…</span>
                                     </div>
+                                </div>
+
+                                <!-- Prorated note (only visible when first cycle started mid-month) -->
+                                <div id="dash-prorated-row" class="dash-prorated-row hidden">
+                                    <svg class="info-icon" tabindex="0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-label="Why was this prorated?"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><circle cx="12" cy="8" r="0.6" fill="currentColor"/></svg>
+                                    <span>First cycle prorated for <strong><span id="dash-prorated-days">0</span> days</strong>. Full monthly billing starts <strong><span id="dash-prorated-next">…</span></strong>.</span>
+                                    <span class="dash-prorated-tooltip">You bought your plan mid-month, so we only billed you for the days remaining until <span id="dash-prorated-end">…</span>. From then on you'll be charged the full monthly amount on the same date each cycle.</span>
                                 </div>
 
                                 <div class="dash-actions">
@@ -1852,6 +1869,30 @@
         // Persist the generated handle so legacy code paths can read it back later
         try { user.handle = handle; localStorage.setItem('dt_user', JSON.stringify(user)); } catch {}
 
+        // ─── Prorated note: only visible when the plan started mid-month ───
+        const proRow = document.getElementById('dash-prorated-row');
+        if (proRow) {
+            if (user.planStartDate) {
+                const start = new Date(user.planStartDate);
+                const startDay = start.getDate();
+                if (startDay > 1) {
+                    const lastDayOfMonth = new Date(start.getFullYear(), start.getMonth() + 1, 0).getDate();
+                    const proratedDays = lastDayOfMonth - startDay + 1;
+                    const monthEnd = new Date(start.getFullYear(), start.getMonth(), lastDayOfMonth);
+                    const nextCycleStart = new Date(start.getFullYear(), start.getMonth() + 1, 1);
+                    const fmt = (d) => d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+                    setText('dash-prorated-days', proratedDays);
+                    setText('dash-prorated-next', fmt(nextCycleStart));
+                    setText('dash-prorated-end', fmt(monthEnd));
+                    proRow.classList.remove('hidden');
+                } else {
+                    proRow.classList.add('hidden');
+                }
+            } else {
+                proRow.classList.add('hidden');
+            }
+        }
+
         // ─── Status pill: Processing (default), Active (admin-set), Cancelled ───
         const status = (user.planStatus || 'processing').toLowerCase();
         const badge = document.getElementById('dash-badge');
@@ -1945,7 +1986,6 @@
 
     /* ─── Dashboard sidebar + flip card wiring ─── */
     document.getElementById('logout-btn-side')?.addEventListener('click', () => { clearSession(); location.reload(); });
-    document.getElementById('btn-upgrade-side')?.addEventListener('click', startUpgradeFlow);
     document.getElementById('dash-flip')?.addEventListener('click', () => {
         document.getElementById('dash-card-inner')?.classList.toggle('flipped');
     });
