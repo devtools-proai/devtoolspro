@@ -1631,6 +1631,10 @@
 
     /* ─── Plan selection (now with summary pane + explicit Continue) ─── */
     let selectedPlan = '', selectedAmount = 0, selectedCredits = '';
+    // Server-side payment record id, set when the user enters the payment view
+    // and reused when the UTR is submitted so the row in `payments` is updated
+    // (instead of leaving an empty row behind).
+    let currentPaymentId = null;
 
     function selectPlanCard(card) {
         document.querySelectorAll('.plan-card').forEach(c => c.classList.remove('selected'));
@@ -1684,12 +1688,39 @@
     document.getElementById('curr-inr')?.addEventListener('click', () => setCurrency('INR'));
     document.getElementById('curr-usd')?.addEventListener('click', () => setCurrency('USD'));
 
-    document.getElementById('plan-continue').addEventListener('click', () => {
+    document.getElementById('plan-continue').addEventListener('click', async () => {
         if (!selectedPlan) return;
         const btn = document.getElementById('plan-continue');
         setBtnLoading(btn, true, 'Loading payment…');
-        // Slight delay so user sees the spinner & QR generation feels intentional
-        setTimeout(() => { showPaymentView(selectedPlan, selectedAmount); setBtnLoading(btn, false); }, 250);
+
+        // Compute the prorated amount the user will actually pay today
+        const now = new Date();
+        const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+        const remaining = daysInMonth - now.getDate() + 1;
+        const proratedToday = Math.round((remaining / daysInMonth) * selectedAmount);
+
+        // Register the payment in the `payments` table so we have a row to
+        // attach the UTR to later. Failure here is non-fatal — the UI still
+        // works, but the row won't appear in admin until the UTR step retries.
+        currentPaymentId = null;
+        try {
+            const r = await fetch(`${API_BASE}/api/payment/create`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ amount: proratedToday, plan: selectedPlan })
+            });
+            const j = await r.json();
+            if (j.status === 'success' && j.paymentId) {
+                currentPaymentId = j.paymentId;
+            } else {
+                console.warn('payment/create failed:', j.message);
+            }
+        } catch (e) {
+            console.warn('payment/create network error:', e);
+        }
+
+        showPaymentView(selectedPlan, selectedAmount);
+        setBtnLoading(btn, false);
     });
 
     function showPaymentView(plan, amount) {
@@ -1764,6 +1795,20 @@
             });
             const data = await res.json();
             if (data.status === 'success' && data.data) {
+                // Attach the UTR to the existing row in `payments` (if we
+                // managed to create one earlier). High-confidence UTRs are
+                // auto-verified server-side. Failure is non-fatal: the
+                // submissions row + plan update still complete the flow.
+                if (currentPaymentId) {
+                    try {
+                        await fetch(`${API_BASE}/api/payment/submit-utr`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ paymentId: currentPaymentId, utrId: utr })
+                        });
+                    } catch (e) { console.warn('payment/submit-utr failed', e); }
+                }
+
                 // Persist the plan update on the server and grab the authoritative
                 // dates (planStartDate / planEndDate) — the UI must mirror what the
                 // DB actually stored, never recompute on the client.
@@ -1783,6 +1828,8 @@
                     utrId: utr
                 };
                 setUser(updatedUser);
+                // Clear the payment id once the row has been updated
+                currentPaymentId = null;
                 window.open(data.data.whatsappUrl, '_blank');
                 showView('view-dashboard');
                 renderDashboard(updatedUser);
@@ -1940,6 +1987,7 @@
     // a returning user (upgrade / renew) doesn't see a pre-filled stale UTR.
     function startUpgradeFlow() {
         selectedPlan = ''; selectedAmount = 0; selectedCredits = '';
+        currentPaymentId = null;
         document.querySelectorAll('.plan-card').forEach(c => c.classList.remove('selected'));
         document.getElementById('plan-summary-empty')?.classList.remove('hidden');
         document.getElementById('plan-summary-filled')?.classList.add('hidden');
