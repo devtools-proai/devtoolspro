@@ -1764,9 +1764,24 @@
             });
             const data = await res.json();
             if (data.status === 'success' && data.data) {
-                await fetch(`${API_BASE}/auth/update-plan`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify({ plan: selectedPlan, utrId: utr, meetLink: data.data.meetLink }) });
+                // Persist the plan update on the server and grab the authoritative
+                // dates (planStartDate / planEndDate) — the UI must mirror what the
+                // DB actually stored, never recompute on the client.
+                let serverUser = {};
+                try {
+                    const updRes = await fetch(`${API_BASE}/auth/update-plan`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify({ plan: selectedPlan, utrId: utr, meetLink: data.data.meetLink }) });
+                    const updJson = await updRes.json();
+                    if (updJson?.status === 'success' && updJson.user) serverUser = updJson.user;
+                } catch (e) { console.warn('update-plan failed', e); }
 
-                const updatedUser = { ...user, currentPlan: selectedPlan, planStatus: 'processing', meetLink: data.data.meetLink, utrId: utr };
+                const updatedUser = {
+                    ...user,
+                    ...serverUser, // server-authoritative: planStartDate, planEndDate, planStatus, etc.
+                    currentPlan: selectedPlan,
+                    planStatus: serverUser.planStatus || 'processing',
+                    meetLink: serverUser.meetLink || data.data.meetLink,
+                    utrId: utr
+                };
                 setUser(updatedUser);
                 window.open(data.data.whatsappUrl, '_blank');
                 showView('view-dashboard');
@@ -1841,19 +1856,25 @@
         try { user.handle = handle; localStorage.setItem('dt_user', JSON.stringify(user)); } catch {}
 
         // ─── Prorated note: only visible when the plan started mid-month ───
+        // Source of truth for both dates is the backend (plan_start_date /
+        // plan_end_date columns). We only *display* derived figures here.
         const proRow = document.getElementById('dash-prorated-row');
         if (proRow) {
-            if (user.planStartDate) {
+            if (user.planStartDate && user.planEndDate) {
                 const start = new Date(user.planStartDate);
+                const end = new Date(user.planEndDate);
+                // Date-only diff to avoid timezone slop on the day count
+                const startOnly = new Date(start.getFullYear(), start.getMonth(), start.getDate());
+                const endOnly = new Date(end.getFullYear(), end.getMonth(), end.getDate());
+                const proratedDays = Math.max(0, Math.round((endOnly - startOnly) / 86400000));
                 const startDay = start.getDate();
-                if (startDay > 1) {
-                    const lastDayOfMonth = new Date(start.getFullYear(), start.getMonth() + 1, 0).getDate();
-                    const proratedDays = lastDayOfMonth - startDay + 1;
-                    const monthEnd = new Date(start.getFullYear(), start.getMonth(), lastDayOfMonth);
-                    const nextCycleStart = new Date(start.getFullYear(), start.getMonth() + 1, 1);
+                // Show the note only when the user joined mid-month AND the
+                // first cycle is short (i.e. less than a calendar month).
+                if (startDay > 1 && proratedDays > 0 && proratedDays < 28) {
+                    const monthEnd = new Date(start.getFullYear(), start.getMonth() + 1, 0);
                     const fmt = (d) => d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
                     setText('dash-prorated-days', proratedDays);
-                    setText('dash-prorated-next', fmt(nextCycleStart));
+                    setText('dash-prorated-next', fmt(end));
                     setText('dash-prorated-end', fmt(monthEnd));
                     proRow.classList.remove('hidden');
                 } else {

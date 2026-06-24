@@ -165,9 +165,10 @@ app.post('/auth/update-plan', requireAuth, async (req, res) => {
     const client = getClient();
 
     const now = new Date();
-    const endDate = new Date(now);
-    endDate.setMonth(endDate.getMonth() + 1);
-    if (endDate.getDate() !== now.getDate()) endDate.setDate(0);
+    // Next renewal = first day of the *next* calendar month. The user paid a
+    // prorated amount covering today through the last day of this month; from
+    // the 1st onwards, full monthly billing applies on the same calendar date.
+    const endDate = new Date(now.getFullYear(), now.getMonth() + 1, 1);
 
     const { data, error } = await client
       .from('users')
@@ -187,7 +188,26 @@ app.post('/auth/update-plan', requireAuth, async (req, res) => {
       return res.status(500).json({ status: 'error', message: 'Failed to update plan' });
     }
 
-    res.json({ status: 'success', message: 'Plan activated', user: data });
+    // Return the same camelCase shape /auth/me uses, so the frontend can
+    // merge in the authoritative dates without translating column names.
+    res.json({
+      status: 'success',
+      message: 'Plan recorded',
+      user: {
+        id: data.id,
+        email: data.email,
+        name: data.name,
+        picture: data.picture,
+        currentPlan: data.current_plan,
+        planStatus: data.plan_status,
+        planStartDate: data.plan_start_date,
+        planEndDate: data.plan_end_date,
+        phone: data.phone,
+        registrationComplete: data.registration_complete,
+        utrId: data.utr_id,
+        meetLink: data.meet_link
+      }
+    });
   } catch (error) {
     res.status(500).json({ status: 'error', message: 'Internal error' });
   }
