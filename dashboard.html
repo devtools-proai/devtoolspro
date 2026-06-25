@@ -479,7 +479,14 @@
         body[data-active-view="dashboard"] header.sticky { display: none; }
         /* Lock the dashboard view to a single viewport — no page scroll */
         body[data-active-view="dashboard"] { overflow: hidden; }
-        #view-dashboard { margin-top: -2rem; margin-bottom: -4rem; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+        /* The :not(.hidden) guard is critical — display rules on an ID outrank
+           Tailwind's .hidden (class), so without it the dashboard stays visible
+           while showView() tries to swap to another screen. */
+        #view-dashboard:not(.hidden) { margin-top: -2rem; margin-bottom: -4rem; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+        #view-dashboard.hidden { margin: 0; }
+        /* Belt-and-suspenders: any view explicitly marked .hidden is hidden,
+           regardless of how high-specificity its other rules are. */
+        [id^="view-"].hidden { display: none !important; }
 
         /* Top navbar — full-width brand bar above the sidebar+main area */
         .dash-topbar { display: flex; align-items: center; justify-content: space-between; padding: 0.75rem 1.75rem; border-bottom: 1px solid rgba(255,255,255,0.06); backdrop-filter: blur(18px) saturate(140%); -webkit-backdrop-filter: blur(18px) saturate(140%); background: rgba(10,7,22,0.55); flex-shrink: 0; }
@@ -1500,13 +1507,32 @@
     function setToken(t) { localStorage.setItem('dt_token', t); }
     function getUser() { try { return JSON.parse(localStorage.getItem('dt_user')); } catch { return null; } }
     function setUser(u) { localStorage.setItem('dt_user', JSON.stringify(u)); }
-    function clearSession() { localStorage.removeItem('dt_token'); localStorage.removeItem('dt_user'); }
+    // Clear EVERY session-scoped localStorage key here, not just token + user.
+    // Anything saved with the dt_ prefix is per-user (e.g. dt_handle) and must
+    // not survive a sign-out into the next user's session.
+    function clearSession() {
+        try {
+            for (let i = localStorage.length - 1; i >= 0; i--) {
+                const k = localStorage.key(i);
+                if (k && k.startsWith('dt_')) localStorage.removeItem(k);
+            }
+        } catch {
+            localStorage.removeItem('dt_token');
+            localStorage.removeItem('dt_user');
+            localStorage.removeItem('dt_handle');
+        }
+    }
 
     /* ─── View switching ─── */
     const views = ['view-loading','view-signin','view-register','view-plans','view-payment','view-utr','view-dashboard'];
     function showView(id) {
-        views.forEach(v => document.getElementById(v).classList.add('hidden'));
+        // Defensive: any missing view (removed in a redesign) shouldn't crash the swap.
+        views.forEach(v => {
+            const node = document.getElementById(v);
+            if (node) node.classList.add('hidden');
+        });
         const el = document.getElementById(id);
+        if (!el) { console.warn('showView: unknown view', id); return; }
         el.classList.remove('hidden');
         // Tag the body so view-scoped CSS (e.g. hide global header on dashboard) can react
         document.body.dataset.activeView = id.replace('view-', '');
