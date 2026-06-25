@@ -535,6 +535,9 @@
 
         /* Main content */
         .dash-main { display: flex; flex-direction: column; gap: 1rem; padding-bottom: 0.25rem; overflow-y: auto; min-height: 0; }
+        /* Each .dash-page is a sub-view inside the dashboard shell — sidebar nav
+           switches between them. They share the .dash-main scrollport. */
+        .dash-page { min-width: 0; display: flex; flex-direction: column; gap: 1rem; }
         .dash-main-grid { display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr); gap: 1rem; align-items: start; }
         /* Left column: stacks plan card + membership card */
         .dash-main-left { display: flex; flex-direction: column; gap: 0.85rem; min-width: 0; }
@@ -676,6 +679,46 @@
         .dash-card-back-label { display: block; font-size: 11px; color: rgb(155,150,180); margin-top: auto; position: relative; z-index: 1; }
         .dash-card-chip { width: 38px; height: 28px; border-radius: 6px; background: linear-gradient(135deg, #fde047, #f59e0b); box-shadow: inset 0 1px 0 rgba(255,255,255,0.3), inset 0 -1px 0 rgba(0,0,0,0.2); flex-shrink: 0; }
 
+        /* ─── History page ─── */
+        .dash-history-head { padding: 0.25rem 0; }
+        .dash-history-title { font-size: 30px; font-weight: 800; color: #f5f3ff; margin: 0 0 0.4rem; letter-spacing: -0.025em; }
+        .dash-history-sub { font-size: 14px; color: rgb(155,150,180); margin: 0; }
+
+        .dash-history-stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0.85rem; }
+        .dash-history-stat { position: relative; padding: 1.05rem 1.2rem; border-radius: 16px; background: linear-gradient(180deg, rgba(28,22,56,0.45) 0%, rgba(14,10,30,0.6) 100%); border: 1px solid rgba(255,255,255,0.06); display: flex; flex-direction: column; gap: 4px; overflow: hidden; }
+        .dash-history-stat::before { content: ''; position: absolute; inset: 0; border-radius: inherit; padding: 1px; background: linear-gradient(180deg, rgba(255,255,255,0.10), rgba(255,255,255,0.02) 30%, transparent 60%); -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude; pointer-events: none; }
+        .dash-history-stat-icon { width: 32px; height: 32px; border-radius: 9px; display: inline-flex; align-items: center; justify-content: center; margin-bottom: 6px; flex-shrink: 0; }
+        .dash-history-stat-icon svg { width: 16px; height: 16px; }
+        .dash-history-stat-icon.violet { background: rgba(168,85,247,0.18); border: 1px solid rgba(168,85,247,0.32); color: #c4b5fd; }
+        .dash-history-stat-icon.green  { background: rgba(34,197,94,0.14); border: 1px solid rgba(34,197,94,0.28); color: #4ade80; }
+        .dash-history-stat-icon.amber  { background: rgba(245,158,11,0.14); border: 1px solid rgba(245,158,11,0.28); color: #fbbf24; }
+        .dash-history-stat-icon.pink   { background: rgba(236,72,153,0.14); border: 1px solid rgba(236,72,153,0.28); color: #f472b6; }
+        .dash-history-stat-label { font-size: 11px; color: rgb(155,150,180); font-weight: 500; }
+        .dash-history-stat-value { font-size: 19px; font-weight: 800; color: #f5f3ff; letter-spacing: -0.01em; line-height: 1.2; word-break: break-word; }
+        .dash-history-stat-value.green { color: #4ade80; }
+        .dash-history-stat-foot { font-size: 9px; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase; color: rgb(120,115,145); margin-top: 4px; }
+
+        .dash-history-table-wrap { position: relative; border-radius: 16px; background: linear-gradient(180deg, rgba(28,22,56,0.45) 0%, rgba(14,10,30,0.6) 100%); border: 1px solid rgba(255,255,255,0.06); overflow: hidden; }
+        .dash-history-table { width: 100%; border-collapse: collapse; }
+        .dash-history-table thead th { font-size: 10px; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase; color: rgb(140,135,165); text-align: left; padding: 0.95rem 1.25rem; border-bottom: 1px solid rgba(255,255,255,0.05); }
+        .dash-history-table thead th:last-child, .dash-history-table tbody td:last-child { text-align: right; }
+        .dash-history-table tbody td { padding: 0.95rem 1.25rem; border-bottom: 1px solid rgba(255,255,255,0.04); font-size: 13px; color: rgb(195,190,215); vertical-align: middle; }
+        .dash-history-table tbody tr:last-child td { border-bottom: 0; }
+        .dash-history-table tbody tr:hover { background: rgba(255,255,255,0.02); }
+        .dash-history-date-day { display: block; color: #f5f3ff; font-weight: 700; }
+        .dash-history-date-time { display: block; font-size: 11.5px; color: rgb(140,135,165); margin-top: 2px; }
+        .dash-history-plan { display: inline-flex; align-items: center; gap: 9px; }
+        .dash-history-plan-dot { width: 8px; height: 8px; border-radius: 50%; background: #a78bfa; flex-shrink: 0; }
+        .dash-history-plan-dot.amber { background: #fbbf24; }
+        .dash-history-amount { color: #f5f3ff; font-weight: 600; font-family: ui-monospace, monospace; white-space: nowrap; }
+        .dash-history-status { display: inline-block; padding: 4px 12px; border-radius: 999px; font-size: 11px; font-weight: 700; }
+        .dash-history-status.success { background: rgba(34,197,94,0.14); color: #4ade80; border: 1px solid rgba(34,197,94,0.25); }
+        .dash-history-status.pending { background: rgba(245,158,11,0.14); color: #fbbf24; border: 1px solid rgba(245,158,11,0.25); }
+        .dash-history-status.cancel  { background: rgba(248,113,113,0.14); color: #f87171; border: 1px solid rgba(248,113,113,0.25); }
+        .dash-history-utr { font-family: ui-monospace, monospace; color: rgb(195,190,215); font-size: 12.5px; }
+        .dash-history-utr-pending { font-style: italic; color: rgb(140,135,165); }
+        .dash-history-empty { padding: 2.5rem 1.5rem; text-align: center; color: rgb(155,150,180); font-size: 13px; }
+
         @media (max-width: 1080px) {
             .dash-shell { grid-template-columns: 1fr; }
             .dash-sidebar { position: relative; min-height: auto; flex-direction: row; flex-wrap: wrap; gap: 0.75rem; padding: 0.85rem; align-items: center; }
@@ -684,11 +727,17 @@
             .dash-nav-item { padding: 9px 12px; }
             .dash-side-foot { margin-top: 0; flex-direction: row; gap: 0.5rem; }
             .dash-main-grid { grid-template-columns: 1fr; }
+            .dash-history-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
         }
         @media (max-width: 660px) {
             .dash-info-grid { grid-template-columns: 1fr; }
             .dash-card-3d { max-width: 100%; }
             .dash-card-name { font-size: 20px; }
+            .dash-history-stats { grid-template-columns: 1fr; }
+            .dash-history-table thead { display: none; }
+            .dash-history-table tbody td { display: block; padding: 0.4rem 1rem; border-bottom: 0; text-align: left !important; }
+            .dash-history-table tbody td:last-child { text-align: left !important; }
+            .dash-history-table tbody tr { display: block; padding: 0.85rem 0; border-bottom: 1px solid rgba(255,255,255,0.05); }
         }
     </style>
 </head>
@@ -1327,11 +1376,11 @@
                         </div>
 
                         <nav class="dash-nav">
-                            <button type="button" class="dash-nav-item active">
+                            <button type="button" class="dash-nav-item active" data-dash-nav="overview">
                                 <svg fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h6v6H4zM14 6h6v3h-6zM14 13h6v5h-6zM4 15h6v3H4z"/></svg>
                                 Dashboard
                             </button>
-                            <button type="button" class="dash-nav-item" id="nav-history">
+                            <button type="button" class="dash-nav-item" id="nav-history" data-dash-nav="history">
                                 <svg fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 10h2l1-7M12 8v4l3 2M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                                 History
                             </button>
@@ -1351,6 +1400,8 @@
 
                     <!-- Main content -->
                     <div class="dash-main">
+                        <!-- ─── Page: Overview (default) ─── -->
+                        <div id="dash-page-overview" class="dash-page" data-dash-page="overview">
                         <div class="dash-main-grid">
                             <!-- Left column: plan + membership -->
                             <div class="dash-main-left">
@@ -1539,6 +1590,64 @@
                                     </ul>
                                 </div>
                             </aside>
+                        </div>
+                        </div><!-- /#dash-page-overview -->
+
+                        <!-- ─── Page: Payment History ─── -->
+                        <div id="dash-page-history" class="dash-page hidden" data-dash-page="history">
+                            <header class="dash-history-head">
+                                <h1 class="dash-history-title">Payment History</h1>
+                                <p class="dash-history-sub">Manage and download receipts for your IDE subscriptions.</p>
+                            </header>
+
+                            <div class="dash-history-stats">
+                                <div class="dash-history-stat">
+                                    <span class="dash-history-stat-icon violet" aria-hidden="true">
+                                        <svg fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 10h11M9 21V3m12 7H3m18 0v8a2 2 0 01-2 2H5a2 2 0 01-2-2v-8m18 0V8a2 2 0 00-2-2H5a2 2 0 00-2 2v2"/></svg>
+                                    </span>
+                                    <span class="dash-history-stat-label">Total Spent (YTD)</span>
+                                    <span class="dash-history-stat-value" id="hist-total-spent">₹0</span>
+                                </div>
+                                <div class="dash-history-stat">
+                                    <span class="dash-history-stat-icon green" aria-hidden="true">
+                                        <svg fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                    </span>
+                                    <span class="dash-history-stat-label">Total Saved</span>
+                                    <span class="dash-history-stat-value green" id="hist-total-saved">₹0</span>
+                                    <span class="dash-history-stat-foot">Saved vs Kiro market price</span>
+                                </div>
+                                <div class="dash-history-stat">
+                                    <span class="dash-history-stat-icon amber" aria-hidden="true">
+                                        <svg fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                                    </span>
+                                    <span class="dash-history-stat-label">Next Renewal</span>
+                                    <span class="dash-history-stat-value" id="hist-next-renewal">—</span>
+                                </div>
+                                <div class="dash-history-stat">
+                                    <span class="dash-history-stat-icon pink" aria-hidden="true">
+                                        <svg fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.6 4.5A9 9 0 1112 21a9 9 0 008.6-6.5z"/></svg>
+                                    </span>
+                                    <span class="dash-history-stat-label">Active Plan</span>
+                                    <span class="dash-history-stat-value" id="hist-active-plan">—</span>
+                                </div>
+                            </div>
+
+                            <div class="dash-history-table-wrap">
+                                <table class="dash-history-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Date</th>
+                                            <th>Plan</th>
+                                            <th>Amount (INR)</th>
+                                            <th>Status</th>
+                                            <th>UTR / TXN ID</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="dash-history-rows">
+                                        <tr><td colspan="5" class="dash-history-empty">No payment history yet — your subscriptions will appear here.</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -2109,6 +2218,96 @@
     document.getElementById('dash-flip')?.addEventListener('click', () => {
         document.getElementById('dash-card-inner')?.classList.toggle('flipped');
     });
+
+    /* ─── Dashboard sub-page navigation (overview / history) ─── */
+    function showDashPage(page) {
+        document.querySelectorAll('.dash-page').forEach(p => p.classList.add('hidden'));
+        const target = document.getElementById('dash-page-' + page);
+        if (target) target.classList.remove('hidden');
+        document.querySelectorAll('.dash-nav-item[data-dash-nav]').forEach(b => b.classList.toggle('active', b.dataset.dashNav === page));
+        // Render data lazily — only when the user actually navigates to it
+        if (page === 'history') renderHistory(getUser());
+        // Scroll the main scrollport back to top for a fresh "page" feel
+        const main = document.querySelector('.dash-main');
+        if (main) main.scrollTop = 0;
+    }
+    document.querySelectorAll('.dash-nav-item[data-dash-nav]').forEach(btn => {
+        btn.addEventListener('click', () => showDashPage(btn.dataset.dashNav));
+    });
+
+    /* ─── Payment History rendering ─── */
+    function renderHistory(user) {
+        if (!user) return;
+        const PLAN_AMOUNT_INR = { 'Pro': 946, 'Pro+': 1892, 'Pro Max': 4731, 'Power': 9461 };
+        const planAmount = PLAN_AMOUNT_INR[user.currentPlan] || 0;
+        const fmtINR = (n) => '₹' + Math.round(n).toLocaleString('en-IN');
+
+        // Total spent: best-effort estimate using the user's prorated first
+        // payment derived from their plan_start_date / plan_end_date. Server-
+        // authoritative once we wire /api/payments/me; for now this stays
+        // consistent with what selectPlanCard charged.
+        let proratedAmount = 0;
+        let proratedDays = 0;
+        if (user.planStartDate && user.planEndDate && planAmount) {
+            const start = new Date(user.planStartDate);
+            const end = new Date(user.planEndDate);
+            const startOnly = new Date(start.getFullYear(), start.getMonth(), start.getDate());
+            const endOnly = new Date(end.getFullYear(), end.getMonth(), end.getDate());
+            const daysInMonth = new Date(start.getFullYear(), start.getMonth() + 1, 0).getDate();
+            proratedDays = Math.max(0, Math.round((endOnly - startOnly) / 86400000));
+            proratedAmount = Math.round((proratedDays / daysInMonth) * planAmount);
+        } else if (user.currentPlan && planAmount) {
+            proratedAmount = planAmount;
+        }
+
+        setText('hist-total-spent', proratedAmount ? fmtINR(proratedAmount) : '₹0');
+        // 50% off vs Kiro market price, so savings == amount paid
+        setText('hist-total-saved', proratedAmount ? fmtINR(proratedAmount) : '₹0');
+        setText('hist-next-renewal', user.planEndDate ? new Date(user.planEndDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '—');
+        setText('hist-active-plan', user.currentPlan || 'No plan');
+
+        // Build the table — for now this surfaces the user's most recent
+        // subscription pulled from their account record. Once /api/payments/me
+        // is in place we'll replace this with the full payments[] list.
+        const tbody = document.getElementById('dash-history-rows');
+        if (!tbody) return;
+        if (!user.currentPlan || !user.planStartDate) {
+            tbody.innerHTML = `<tr><td colspan="5" class="dash-history-empty">No payment history yet — your subscriptions will appear here.</td></tr>`;
+            return;
+        }
+
+        const start = new Date(user.planStartDate);
+        const fmtDate = start.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+        const fmtTime = start.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }).toUpperCase();
+
+        const status = (user.planStatus || 'processing').toLowerCase();
+        const statusLabel = status === 'active' ? 'Successful'
+                          : status === 'cancelled' ? 'Cancelled'
+                          : 'Pending';
+        const statusClass = status === 'active' ? 'success'
+                          : status === 'cancelled' ? 'cancel'
+                          : 'pending';
+        const dotClass = status === 'active' ? '' : status === 'processing' ? 'amber' : '';
+        const planLabel = `${user.currentPlan}${proratedDays && proratedDays < 28 ? ' (prorated)' : ' Monthly'}`;
+
+        const escape = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
+        tbody.innerHTML = `
+            <tr>
+                <td>
+                    <span class="dash-history-date-day">${escape(fmtDate)}</span>
+                    <span class="dash-history-date-time">${escape(fmtTime)}</span>
+                </td>
+                <td>
+                    <span class="dash-history-plan">
+                        <span class="dash-history-plan-dot ${dotClass}"></span>${escape(planLabel)}
+                    </span>
+                </td>
+                <td class="dash-history-amount">${escape(fmtINR(proratedAmount))}</td>
+                <td><span class="dash-history-status ${statusClass}">${escape(statusLabel)}</span></td>
+                <td class="${user.utrId ? 'dash-history-utr' : 'dash-history-utr dash-history-utr-pending'}">${escape(user.utrId || 'Processing…')}</td>
+            </tr>
+        `;
+    }
 
     init();
     </script>
