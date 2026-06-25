@@ -830,7 +830,7 @@
                             <li>
                                 <span class="welcome-check"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>
                                 <div>
-                                    <span class="welcome-feat-title">Cancel anytime, no GST, no hidden fees</span>
+                                    <span class="welcome-feat-title">Cancel anytime, no hidden fees</span>
                                     <span class="welcome-feat-desc">Transparent pricing with zero long-term commitment required.</span>
                                 </div>
                             </li>
@@ -955,7 +955,7 @@
                     <header class="plans-head">
                         <span class="plans-eyebrow">Step 2 of 2</span>
                         <h1 class="plans-title">Choose your plan</h1>
-                        <p class="plans-sub">All plans at flat <span class="plans-sub-accent">50% off</span> · No GST · Cancel anytime</p>
+                        <p class="plans-sub">All plans at flat <span class="plans-sub-accent">50% off</span> · Cancel anytime</p>
                         <div class="curr-toggle" role="tablist" aria-label="Currency">
                             <button id="curr-inr" type="button" class="active" aria-pressed="true">INR ₹</button>
                             <button id="curr-usd" type="button" aria-pressed="false">USD $</button>
@@ -1144,7 +1144,7 @@
                             </div>
                             <p class="plans-bar-note">
                                 <svg class="info-icon" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><circle cx="12" cy="8" r="0.6" fill="currentColor"/></svg>
-                                <span>Prorated billing. You're only charged for the <strong><span id="sum-days-note">…</span> days</strong> remaining this month, not the full month. From the 1st of next month onwards you'll be billed the full <strong data-curr-show="INR">₹<span id="sum-monthly-note">0</span>/mo</strong><strong data-curr-show="USD">$<span id="sum-monthly-note-usd">0</span>/mo</strong>. Cancel anytime, no GST. <span data-curr-show="USD" style="color:rgb(155,150,180)">USD shown is a conversion; actual billing happens in INR via UPI.</span></span>
+                                <span>Prorated billing. You're only charged for the <strong><span id="sum-days-note">…</span> days</strong> remaining this month, not the full month. From the 1st of next month onwards you'll be billed the full <strong data-curr-show="INR">₹<span id="sum-monthly-note">0</span>/mo</strong><strong data-curr-show="USD">$<span id="sum-monthly-note-usd">0</span>/mo</strong>. Cancel anytime. <span data-curr-show="USD" style="color:rgb(155,150,180)">USD shown is a conversion; actual billing happens in INR via UPI.</span></span>
                             </p>
                         </div>
                     </div>
@@ -1225,7 +1225,7 @@
                                 <span>I've Paid · Enter UTR</span>
                                 <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.2"><path stroke-linecap="round" stroke-linejoin="round" d="M5 12h14M13 6l6 6-6 6"/></svg>
                             </button>
-                            <p class="pay-cta-note">Secure UPI · No card details stored · No GST</p>
+                            <p class="pay-cta-note">Secure UPI · No card details stored</p>
 
                             <div class="pay-trust">
                                 <div class="pay-trust-item">
@@ -1918,7 +1918,7 @@
         document.getElementById('pay-amount').textContent = `₹${prorated.toLocaleString('en-IN')}`;
         document.getElementById('pay-prorated').textContent = `₹${prorated.toLocaleString('en-IN')} (${remaining} days)`;
         document.getElementById('pay-full').textContent = `₹${amount.toLocaleString('en-IN')}/mo`;
-        // Total today mirrors the prorated value (no tax / no GST is added)
+        // Total today mirrors the prorated value (no extra fees on top of the plan amount)
         const totalEl = document.getElementById('pay-total');
         if (totalEl) totalEl.textContent = `₹${prorated.toLocaleString('en-IN')}`;
 

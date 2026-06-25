@@ -703,7 +703,7 @@ document.addEventListener('DOMContentLoaded', () => {
       [
         { n: 'Sneha Nair', c: 'Kochi, India', r: 'Team Lead', t: "My team of 3 switched to Pro+. Saving ₹5k+ a month combined. WhatsApp support is actually responsive unlike most services.", s: 5 },
         { n: 'James Chen', c: 'San Francisco, CA', r: 'SWE', t: "Skeptical at first but the Meet call proved it. Legit subscription, legit account. 3 months in, zero issues.", s: 5 },
-        { n: 'Vikram Reddy', c: 'Warangal, India', r: 'Developer', t: "No international card issues, no GST. UPI payment, instant setup. Been looking for something like this for months.", s: 4 },
+        { n: 'Vikram Reddy', c: 'Warangal, India', r: 'Developer', t: "No international card issues. UPI payment, instant setup. Been looking for something like this for months.", s: 4 },
         { n: 'Ananya Trivedi', c: 'Ahmedabad, India', r: 'Freelancer', t: "Freelancer here. Claude Opus for client projects at half price? Already referred 3 friends, they signed up same day.", s: 5 },
         { n: 'Kevin Park', c: 'Seattle, WA', r: 'Startup Founder', t: "Power plan at $100 instead of $200. 10k credits, all models. My startup's dev budget literally got halved overnight.", s: 5 },
         { n: 'Manish Gupta', c: 'Bhopal, India', r: 'Student', t: "3rd year CSE. Was using free tier, Pro plan with 1000 credits changed my workflow completely. Building projects 5x faster.", s: 5 },
