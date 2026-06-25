@@ -22,7 +22,7 @@ const { v4: uuidv4 } = require('uuid');
 const { initDB, addSubmission, getAllSubmissions, getSubmissionByUTR, getStats, getClient } = require('./db');
 const { generateSetupMessage, generateQuickReply } = require('./meet-service');
 const { createPaymentRecord, submitUTR, getPaymentStatus, verifyPayment, getPendingPayments, getUTRConfidence } = require('./payment-verify');
-const { verifyGoogleToken, findOrCreateUser, generateSessionToken, requireAuth, GOOGLE_CLIENT_ID } = require('./auth');
+const { verifyGoogleToken, findOrCreateUser, generateSessionToken, requireAuth, GOOGLE_CLIENT_ID, adminCredsConfigured, verifyAdminCreds, generateAdminToken, requireAdminAuth } = require('./auth');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -289,6 +289,190 @@ app.post('/auth/cancel-plan', requireAuth, async (req, res) => {
 // Return the Google Client ID for frontend
 app.get('/auth/google-client-id', (req, res) => {
   res.json({ clientId: GOOGLE_CLIENT_ID });
+});
+
+// ═══════════════════════════════════════════
+// ADMIN ENDPOINTS — username + password -> JWT
+// Requires env: ADMIN_USERNAME + ADMIN_PASSWORD (or ADMIN_KEY as the password)
+// ═══════════════════════════════════════════
+
+// Tighter rate limit on admin login to slow down brute-force.
+const adminLoginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  message: { status: 'error', message: 'Too many login attempts. Try again in 15 minutes.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+// ─── POST /admin/login ───
+app.post('/admin/login', adminLoginLimiter, async (req, res) => {
+  if (!adminCredsConfigured()) {
+    return res.status(503).json({ status: 'error', message: 'Admin access not configured on this server.' });
+  }
+  const { username, password } = req.body || {};
+  if (!username || !password) {
+    return res.status(400).json({ status: 'error', message: 'Username and password are required' });
+  }
+  const ok = verifyAdminCreds(username, password);
+  // Constant-time-ish delay so failed attempts don't leak via timing
+  await new Promise(r => setTimeout(r, ok ? 0 : 350));
+  if (!ok) {
+    return res.status(401).json({ status: 'error', message: 'Invalid credentials' });
+  }
+  const token = generateAdminToken();
+  res.json({ status: 'success', token, expiresIn: 8 * 60 * 60 });
+  console.log(`🔐 Admin login: ${username}`);
+});
+
+// ─── GET /admin/me ───
+// Lightweight token check — frontend uses this on load to decide login vs shell
+app.get('/admin/me', requireAdminAuth, (req, res) => {
+  res.json({ status: 'success', role: req.admin.role });
+});
+
+// ─── GET /admin/stats ───
+app.get('/admin/stats', requireAdminAuth, async (req, res) => {
+  try {
+    const client = getClient();
+    const { data, error } = await client.from('users').select('plan_status,current_plan,registration_complete,created_at');
+    if (error) {
+      console.error('admin/stats error:', error);
+      return res.status(500).json({ status: 'error', message: 'Failed to fetch stats' });
+    }
+    const list = data || [];
+    const by = (k, v) => list.filter(u => u[k] === v).length;
+    res.json({
+      status: 'success',
+      stats: {
+        totalUsers: list.length,
+        active: by('plan_status', 'active'),
+        processing: by('plan_status', 'processing'),
+        cancelled: by('plan_status', 'cancelled'),
+        none: list.filter(u => !u.plan_status || u.plan_status === 'none').length,
+        registered: by('registration_complete', true),
+        byPlan: {
+          'Pro': by('current_plan', 'Pro'),
+          'Pro+': by('current_plan', 'Pro+'),
+          'Pro Max': by('current_plan', 'Pro Max'),
+          'Power': by('current_plan', 'Power'),
+        }
+      }
+    });
+  } catch (e) {
+    res.status(500).json({ status: 'error', message: 'Internal error' });
+  }
+});
+
+// Map Supabase row -> camelCase user dto used by the admin UI
+function rowToAdminUser(u) {
+  return {
+    id: u.id,
+    email: u.email,
+    name: u.name,
+    picture: u.picture,
+    phone: u.phone,
+    source: u.source,
+    googleId: u.google_id,
+    currentPlan: u.current_plan,
+    planStatus: u.plan_status,
+    planStartDate: u.plan_start_date,
+    planEndDate: u.plan_end_date,
+    utrId: u.utr_id,
+    meetLink: u.meet_link,
+    registrationComplete: u.registration_complete,
+    createdAt: u.created_at,
+    lastLogin: u.last_login,
+  };
+}
+
+// ─── GET /admin/users ───
+// Optional query params: search (email/name/utr), status, limit (default 200, max 1000)
+app.get('/admin/users', requireAdminAuth, async (req, res) => {
+  try {
+    const search = (req.query.search || '').toString().trim();
+    const status = (req.query.status || '').toString().trim();
+    const plan = (req.query.plan || '').toString().trim();
+    const limit = Math.min(parseInt(req.query.limit) || 200, 1000);
+
+    const client = getClient();
+    let query = client.from('users').select('*').order('created_at', { ascending: false }).limit(limit);
+    if (status) query = query.eq('plan_status', status);
+    if (plan)   query = query.eq('current_plan', plan);
+    if (search) {
+      // Escape any % to prevent injection-like fuzzing in ilike
+      const safe = search.replace(/[%_]/g, '\\$&');
+      query = query.or(`email.ilike.%${safe}%,name.ilike.%${safe}%,utr_id.ilike.%${safe}%`);
+    }
+
+    const { data, error } = await query;
+    if (error) {
+      console.error('admin/users error:', error);
+      return res.status(500).json({ status: 'error', message: 'Failed to fetch users' });
+    }
+    res.json({ status: 'success', users: (data || []).map(rowToAdminUser), count: (data || []).length });
+  } catch (e) {
+    res.status(500).json({ status: 'error', message: 'Internal error' });
+  }
+});
+
+// ─── PATCH /admin/users/:id ───
+// Update any subset of plan / status / dates / meet link / utr / phone / source / name
+const ALLOWED_PLANS = new Set(['Pro', 'Pro+', 'Pro Max', 'Power', null]);
+const ALLOWED_STATUSES = new Set(['none', 'processing', 'active', 'cancelled', 'expired']);
+
+app.patch('/admin/users/:id', requireAdminAuth, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const body = req.body || {};
+    const updates = {};
+
+    if ('currentPlan' in body) {
+      const v = body.currentPlan === '' ? null : body.currentPlan;
+      if (v !== null && !ALLOWED_PLANS.has(v)) {
+        return res.status(400).json({ status: 'error', message: 'Invalid plan' });
+      }
+      updates.current_plan = v;
+    }
+    if ('planStatus' in body) {
+      const v = body.planStatus || 'none';
+      if (!ALLOWED_STATUSES.has(v)) {
+        return res.status(400).json({ status: 'error', message: 'Invalid status' });
+      }
+      updates.plan_status = v;
+    }
+    if ('planStartDate' in body) updates.plan_start_date = body.planStartDate || null;
+    if ('planEndDate'   in body) updates.plan_end_date   = body.planEndDate   || null;
+    if ('utrId'         in body) updates.utr_id          = body.utrId         || null;
+    if ('meetLink'      in body) updates.meet_link       = body.meetLink      || null;
+    if ('phone'         in body) updates.phone           = body.phone         || null;
+    if ('source'        in body) updates.source          = body.source        || null;
+    if ('name'          in body && typeof body.name === 'string' && body.name.trim()) {
+      updates.name = body.name.trim();
+    }
+
+    if (Object.keys(updates).length === 0) {
+      return res.status(400).json({ status: 'error', message: 'No valid fields to update' });
+    }
+
+    const client = getClient();
+    const { data, error } = await client
+      .from('users')
+      .update(updates)
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error || !data) {
+      console.error('admin patch error:', error);
+      return res.status(500).json({ status: 'error', message: 'Failed to update user' });
+    }
+    res.json({ status: 'success', user: rowToAdminUser(data) });
+    console.log(`🛠️ Admin updated user ${data.email}: ${JSON.stringify(updates)}`);
+  } catch (e) {
+    console.error('admin patch exception:', e);
+    res.status(500).json({ status: 'error', message: 'Internal error' });
+  }
 });
 
 // ─── POST /api/submit ───

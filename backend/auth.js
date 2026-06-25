@@ -157,11 +157,64 @@ function requireAuth(req, res, next) {
   next();
 }
 
+/* ─────────────────────────── Admin auth ───────────────────────────
+ * Username + password (env-backed) -> short-lived JWT with role: 'admin'.
+ * Used by /admin/* endpoints so the registry UI can manage every user
+ * without exposing the raw ADMIN_KEY in browser code.
+ */
+const crypto = require('crypto');
+
+function safeEqual(a, b) {
+  if (typeof a !== 'string' || typeof b !== 'string') return false;
+  const ab = Buffer.from(a, 'utf8');
+  const bb = Buffer.from(b, 'utf8');
+  if (ab.length !== bb.length) return false;
+  return crypto.timingSafeEqual(ab, bb);
+}
+
+function adminCredsConfigured() {
+  return Boolean(process.env.ADMIN_USERNAME && (process.env.ADMIN_PASSWORD || process.env.ADMIN_KEY));
+}
+
+function verifyAdminCreds(username, password) {
+  const expectedUser = process.env.ADMIN_USERNAME || '';
+  const expectedPass = process.env.ADMIN_PASSWORD || process.env.ADMIN_KEY || '';
+  if (!expectedUser || !expectedPass) return false;
+  return safeEqual(username || '', expectedUser) && safeEqual(password || '', expectedPass);
+}
+
+function generateAdminToken() {
+  return jwt.sign({ role: 'admin', iat: Math.floor(Date.now() / 1000) }, JWT_SECRET, { expiresIn: '8h' });
+}
+
+function requireAdminAuth(req, res, next) {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return res.status(401).json({ status: 'error', message: 'Admin auth required' });
+  }
+  const token = authHeader.slice(7);
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET);
+    if (decoded.role !== 'admin') {
+      return res.status(403).json({ status: 'error', message: 'Forbidden' });
+    }
+    req.admin = decoded;
+    next();
+  } catch {
+    return res.status(401).json({ status: 'error', message: 'Invalid or expired admin session' });
+  }
+}
+
 module.exports = {
   verifyGoogleToken,
   findOrCreateUser,
   generateSessionToken,
   verifySessionToken,
   requireAuth,
-  GOOGLE_CLIENT_ID
+  GOOGLE_CLIENT_ID,
+  // Admin
+  adminCredsConfigured,
+  verifyAdminCreds,
+  generateAdminToken,
+  requireAdminAuth,
 };
