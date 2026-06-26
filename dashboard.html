@@ -1001,6 +1001,8 @@
         }
         .modal-plan-badge.current { background: rgba(34,197,94,0.14); color: #4ade80; border: 1px solid rgba(34,197,94,0.28); }
         .modal-plan-badge.muted { background: rgba(255,255,255,0.04); color: rgb(155,150,180); border: 1px solid rgba(255,255,255,0.08); }
+        .modal-plan-badge.upgrade { background: rgba(168,85,247,0.14); color: #c4b5fd; border: 1px solid rgba(168,85,247,0.32); }
+        .modal-plan-badge.downgrade { background: rgba(245,158,11,0.12); color: #fbbf24; border: 1px solid rgba(245,158,11,0.28); }
         .modal-plan-name { font-size: 17px; font-weight: 800; color: #f5f3ff; letter-spacing: -0.015em; }
         .modal-plan-price-row { display: flex; align-items: baseline; gap: 4px; margin-top: 2px; }
         .modal-plan-price {
@@ -1855,7 +1857,7 @@
                                 </div>
 
                                 <div class="dash-actions">
-                                    <button id="btn-upgrade" class="dash-btn dash-btn-primary" type="button" data-label="Upgrade Plan">Upgrade Plan</button>
+                                    <button id="btn-upgrade" class="dash-btn dash-btn-primary" type="button" data-label="Change Plan">Change Plan</button>
                                     <button id="btn-renew" class="dash-btn dash-btn-outline" type="button" data-label="Renew Now">Renew Now</button>
                                     <button id="btn-cancel" class="dash-btn dash-btn-ghost" type="button" data-label="Cancel">Cancel Subscription</button>
                                 </div>
@@ -2665,6 +2667,28 @@
                 if (meetPill) meetPill.textContent = 'Upcoming';
             }
         }
+
+        // ─── Change-plan button label ───
+        // Cancelled users see "Select Plan" (they're picking a new
+        // subscription); everyone else sees "Change Plan" (which now allows
+        // both upgrade and downgrade flows inside the modal).
+        const upgradeBtn = document.getElementById('btn-upgrade');
+        if (upgradeBtn) {
+            const planLabel = status === 'cancelled' ? 'Select Plan' : 'Change Plan';
+            upgradeBtn.textContent = planLabel;
+            upgradeBtn.dataset.label = planLabel;
+        }
+
+        // ─── Renew / Cancel button visibility ───
+        // A user with no active subscription (plan_status === 'cancelled' or
+        // missing entirely) shouldn't see "Renew" or "Cancel" — those don't
+        // apply to a subscription that isn't running. Hide them gracefully
+        // so the Change/Select Plan button stays as the single primary CTA.
+        const renewBtn = document.getElementById('btn-renew');
+        const cancelBtn = document.getElementById('btn-cancel');
+        const subInactive = !user.currentPlan || status === 'cancelled' || status === 'expired' || status === 'none';
+        if (renewBtn)  renewBtn.style.display  = subInactive ? 'none' : '';
+        if (cancelBtn) cancelBtn.style.display = subInactive ? 'none' : '';
     }
 
     function getCreditsByPlan(plan) {
@@ -2696,7 +2720,7 @@
         showView('view-plans');
     }
     // Wire the dashboard buttons to the in-page modal flow defined below.
-    document.getElementById('btn-upgrade').addEventListener('click', () => openPlanModal('upgrade'));
+    document.getElementById('btn-upgrade').addEventListener('click', () => openPlanModal('change'));
     document.getElementById('btn-renew').addEventListener('click', () => openPlanModal('renew'));
     document.getElementById('btn-cancel').addEventListener('click', () => openPlanModal('cancel'));
 
@@ -2724,15 +2748,16 @@
         const user = getUser() || {};
         planModalState = { flow, step: null, selectedPlan: null, paymentId: null };
 
-        if (flow === 'upgrade') {
-            // If user is already on the highest tier, jump to a soft message
-            // instead of an empty picker.
+        if (flow === 'change') {
+            // Plan picker: allow up, down, or sideways. Lets users on every
+            // tier (including Power) reach a non-empty picker since lower
+            // tiers are now selectable.
             planModalState.step = 'pick';
         } else if (flow === 'renew') {
             if (!user.currentPlan) {
                 // Edge case: user has no plan but clicked Renew. Fall back to
                 // the regular plan picker.
-                planModalState.flow = 'upgrade';
+                planModalState.flow = 'change';
                 planModalState.step = 'pick';
             } else {
                 planModalState.selectedPlan = user.currentPlan;
@@ -2804,38 +2829,67 @@
         }
     }
 
-    /* ─── Step: plan picker (upgrade only) ─── */
+    /* ─── Step: plan picker (change flow) ─── */
     function renderModalPick(titleEl, subEl, bodyEl) {
         const user = getUser() || {};
         const current = user.currentPlan;
         const currentIdx = PLAN_TIERS.indexOf(current);
-        const isOnHighest = currentIdx === PLAN_TIERS.length - 1;
+        const isCancelled = (user.planStatus || '').toLowerCase() === 'cancelled';
+        const endDate = user.planEndDate ? new Date(user.planEndDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '';
 
-        titleEl.textContent = 'Upgrade your plan';
-        subEl.textContent = current
-            ? `You're currently on ${current}. Pick a higher tier to upgrade — your dashboard updates the moment you confirm payment.`
-            : 'Pick a plan to start. You can upgrade or cancel anytime.';
+        // Title + subtitle: "Select" for cancelled / no-plan, "Change" otherwise.
+        if (isCancelled && current) {
+            titleEl.textContent = 'Select a plan';
+            subEl.textContent = `Your ${current} subscription is set to end on ${endDate}. Pick any plan to resubscribe — we'll pick up from there.`;
+        } else if (!current) {
+            titleEl.textContent = 'Select a plan';
+            subEl.textContent = 'Pick any tier to get started. You can change or cancel anytime.';
+        } else {
+            titleEl.textContent = 'Change your plan';
+            subEl.textContent = `You're currently on ${current}. Pick any tier — upgrade for more credits, or downgrade to a smaller monthly bill.`;
+        }
 
-        // Currency toggle + tiles
+        // Currency toggle
         const toggleHtml = `
             <div class="modal-curr-toggle" role="tablist" aria-label="Currency">
                 <button type="button" id="modal-curr-inr" class="active">INR ₹</button>
                 <button type="button" id="modal-curr-usd">USD $</button>
             </div>`;
 
+        // All four tiles. Selection rules:
+        //   - For ACTIVE users: their current plan is shown as "Current
+        //     plan" and disabled (Renew flow handles same-plan billing).
+        //     Higher tiers get an "Upgrade" badge, lower tiers a
+        //     "Downgrade" badge — both selectable.
+        //   - For CANCELLED users: nothing is disabled. The plan they had
+        //     before gets a muted "Previous" badge so they can spot it,
+        //     but they can pick it (resubscribe) or pick anything else.
+        //   - For NO-PLAN users: no badges, everything selectable.
         const tilesHtml = PLAN_TIERS.map((plan, idx) => {
-            const isCurrent = plan === current;
+            const isActiveCurrent = !isCancelled && plan === current;
+            const isPrevious = isCancelled && plan === current;
+            const isHigher = current && idx > currentIdx;
             const isLower = current && idx < currentIdx;
-            const isUpgrade = !current || idx > currentIdx;
             const inr = PLAN_INR[plan];
             const usd = PLAN_USD[plan];
             const credits = (PLAN_CREDITS[plan] || 0).toLocaleString('en-IN');
+
             const cls = ['modal-plan-tile'];
-            if (isCurrent) cls.push('is-current');
-            const disabled = (!isUpgrade) ? 'disabled' : '';
-            const badge = isCurrent
-                ? `<span class="modal-plan-badge current">Current plan</span>`
-                : (isLower ? `<span class="modal-plan-badge muted">Lower tier</span>` : '');
+            let badge = '';
+            let disabled = '';
+
+            if (isActiveCurrent) {
+                cls.push('is-current');
+                badge = `<span class="modal-plan-badge current">Current plan</span>`;
+                disabled = 'disabled';
+            } else if (isPrevious) {
+                badge = `<span class="modal-plan-badge muted">Previous</span>`;
+            } else if (isHigher) {
+                badge = `<span class="modal-plan-badge upgrade">Upgrade</span>`;
+            } else if (isLower) {
+                badge = `<span class="modal-plan-badge downgrade">Downgrade</span>`;
+            }
+
             return `
                 <button class="${cls.join(' ')}" data-plan="${plan}" ${disabled} type="button" aria-label="${plan} plan">
                     ${badge}
@@ -2851,15 +2905,28 @@
                 </button>`;
         }).join('');
 
-        const noUpgradesMsg = isOnHighest ? `
-            <div class="modal-info-row">
-                <svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                <span>You're already on <b>Power</b>, our highest tier. You can renew or cancel from the dashboard — there's nothing higher to upgrade to.</span>
-            </div>` : '';
+        // Context note above the grid for downgrade UX clarity. Active
+        // users get a heads-up that a downgrade means fewer credits;
+        // cancelled users get a reminder that picking the same plan is
+        // effectively a resubscribe.
+        let helpRow = '';
+        if (!isCancelled && current) {
+            helpRow = `
+                <div class="modal-info-row">
+                    <svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                    <span>Downgrades take effect from the <b>next billing cycle</b>. Until then you keep your current <b>${escapeHTML(current)}</b> benefits.</span>
+                </div>`;
+        } else if (isCancelled) {
+            helpRow = `
+                <div class="modal-info-row">
+                    <svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.6 4.5A9 9 0 1112 21a9 9 0 008.6-6.5z"/></svg>
+                    <span>Pick any plan to resubscribe. Your dashboard returns to <b>Processing</b> until our team verifies the payment.</span>
+                </div>`;
+        }
 
         bodyEl.innerHTML = `
             ${toggleHtml}
-            ${noUpgradesMsg}
+            ${helpRow}
             <div class="modal-plan-grid">${tilesHtml}</div>
             <div class="modal-actions">
                 <button class="modal-btn modal-btn-ghost" type="button" id="modal-pick-cancel">Cancel</button>
@@ -2889,7 +2956,6 @@
             await createModalPayment();
             planModalState.step = 'pay';
             renderPlanModalStep();
-            // No need to clear the loader — the body re-renders.
         });
     }
 
@@ -2915,17 +2981,46 @@
         }
     }
 
+    /* Compute the verb used in flow titles based on the relationship between
+       the current plan and the one being picked. Renew is always 'Renew';
+       for the change flow we differentiate Upgrade / Downgrade / Switch /
+       Resubscribe to so the user knows what they're committing to. */
+    function planChangeVerb(plan) {
+        if (planModalState.flow === 'renew') return 'Renew';
+        const user = getUser() || {};
+        const current = user.currentPlan;
+        const isCancelled = (user.planStatus || '').toLowerCase() === 'cancelled';
+        if (!current || isCancelled) return plan === current ? 'Resubscribe to' : 'Subscribe to';
+        const currentIdx = PLAN_TIERS.indexOf(current);
+        const newIdx = PLAN_TIERS.indexOf(plan);
+        if (currentIdx < 0 || newIdx < 0) return 'Switch to';
+        if (newIdx > currentIdx) return 'Upgrade to';
+        if (newIdx < currentIdx) return 'Downgrade to';
+        return 'Switch to';
+    }
+
     /* ─── Step: payment QR ─── */
     function renderModalPay(titleEl, subEl, bodyEl) {
         const plan = planModalState.selectedPlan;
         const isRenew = planModalState.flow === 'renew';
         const inr = PLAN_INR[plan];
         const usd = PLAN_USD[plan];
+        const verb = planChangeVerb(plan);
+        const user = getUser() || {};
+        const isCancelled = (user.planStatus || '').toLowerCase() === 'cancelled';
 
-        titleEl.textContent = isRenew ? `Renew ${plan}` : `Upgrade to ${plan}`;
-        subEl.textContent = isRenew
-            ? `Pay for the next billing cycle. Your plan will continue uninterrupted.`
-            : `One month of full ${plan} access — Claude Opus, Sonnet, and all premium models.`;
+        titleEl.textContent = isRenew ? `Renew ${plan}` : `${verb} ${plan}`;
+        if (isRenew) {
+            subEl.textContent = 'Pay for the next billing cycle. Your plan will continue uninterrupted.';
+        } else if (isCancelled) {
+            subEl.textContent = `One month of full ${plan} access — your subscription resumes from Processing once we verify the payment.`;
+        } else if (verb === 'Downgrade to') {
+            subEl.textContent = `Your current plan stays active until the end of this billing cycle. The ${plan} tier takes effect from next month — that's when you'll see the lower credit cap.`;
+        } else if (verb === 'Upgrade to') {
+            subEl.textContent = `One month of full ${plan} access — Claude Opus, Sonnet, and all premium models with the bigger monthly credit cap.`;
+        } else {
+            subEl.textContent = `One month of full ${plan} access — Claude Opus, Sonnet, and all premium models.`;
+        }
 
         // Ensure currency toggle state matches the current modal currency
         const curr = bodyEl.dataset.modalCurr || 'INR';
@@ -3009,7 +3104,9 @@
         const plan = planModalState.selectedPlan;
         const isRenew = planModalState.flow === 'renew';
 
-        titleEl.textContent = isRenew ? `Confirm renewal · ${plan}` : `Confirm upgrade · ${plan}`;
+        titleEl.textContent = isRenew
+            ? `Confirm renewal · ${plan}`
+            : `Confirm plan change · ${plan}`;
         subEl.textContent = 'Enter the UTR / Transaction ID from your UPI app to verify the payment.';
 
         bodyEl.innerHTML = `
@@ -3146,11 +3243,14 @@
         }
     }
 
-    /* ─── Step: success (upgrade / renew) ─── */
+    /* ─── Step: success (change / renew) ─── */
     function renderModalDone(titleEl, subEl, bodyEl) {
         const plan = planModalState.selectedPlan;
         const isRenew = planModalState.flow === 'renew';
-        titleEl.textContent = isRenew ? 'Renewal submitted' : 'Upgrade submitted';
+        // We use planChangeVerb to phrase the title naturally for whichever
+        // direction the user moved (Upgrade / Downgrade / Switch / Resubscribe to).
+        const verb = isRenew ? 'Renewal' : (planChangeVerb(plan) === 'Renew' ? 'Renewal' : 'Plan change');
+        titleEl.textContent = `${verb} submitted`;
         subEl.textContent = "We've opened WhatsApp so our team can connect with you for the Google Meet setup.";
 
         bodyEl.innerHTML = `
@@ -3159,7 +3259,7 @@
                     <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
                 </div>
                 <p class="modal-done-msg">
-                    Your <b>${plan}</b> ${isRenew ? 'renewal' : 'upgrade'} is now in <b>Processing</b> status.
+                    Your <b>${plan}</b> ${isRenew ? 'renewal' : 'plan change'} is now in <b>Processing</b> status.
                     Your dashboard already reflects the new plan.
                 </p>
                 <ul class="modal-done-list">
