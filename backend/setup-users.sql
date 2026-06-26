@@ -5,6 +5,10 @@
 -- IMPORTANT: this script is RLS-restrictive. The backend MUST connect with
 -- the SERVICE_ROLE key (which bypasses RLS). The anon key cannot read or
 -- write this table — that is intentional.
+--
+-- This script is idempotent: re-running it on an existing production
+-- database is safe. New columns are added via ALTER TABLE IF NOT EXISTS,
+-- the plan_status CHECK is reattached, and the RLS policies are reset.
 -- ═══════════════════════════════════════════════════════════
 
 CREATE TABLE IF NOT EXISTS users (
@@ -23,15 +27,35 @@ CREATE TABLE IF NOT EXISTS users (
   plan_end_date TIMESTAMPTZ,
   utr_id TEXT,
   meet_link TEXT,
+  -- ─── Scheduled-change columns ─────────────────────────────────────
+  -- pending_plan / pending_plan_effective are used by the downgrade
+  -- flow: the user pays for the lower tier now, keeps their current
+  -- (higher) plan benefits until the end of this billing cycle, and the
+  -- admin / a cron flips current_plan -> pending_plan when the
+  -- effective date passes. NULL means no change is scheduled.
+  pending_plan TEXT,
+  pending_plan_effective TIMESTAMPTZ,
   last_login TIMESTAMPTZ DEFAULT NOW(),
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- If the table existed already with the old CHECK, swap the constraint in
--- place so 'processing' is accepted without dropping the table.
+-- ─── In-place migration of an existing prod table ────────────────────
+-- Add the new pending-change columns if they're missing. Safe to re-run
+-- — IF NOT EXISTS makes this a no-op once applied.
+ALTER TABLE users ADD COLUMN IF NOT EXISTS pending_plan TEXT;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS pending_plan_effective TIMESTAMPTZ;
+
+-- Index the effective-date column so the "apply due downgrades" admin
+-- query stays fast as the table grows. Partial index keeps it tiny —
+-- rows with no pending change don't pay for an index entry.
+CREATE INDEX IF NOT EXISTS idx_users_pending_plan_effective
+  ON users (pending_plan_effective)
+  WHERE pending_plan IS NOT NULL;
+
+-- If the table existed already with the old CHECK, swap the constraint
+-- in place so 'processing' is accepted without dropping the table.
 DO $$
 BEGIN
-  -- Drop the legacy CHECK (whatever Postgres named it) if it doesn't allow 'processing'.
   EXECUTE (
     SELECT 'ALTER TABLE users DROP CONSTRAINT IF EXISTS ' || quote_ident(conname)
     FROM pg_constraint
@@ -41,7 +65,6 @@ BEGIN
     LIMIT 1
   );
 EXCEPTION WHEN OTHERS THEN
-  -- No legacy constraint to drop; ignore.
   NULL;
 END $$;
 
@@ -70,5 +93,5 @@ CREATE POLICY "users_deny_anon" ON users
   WITH CHECK (false);
 
 -- ═══════════════════════════════════════════════════════════
--- DONE! Users table ready for Google SSO.
+-- DONE!
 -- ═══════════════════════════════════════════════════════════
