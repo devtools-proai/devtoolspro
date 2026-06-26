@@ -1,6 +1,10 @@
 -- ═══════════════════════════════════════════════════════════
--- DevTools Pro — Supabase Database Setup
+-- DevTools Pro — Submissions Table Setup
 -- Run this in: Supabase Dashboard → SQL Editor → New Query
+--
+-- IMPORTANT: this script is RLS-restrictive. The backend MUST connect with
+-- the SERVICE_ROLE key (which bypasses RLS). The anon key cannot read or
+-- write this table — that is intentional, submissions contain PII + UTRs.
 -- ═══════════════════════════════════════════════════════════
 
 -- Create the submissions table
@@ -22,37 +26,29 @@ CREATE TABLE IF NOT EXISTS submissions (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Index for fast UTR lookups (duplicate checking)
 CREATE INDEX IF NOT EXISTS idx_submissions_utr_id ON submissions (LOWER(utr_id));
-
--- Index for status filtering
 CREATE INDEX IF NOT EXISTS idx_submissions_status ON submissions (status);
+CREATE INDEX IF NOT EXISTS idx_submissions_email  ON submissions (LOWER(email));
 
--- Index for email lookups
-CREATE INDEX IF NOT EXISTS idx_submissions_email ON submissions (LOWER(email));
-
--- Enable Row Level Security (RLS)
+-- Enable Row Level Security
 ALTER TABLE submissions ENABLE ROW LEVEL SECURITY;
 
--- Policy: Allow inserts from the API (anon key)
-CREATE POLICY "Allow inserts" ON submissions
-  FOR INSERT
-  WITH CHECK (true);
+-- Wipe legacy open policies if they exist.
+DROP POLICY IF EXISTS "Allow inserts" ON submissions;
+DROP POLICY IF EXISTS "Allow reads" ON submissions;
+DROP POLICY IF EXISTS "Allow updates" ON submissions;
+DROP POLICY IF EXISTS "Allow all on submissions" ON submissions;
 
--- Policy: Allow reads from the API (anon key)
-CREATE POLICY "Allow reads" ON submissions
-  FOR SELECT
-  USING (true);
-
--- Policy: Allow updates from the API (anon key)
-CREATE POLICY "Allow updates" ON submissions
-  FOR UPDATE
-  USING (true)
-  WITH CHECK (true);
+-- Default-deny.
+CREATE POLICY "submissions_deny_anon" ON submissions
+  FOR ALL
+  TO anon, authenticated
+  USING (false)
+  WITH CHECK (false);
 
 -- ═══════════════════════════════════════════════════════════
 -- DONE! Your table is ready.
 -- Now go to Settings → API and copy:
 --   1. Project URL → SUPABASE_URL
---   2. anon public key → SUPABASE_KEY
+--   2. service_role secret → SUPABASE_KEY   (NOT the anon key!)
 -- ═══════════════════════════════════════════════════════════

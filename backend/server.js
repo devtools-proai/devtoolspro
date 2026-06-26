@@ -1,9 +1,9 @@
 /**
  * DevTools Pro Backend Server
- * 
+ *
  * Replaces Google Sheets with Supabase PostgreSQL.
  * Automatically attaches Google Meet links and setup notes.
- * 
+ *
  * Deploy to: Render.com (free), Railway, or any Node.js host
  */
 
@@ -17,41 +17,85 @@ globalThis.Response = require('cross-fetch').Response;
 
 const express = require('express');
 const cors = require('cors');
+const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const { v4: uuidv4 } = require('uuid');
 const { initDB, addSubmission, getAllSubmissions, getSubmissionByUTR, getStats, getClient } = require('./db');
 const { generateSetupMessage, generateQuickReply } = require('./meet-service');
-const { createPaymentRecord, submitUTR, getPaymentStatus, verifyPayment, getPendingPayments, getUTRConfidence } = require('./payment-verify');
-const { verifyGoogleToken, findOrCreateUser, generateSessionToken, requireAuth, GOOGLE_CLIENT_ID, adminCredsConfigured, verifyAdminCreds, generateAdminToken, requireAdminAuth } = require('./auth');
+const {
+  createPaymentRecord, submitUTR, getPaymentStatus, verifyPayment,
+  getPendingPayments, getUTRConfidence,
+} = require('./payment-verify');
+const {
+  verifyGoogleToken, findOrCreateUser, generateSessionToken, requireAuth,
+  GOOGLE_CLIENT_ID, adminCredsConfigured, verifyAdminCreds,
+  generateAdminToken, requireAdminAuth,
+} = require('./auth');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+const NODE_ENV = process.env.NODE_ENV || 'development';
+const IS_PROD = NODE_ENV === 'production';
 
-// Trust proxy (Render, Railway, etc. put a reverse proxy in front)
+// Trust the first reverse proxy (Render, Railway etc.) — required so that
+// express-rate-limit fingerprints the real client IP from X-Forwarded-For
+// instead of the proxy's IP.
 app.set('trust proxy', 1);
 
-// ─── Middleware ───
-app.use(express.json());
-app.use(cors({
-  origin: process.env.FRONTEND_URL || '*',
-  methods: ['GET', 'POST'],
-  allowedHeaders: ['Content-Type', 'x-admin-key', 'Authorization']
+// ─── Security headers (helmet) ───
+// We disable a few defaults that interfere with the static-CDN frontend
+// (Tailwind / qrcodejs / Google Sign-In). CSP is intentionally off for now;
+// it deserves its own pass with a curated allow-list once the CDN deps are
+// vendored into a build step.
+app.use(helmet({
+  contentSecurityPolicy: false,
+  crossOriginEmbedderPolicy: false,
+  crossOriginResourcePolicy: { policy: 'cross-origin' },
 }));
 
-// Rate limiting
-const generalLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 100, message: { status: 'error', message: 'Too many requests, try again later' } });
-const submitLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 10, message: { status: 'error', message: 'Too many submissions, try again later' } });
-const reviewLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 5, message: { status: 'error', message: 'Too many reviews, try again later' } });
-app.use('/api/', generalLimiter);
+// ─── CORS ───
+// FRONTEND_URL may be a comma-separated list of allowed origins. Production
+// fails closed (must be configured); development falls back to "permissive
+// when unconfigured" so contributors aren't blocked.
+const allowedOrigins = (process.env.FRONTEND_URL || '')
+  .split(',').map(s => s.trim()).filter(Boolean);
 
-// Admin auth middleware
-function requireAdmin(req, res, next) {
-  const adminKey = req.headers['x-admin-key'] || req.query.key;
-  if (adminKey !== process.env.ADMIN_KEY) {
-    return res.status(401).json({ status: 'error', message: 'Unauthorized' });
-  }
-  next();
-}
+app.use(cors({
+  origin(origin, cb) {
+    if (!origin) return cb(null, true);                      // server-to-server / curl
+    if (allowedOrigins.includes(origin)) return cb(null, true);
+    if (!IS_PROD && allowedOrigins.length === 0) return cb(null, true); // dev convenience
+    return cb(new Error(`CORS blocked: ${origin}`), false);
+  },
+  methods: ['GET', 'POST', 'PATCH'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'Idempotency-Key'],
+}));
+
+// Hard cap on request body so badly-formed clients can't memory-pressure the
+// server. 32KB is generous for anything we accept (JWT round-trips peak ~3KB).
+app.use(express.json({ limit: '32kb' }));
+
+// ─── Rate limiting ───
+const generalLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, max: 100,
+  message: { status: 'error', message: 'Too many requests, try again later' },
+  standardHeaders: true, legacyHeaders: false,
+});
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, max: 30,
+  message: { status: 'error', message: 'Too many sign-in attempts, try again later' },
+  standardHeaders: true, legacyHeaders: false,
+});
+const submitLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, max: 10,
+  message: { status: 'error', message: 'Too many submissions, try again later' },
+});
+const reviewLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, max: 5,
+  message: { status: 'error', message: 'Too many reviews, try again later' },
+});
+app.use('/api/', generalLimiter);
+app.use('/auth/', authLimiter);
 
 // Initialize database on startup
 initDB().catch(err => {
@@ -64,8 +108,8 @@ app.get('/', (req, res) => {
   res.json({
     status: 'ok',
     service: 'DevTools Pro Backend',
-    version: '1.0.0',
-    timestamp: new Date().toISOString()
+    version: '1.1.0',
+    timestamp: new Date().toISOString(),
   });
 });
 
@@ -73,29 +117,30 @@ app.get('/', (req, res) => {
 // AUTHENTICATION ENDPOINTS
 // ═══════════════════════════════════════════
 
+// Plans accepted across the system. Keep this in sync with the frontend
+// pricing display and plan-hierarchy.js.
+const ALLOWED_PLANS = new Set(['Pro', 'Pro+', 'Pro Max', 'Power']);
+const ALLOWED_PLAN_STATUSES = new Set(['none', 'processing', 'active', 'cancelled', 'expired']);
+
 // ─── POST /auth/google ───
-// Verify Google ID token and return session JWT
 app.post('/auth/google', async (req, res) => {
   try {
-    const { idToken } = req.body;
+    const { idToken } = req.body || {};
     if (!idToken) {
       return res.status(400).json({ status: 'error', message: 'ID token required' });
     }
 
-    // Verify with Google
     const result = await verifyGoogleToken(idToken);
     if (!result.valid) {
       return res.status(401).json({ status: 'error', message: result.message });
     }
 
-    // Find or create user in DB
     const client = getClient();
     const user = await findOrCreateUser(client, result.user);
     if (!user) {
       return res.status(500).json({ status: 'error', message: 'Failed to create user' });
     }
 
-    // Generate session token
     const sessionToken = generateSessionToken(user);
 
     res.json({
@@ -108,19 +153,19 @@ app.post('/auth/google', async (req, res) => {
         picture: user.picture,
         currentPlan: user.current_plan,
         planStatus: user.plan_status,
-        planEndDate: user.plan_end_date
-      }
+        planEndDate: user.plan_end_date,
+      },
     });
 
-    console.log(`🔐 User logged in: ${user.email}`);
+    // Log identifier, not PII payload.
+    console.log(`auth: login uid=${user.id}`);
   } catch (error) {
-    console.error('Auth error:', error);
+    console.error('Auth error:', error.message);
     res.status(500).json({ status: 'error', message: 'Authentication failed' });
   }
 });
 
 // ─── GET /auth/me ───
-// Get current user profile (requires auth)
 app.get('/auth/me', requireAuth, async (req, res) => {
   try {
     const client = getClient();
@@ -149,8 +194,8 @@ app.get('/auth/me', requireAuth, async (req, res) => {
         registrationComplete: user.registration_complete,
         utrId: user.utr_id,
         meetLink: user.meet_link,
-        createdAt: user.created_at
-      }
+        createdAt: user.created_at,
+      },
     });
   } catch (error) {
     res.status(500).json({ status: 'error', message: 'Internal error' });
@@ -158,17 +203,74 @@ app.get('/auth/me', requireAuth, async (req, res) => {
 });
 
 // ─── POST /auth/update-plan ───
-// Update user's plan after successful payment (requires auth)
+// Record the plan a user has chosen and is paying for. The frontend invokes
+// this after the /api/submit + UTR step has succeeded.
+//
+// Security posture: we treat the body as user-controlled and DO NOT honor a
+// client-supplied meet_link. The Meet link is server-assigned at /api/submit
+// time and stored on the matching submissions row; here we look it up and
+// copy it onto the users row. The chosen plan must match what the user
+// declared on the submission, preventing tier-jumping by replaying the call.
 app.post('/auth/update-plan', requireAuth, async (req, res) => {
   try {
-    const { plan, utrId, meetLink } = req.body;
+    const { plan, utrId } = req.body || {};
+
+    if (!plan || !ALLOWED_PLANS.has(plan)) {
+      return res.status(400).json({ status: 'error', message: 'Invalid plan' });
+    }
+    if (!utrId || typeof utrId !== 'string' || utrId.trim().length < 6) {
+      return res.status(400).json({ status: 'error', message: 'Invalid UTR' });
+    }
+
+    const cleanedUtr = utrId.trim();
     const client = getClient();
 
+    // Get the canonical email on the users row — we never trust the JWT
+    // payload's email as the lookup key for the submission.
+    const { data: userRow, error: userErr } = await client
+      .from('users')
+      .select('id, email')
+      .eq('id', req.user.userId)
+      .single();
+
+    if (userErr || !userRow) {
+      return res.status(404).json({ status: 'error', message: 'User not found' });
+    }
+
+    // Pull the most recent submissions row for this user so we can recover
+    // the server-assigned meet_link. We also use it to validate plan choice.
+    const { data: subs } = await client
+      .from('submissions')
+      .select('meet_link, utr_id, selected_plan, submission_timestamp')
+      .ilike('email', userRow.email)
+      .order('created_at', { ascending: false })
+      .limit(5);
+
+    const matchingSub = (subs || []).find(
+      s => s.utr_id && s.utr_id.toLowerCase() === cleanedUtr.toLowerCase()
+    );
+
+    if (matchingSub && matchingSub.selected_plan) {
+      // The submission row is the source of truth for the requested plan.
+      const submittedPlan = String(matchingSub.selected_plan).split(' —')[0].trim();
+      if (submittedPlan && submittedPlan !== plan) {
+        return res.status(400).json({
+          status: 'error',
+          message: 'Plan does not match the submitted UTR',
+        });
+      }
+    }
+
+    // Server-controlled meet_link: from the matching submission if we have it,
+    // else from the latest submission for this user, else null.
+    const serverMeetLink = (matchingSub && matchingSub.meet_link)
+      || (subs && subs[0] && subs[0].meet_link)
+      || null;
+
+    // Next renewal = first UTC day of the next calendar month. Storing UTC
+    // keeps the boundary stable regardless of where the server runs.
     const now = new Date();
-    // Next renewal = first day of the *next* calendar month. The user paid a
-    // prorated amount covering today through the last day of this month; from
-    // the 1st onwards, full monthly billing applies on the same calendar date.
-    const endDate = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+    const endDate = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1, 0, 0, 0));
 
     const { data, error } = await client
       .from('users')
@@ -177,19 +279,18 @@ app.post('/auth/update-plan', requireAuth, async (req, res) => {
         plan_status: 'processing',
         plan_start_date: now.toISOString(),
         plan_end_date: endDate.toISOString(),
-        utr_id: utrId || null,
-        meet_link: meetLink || null
+        utr_id: cleanedUtr,
+        meet_link: serverMeetLink,
       })
       .eq('id', req.user.userId)
       .select()
       .single();
 
     if (error) {
+      console.error('update-plan db error:', error.message);
       return res.status(500).json({ status: 'error', message: 'Failed to update plan' });
     }
 
-    // Return the same camelCase shape /auth/me uses, so the frontend can
-    // merge in the authoritative dates without translating column names.
     res.json({
       status: 'success',
       message: 'Plan recorded',
@@ -205,42 +306,40 @@ app.post('/auth/update-plan', requireAuth, async (req, res) => {
         phone: data.phone,
         registrationComplete: data.registration_complete,
         utrId: data.utr_id,
-        meetLink: data.meet_link
-      }
+        meetLink: data.meet_link,
+      },
     });
   } catch (error) {
+    console.error('update-plan exception:', error.message);
     res.status(500).json({ status: 'error', message: 'Internal error' });
   }
 });
 
 // ─── POST /auth/register ───
-// Complete user registration with additional details (requires auth)
 app.post('/auth/register', requireAuth, async (req, res) => {
   try {
-    const { firstName, lastName, source } = req.body;
+    const { firstName, lastName, source } = req.body || {};
     if (!firstName || !lastName || !source) {
       return res.status(400).json({ status: 'error', message: 'All fields are required' });
     }
 
     const client = getClient();
-    const fullName = `${firstName.trim()} ${lastName.trim()}`;
+    const fullName = `${String(firstName).trim()} ${String(lastName).trim()}`;
 
-    // Update without returning data (avoids Premature close with cross-fetch)
     const { error } = await client
       .from('users')
       .update({
         name: fullName,
-        source: source,
-        registration_complete: true
+        source: String(source).trim().slice(0, 60),
+        registration_complete: true,
       })
       .eq('id', req.user.userId);
 
     if (error) {
-      console.error('Register error:', JSON.stringify(error));
+      console.error('Register error:', error.message);
       return res.status(500).json({ status: 'error', message: error.message });
     }
 
-    // Fetch user data separately
     const { data } = await client
       .from('users')
       .select('*')
@@ -250,21 +349,26 @@ app.post('/auth/register', requireAuth, async (req, res) => {
     res.json({
       status: 'success',
       user: {
-        id: data?.id || req.user.userId, email: data?.email || req.user.email, name: data?.name || fullName,
-        picture: data?.picture, currentPlan: data?.current_plan, planStatus: data?.plan_status || 'none',
-        planStartDate: data?.plan_start_date, planEndDate: data?.plan_end_date, meetLink: data?.meet_link,
-        registrationComplete: true
-      }
+        id: data?.id || req.user.userId,
+        email: data?.email || req.user.email,
+        name: data?.name || fullName,
+        picture: data?.picture,
+        currentPlan: data?.current_plan,
+        planStatus: data?.plan_status || 'none',
+        planStartDate: data?.plan_start_date,
+        planEndDate: data?.plan_end_date,
+        meetLink: data?.meet_link,
+        registrationComplete: true,
+      },
     });
-    console.log(`📝 Registration: ${fullName}`);
+    console.log(`auth: registration uid=${req.user.userId}`);
   } catch (error) {
     console.error('Register exception:', error.message);
-    res.status(500).json({ status: 'error', message: error.message });
+    res.status(500).json({ status: 'error', message: 'Internal error' });
   }
 });
 
 // ─── POST /auth/cancel-plan ───
-// Cancel user's plan (requires auth)
 app.post('/auth/cancel-plan', requireAuth, async (req, res) => {
   try {
     const client = getClient();
@@ -286,14 +390,13 @@ app.post('/auth/cancel-plan', requireAuth, async (req, res) => {
 });
 
 // ─── GET /auth/google-client-id ───
-// Return the Google Client ID for frontend
 app.get('/auth/google-client-id', (req, res) => {
-  res.json({ clientId: GOOGLE_CLIENT_ID });
+  res.json({ clientId: GOOGLE_CLIENT_ID || '' });
 });
 
 // ═══════════════════════════════════════════
 // ADMIN ENDPOINTS — username + password -> JWT
-// Requires env: ADMIN_USERNAME + ADMIN_PASSWORD (or ADMIN_KEY as the password)
+// Requires env: ADMIN_USERNAME + ADMIN_PASSWORD (or ADMIN_KEY as fallback)
 // ═══════════════════════════════════════════
 
 // Tighter rate limit on admin login to slow down brute-force.
@@ -315,18 +418,17 @@ app.post('/admin/login', adminLoginLimiter, async (req, res) => {
     return res.status(400).json({ status: 'error', message: 'Username and password are required' });
   }
   const ok = verifyAdminCreds(username, password);
-  // Constant-time-ish delay so failed attempts don't leak via timing
+  // Add a small delay on failure so timing differences don't leak validity.
   await new Promise(r => setTimeout(r, ok ? 0 : 350));
   if (!ok) {
     return res.status(401).json({ status: 'error', message: 'Invalid credentials' });
   }
   const token = generateAdminToken();
   res.json({ status: 'success', token, expiresIn: 8 * 60 * 60 });
-  console.log(`🔐 Admin login: ${username}`);
+  console.log(`admin: login user=${username}`);
 });
 
 // ─── GET /admin/me ───
-// Lightweight token check — frontend uses this on load to decide login vs shell
 app.get('/admin/me', requireAdminAuth, (req, res) => {
   res.json({ status: 'success', role: req.admin.role });
 });
@@ -356,8 +458,8 @@ app.get('/admin/stats', requireAdminAuth, async (req, res) => {
           'Pro+': by('current_plan', 'Pro+'),
           'Pro Max': by('current_plan', 'Pro Max'),
           'Power': by('current_plan', 'Power'),
-        }
-      }
+        },
+      },
     });
   } catch (e) {
     res.status(500).json({ status: 'error', message: 'Internal error' });
@@ -387,21 +489,22 @@ function rowToAdminUser(u) {
 }
 
 // ─── GET /admin/users ───
-// Optional query params: search (email/name/utr), status, limit (default 200, max 1000)
 app.get('/admin/users', requireAdminAuth, async (req, res) => {
   try {
-    const search = (req.query.search || '').toString().trim();
+    const search = (req.query.search || '').toString().trim().slice(0, 100);
     const status = (req.query.status || '').toString().trim();
     const plan = (req.query.plan || '').toString().trim();
-    const limit = Math.min(parseInt(req.query.limit) || 200, 1000);
+    const limit = Math.min(parseInt(req.query.limit, 10) || 200, 1000);
 
     const client = getClient();
     let query = client.from('users').select('*').order('created_at', { ascending: false }).limit(limit);
-    if (status) query = query.eq('plan_status', status);
-    if (plan)   query = query.eq('current_plan', plan);
+    if (status && ALLOWED_PLAN_STATUSES.has(status)) query = query.eq('plan_status', status);
+    if (plan && ALLOWED_PLANS.has(plan))             query = query.eq('current_plan', plan);
     if (search) {
-      // Escape any % to prevent injection-like fuzzing in ilike
-      const safe = search.replace(/[%_]/g, '\\$&');
+      // Escape PostgREST OR-clause special chars + ilike wildcards. Without
+      // this, a comma or parenthesis would break the parser and a `%` would
+      // turn the query into a free-text fuzzer.
+      const safe = search.replace(/[%_,()*\\]/g, '\\$&');
       query = query.or(`email.ilike.%${safe}%,name.ilike.%${safe}%,utr_id.ilike.%${safe}%`);
     }
 
@@ -417,10 +520,6 @@ app.get('/admin/users', requireAdminAuth, async (req, res) => {
 });
 
 // ─── PATCH /admin/users/:id ───
-// Update any subset of plan / status / dates / meet link / utr / phone / source / name
-const ALLOWED_PLANS = new Set(['Pro', 'Pro+', 'Pro Max', 'Power', null]);
-const ALLOWED_STATUSES = new Set(['none', 'processing', 'active', 'cancelled', 'expired']);
-
 app.patch('/admin/users/:id', requireAdminAuth, async (req, res) => {
   try {
     const { id } = req.params;
@@ -436,7 +535,7 @@ app.patch('/admin/users/:id', requireAdminAuth, async (req, res) => {
     }
     if ('planStatus' in body) {
       const v = body.planStatus || 'none';
-      if (!ALLOWED_STATUSES.has(v)) {
+      if (!ALLOWED_PLAN_STATUSES.has(v)) {
         return res.status(400).json({ status: 'error', message: 'Invalid status' });
       }
       updates.plan_status = v;
@@ -448,7 +547,7 @@ app.patch('/admin/users/:id', requireAdminAuth, async (req, res) => {
     if ('phone'         in body) updates.phone           = body.phone         || null;
     if ('source'        in body) updates.source          = body.source        || null;
     if ('name'          in body && typeof body.name === 'string' && body.name.trim()) {
-      updates.name = body.name.trim();
+      updates.name = body.name.trim().slice(0, 120);
     }
 
     if (Object.keys(updates).length === 0) {
@@ -468,78 +567,72 @@ app.patch('/admin/users/:id', requireAdminAuth, async (req, res) => {
       return res.status(500).json({ status: 'error', message: 'Failed to update user' });
     }
     res.json({ status: 'success', user: rowToAdminUser(data) });
-    console.log(`🛠️ Admin updated user ${data.email}: ${JSON.stringify(updates)}`);
+    console.log(`admin: patched uid=${data.id} fields=${Object.keys(updates).join(',')}`);
   } catch (e) {
-    console.error('admin patch exception:', e);
+    console.error('admin patch exception:', e.message);
     res.status(500).json({ status: 'error', message: 'Internal error' });
   }
 });
 
+// ═══════════════════════════════════════════
+// SUBMISSION + REVIEW + PAYMENT ENDPOINTS
+// ═══════════════════════════════════════════
+
 // ─── POST /api/submit ───
-// Main endpoint: receives user form data, stores in DB, returns Meet link + message
 app.post('/api/submit', submitLimiter, async (req, res) => {
   try {
-    const { firstName, lastName, email, selectedPlan, utrId, submissionTimestamp } = req.body;
+    const { firstName, lastName, email, selectedPlan, utrId, submissionTimestamp } = req.body || {};
 
-    // Validate required fields
     const requiredFields = { firstName, lastName, email, selectedPlan, utrId };
     for (const [field, value] of Object.entries(requiredFields)) {
       if (!value || !value.toString().trim()) {
-        return res.status(400).json({
-          status: 'error',
-          message: `Missing required field: ${field}`
-        });
+        return res.status(400).json({ status: 'error', message: `Missing required field: ${field}` });
       }
     }
 
-    // Validate email format
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
-      return res.status(400).json({
-        status: 'error',
-        message: 'Invalid email format'
-      });
+      return res.status(400).json({ status: 'error', message: 'Invalid email format' });
     }
 
-    // Generate Meet link and setup message
+    // Plan must be one we recognise, ignoring any trailing " — extra" suffix
+    // that older variants of the form may have appended.
+    const planClean = String(selectedPlan).split(' —')[0].trim();
+    if (!ALLOWED_PLANS.has(planClean)) {
+      return res.status(400).json({ status: 'error', message: 'Invalid plan' });
+    }
+
     const userData = { firstName, lastName, email, selectedPlan, utrId };
     const setupInfo = generateSetupMessage(userData);
 
-    // Prepare submission record
     const submission = {
       id: uuidv4(),
       firstName: firstName.trim(),
       lastName: lastName.trim(),
-      email: email.trim(),
-      selectedPlan,
+      email: email.trim().toLowerCase(),
+      selectedPlan: planClean,
       utrId: utrId.trim(),
       submissionTimestamp: submissionTimestamp || new Date().toISOString(),
       meetLink: setupInfo.meetLink,
-      notes: setupInfo.autoReplyNote
+      notes: setupInfo.autoReplyNote,
     };
 
-    // Save to database
     const result = await addSubmission(submission);
 
     if (!result.success) {
       if (result.error === 'duplicate') {
         return res.status(409).json({
           status: 'duplicate',
-          message: 'This UTR/Transaction ID has already been submitted'
+          message: 'This UTR/Transaction ID has already been submitted',
         });
       }
-      return res.status(500).json({
-        status: 'error',
-        message: result.message
-      });
+      return res.status(500).json({ status: 'error', message: result.message });
     }
 
-    // Build the WhatsApp redirect URL with Meet link included
     const whatsappNumber = process.env.WHATSAPP_NUMBER || '919019879108';
     const quickReply = generateQuickReply(userData, setupInfo.meetLink);
     const whatsappUrl = `https://api.whatsapp.com/send?phone=${whatsappNumber}&text=${encodeURIComponent(setupInfo.whatsappMessage)}`;
 
-    // Return success with Meet link and WhatsApp URL
     res.status(201).json({
       status: 'success',
       message: 'Submission saved successfully',
@@ -549,53 +642,39 @@ app.post('/api/submit', submitLimiter, async (req, res) => {
         setupNote: setupInfo.autoReplyNote,
         whatsappUrl,
         whatsappMessage: setupInfo.whatsappMessage,
-        quickReply
-      }
+        quickReply,
+      },
     });
 
-    console.log(`✅ New submission: ${firstName} ${lastName} | Plan: ${selectedPlan} | Meet: ${setupInfo.meetLink}`);
-
+    console.log(`submit: id=${submission.id} plan=${planClean}`);
   } catch (error) {
-    console.error('❌ Submit error:', error);
-    res.status(500).json({
-      status: 'error',
-      message: 'Internal server error'
-    });
+    console.error('submit error:', error.message);
+    res.status(500).json({ status: 'error', message: 'Internal server error' });
   }
 });
 
 // ─── GET /api/submissions ───
-// Admin endpoint: get all submissions
-app.get('/api/submissions', requireAdmin, async (req, res) => {
+app.get('/api/submissions', requireAdminAuth, async (req, res) => {
   try {
     const submissions = await getAllSubmissions();
-    res.json({
-      status: 'success',
-      count: submissions.length,
-      data: submissions
-    });
+    res.json({ status: 'success', count: submissions.length, data: submissions });
   } catch (error) {
     res.status(500).json({ status: 'error', message: error.message });
   }
 });
 
 // ─── GET /api/check-utr/:utrId ───
-// Check if a UTR already exists
 app.get('/api/check-utr/:utrId', async (req, res) => {
   try {
     const existing = await getSubmissionByUTR(req.params.utrId);
-    res.json({
-      exists: !!existing,
-      status: existing ? existing.status : null
-    });
+    res.json({ exists: !!existing, status: existing ? existing.status : null });
   } catch (error) {
     res.status(500).json({ status: 'error', message: error.message });
   }
 });
 
 // ─── GET /api/stats ───
-// Get submission statistics
-app.get('/api/stats', requireAdmin, async (req, res) => {
+app.get('/api/stats', requireAdminAuth, async (req, res) => {
   try {
     const stats = await getStats();
     res.json({ status: 'success', data: stats });
@@ -609,14 +688,22 @@ app.get('/api/stats', requireAdmin, async (req, res) => {
 // ═══════════════════════════════════════════
 
 // ─── POST /api/payment/create ───
-// Create a payment session when user selects a plan
 app.post('/api/payment/create', async (req, res) => {
   try {
-    const { amount, plan } = req.body;
+    const { amount, plan } = req.body || {};
     if (!amount || !plan) {
       return res.status(400).json({ status: 'error', message: 'Amount and plan are required' });
     }
-    const result = await createPaymentRecord({ amount, plan, upiId: 'devtoolpro@ybl' });
+    // Plan must be a known tier so users can't insert "Custom Free" rows.
+    const planClean = String(plan).split(' —')[0].trim();
+    if (!ALLOWED_PLANS.has(planClean)) {
+      return res.status(400).json({ status: 'error', message: 'Invalid plan' });
+    }
+    const numericAmount = Number(amount);
+    if (!Number.isFinite(numericAmount) || numericAmount <= 0 || numericAmount > 100000) {
+      return res.status(400).json({ status: 'error', message: 'Invalid amount' });
+    }
+    const result = await createPaymentRecord({ amount: numericAmount, plan: planClean, upiId: 'devtoolpro@ybl' });
     if (!result.success) {
       return res.status(500).json({ status: 'error', message: result.message });
     }
@@ -624,8 +711,8 @@ app.post('/api/payment/create', async (req, res) => {
       status: 'success',
       paymentId: result.paymentId,
       upiId: 'devtoolpro@ybl',
-      amount,
-      plan
+      amount: numericAmount,
+      plan: planClean,
     });
   } catch (error) {
     res.status(500).json({ status: 'error', message: 'Internal error' });
@@ -633,10 +720,14 @@ app.post('/api/payment/create', async (req, res) => {
 });
 
 // ─── POST /api/payment/submit-utr ───
-// User submits UTR after making payment
+// Auto-verify threshold raised from 70 → 95. A clean 12-digit UTR still
+// scores 100 and auto-verifies; anything with repeating digits or obvious
+// test prefixes now waits for human review.
+const AUTO_VERIFY_THRESHOLD = 95;
+
 app.post('/api/payment/submit-utr', async (req, res) => {
   try {
-    const { paymentId, utrId } = req.body;
+    const { paymentId, utrId } = req.body || {};
     if (!paymentId || !utrId) {
       return res.status(400).json({ status: 'error', message: 'Payment ID and UTR are required' });
     }
@@ -646,16 +737,14 @@ app.post('/api/payment/submit-utr', async (req, res) => {
       return res.status(400).json({ status: 'error', message: result.message });
     }
 
-    // Calculate UTR confidence score
     const confidence = getUTRConfidence(utrId.trim());
 
-    // Auto-verify high-confidence UTRs immediately (standard 12-digit format)
-    if (confidence >= 70) {
+    if (confidence >= AUTO_VERIFY_THRESHOLD) {
       try {
-        await verifyPayment(paymentId, process.env.ADMIN_KEY);
-        console.log(`✅ Auto-verified payment ${paymentId} (UTR: ${utrId}, confidence: ${confidence})`);
+        await verifyPayment(paymentId);
+        console.log(`payment: auto-verified id=${paymentId} confidence=${confidence}`);
       } catch (e) {
-        console.error('Auto-verify failed:', e.message);
+        console.error('auto-verify failed:', e.message);
       }
     }
 
@@ -663,17 +752,16 @@ app.post('/api/payment/submit-utr', async (req, res) => {
       status: 'success',
       message: 'UTR submitted — verifying payment',
       paymentStatus: 'awaiting_verification',
-      confidence
+      confidence,
     });
 
-    console.log(`💰 UTR submitted: ${utrId} | Payment: ${paymentId} | Confidence: ${confidence}`);
+    console.log(`payment: utr submitted id=${paymentId} confidence=${confidence}`);
   } catch (error) {
     res.status(500).json({ status: 'error', message: 'Internal error' });
   }
 });
 
 // ─── GET /api/payment/status/:paymentId ───
-// Frontend polls this to check if payment is verified
 app.get('/api/payment/status/:paymentId', async (req, res) => {
   try {
     const result = await getPaymentStatus(req.params.paymentId);
@@ -687,16 +775,13 @@ app.get('/api/payment/status/:paymentId', async (req, res) => {
 });
 
 // ─── POST /api/payment/verify/:paymentId ───
-// Admin: manually verify a payment
-app.post('/api/payment/verify/:paymentId', async (req, res) => {
+// Admin-only. Authentication is enforced via the requireAdminAuth middleware
+// (JWT issued by /admin/login). We no longer accept a body/header admin key.
+app.post('/api/payment/verify/:paymentId', requireAdminAuth, async (req, res) => {
   try {
-    const adminKey = req.headers['x-admin-key'] || req.body.adminKey;
-    const result = await verifyPayment(req.params.paymentId, adminKey);
+    const result = await verifyPayment(req.params.paymentId);
     if (!result.success) {
-      return res.status(result.message === 'Unauthorized' ? 401 : 400).json({
-        status: 'error',
-        message: result.message
-      });
+      return res.status(400).json({ status: 'error', message: result.message });
     }
     res.json({ status: 'success', message: 'Payment verified', data: result.record });
   } catch (error) {
@@ -705,10 +790,9 @@ app.post('/api/payment/verify/:paymentId', async (req, res) => {
 });
 
 // ─── GET /api/payment/pending ───
-// Admin: get all payments waiting for verification
-app.get('/api/payment/pending', requireAdmin, async (req, res) => {
+app.get('/api/payment/pending', requireAdminAuth, async (req, res) => {
   try {
-    const result = await getPendingPayments(process.env.ADMIN_KEY);
+    const result = await getPendingPayments();
     if (!result.success) {
       return res.status(500).json({ status: 'error', message: result.message });
     }
@@ -723,24 +807,30 @@ app.get('/api/payment/pending', requireAdmin, async (req, res) => {
 // ═══════════════════════════════════════════
 
 // ─── POST /api/reviews ───
-// Submit a new review
 app.post('/api/reviews', reviewLimiter, async (req, res) => {
   try {
-    const { name, city, role, reviewText, rating } = req.body;
+    const { name, city, role, reviewText, rating } = req.body || {};
     if (!name || !city || !reviewText) {
       return res.status(400).json({ status: 'error', message: 'Name, city, and review text are required' });
     }
-    if (!rating || rating < 1 || rating > 5) {
+    const r = parseInt(rating, 10);
+    if (!Number.isFinite(r) || r < 1 || r > 5) {
       return res.status(400).json({ status: 'error', message: 'Rating must be 1-5' });
     }
-    if (reviewText.length > 200) {
+    if (String(reviewText).length > 200) {
       return res.status(400).json({ status: 'error', message: 'Review must be under 200 characters' });
     }
 
     const client = getClient();
     const { data, error } = await client
       .from('reviews')
-      .insert({ name: name.trim(), city: city.trim(), role: role || 'Developer', review_text: reviewText.trim(), rating: parseInt(rating) })
+      .insert({
+        name: String(name).trim().slice(0, 60),
+        city: String(city).trim().slice(0, 60),
+        role: String(role || 'Developer').trim().slice(0, 40),
+        review_text: String(reviewText).trim(),
+        rating: r,
+      })
       .select()
       .single();
 
@@ -749,17 +839,16 @@ app.post('/api/reviews', reviewLimiter, async (req, res) => {
     }
 
     res.status(201).json({ status: 'success', review: data });
-    console.log(`⭐ New review from ${name} (${city}) — ${rating}★`);
+    console.log(`reviews: new id=${data.id} rating=${r}`);
   } catch (error) {
     res.status(500).json({ status: 'error', message: 'Internal error' });
   }
 });
 
 // ─── GET /api/reviews ───
-// Get latest approved reviews (for dynamic rendering)
 app.get('/api/reviews', async (req, res) => {
   try {
-    const limit = parseInt(req.query.limit) || 20;
+    const limit = Math.min(parseInt(req.query.limit, 10) || 20, 100);
     const client = getClient();
 
     const { data, error } = await client
@@ -785,10 +874,13 @@ app.listen(PORT, () => {
 ╔══════════════════════════════════════════════╗
 ║   DevTools Pro Backend                       ║
 ║   Running on port ${PORT}                        ║
+║   Env: ${NODE_ENV.padEnd(38, ' ')}║
 ║   Database: Supabase PostgreSQL              ║
-║   Meet links: Configured ✓                   ║
 ╚══════════════════════════════════════════════╝
   `);
+  if (!IS_PROD && allowedOrigins.length === 0) {
+    console.warn('⚠️  CORS: FRONTEND_URL not set — accepting any origin (dev mode).');
+  }
 });
 
 module.exports = app;

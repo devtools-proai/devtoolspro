@@ -1725,11 +1725,26 @@
         if (!token) { showView('view-signin'); initGoogleSignIn(); return; }
         try {
             const res = await fetch(`${API_BASE}/auth/me`, { headers: { 'Authorization': `Bearer ${token}` } });
+            // Explicit 401 means the token is no longer valid. Always clear
+            // session in that case — don't silently fall back to a cached
+            // user (which would render a stale dashboard whose actions then
+            // all fail).
+            if (res.status === 401) {
+                clearSession();
+                showView('view-signin');
+                initGoogleSignIn();
+                return;
+            }
             const data = await res.json();
             if (data.status === 'success') {
                 setUser(data.user); showHeader(data.user); routeUser(data.user);
-            } else { clearSession(); showView('view-signin'); initGoogleSignIn(); }
+            } else {
+                clearSession(); showView('view-signin'); initGoogleSignIn();
+            }
         } catch {
+            // Network-level error only — keep the cached user so an offline
+            // refresh doesn't kick the user out. They'll re-auth as soon as
+            // the next API call returns 401.
             const u = getUser();
             if (u) { showHeader(u); routeUser(u); }
             else { clearSession(); showView('view-signin'); initGoogleSignIn(); }
@@ -1997,9 +2012,14 @@
                 // Persist the plan update on the server and grab the authoritative
                 // dates (planStartDate / planEndDate) — the UI must mirror what the
                 // DB actually stored, never recompute on the client.
+                //
+                // Note: we deliberately don't send meetLink here. The server looks
+                // up the Meet link from the matching submissions row it created
+                // earlier in /api/submit — letting the client choose the link
+                // would create a tampering vector.
                 let serverUser = {};
                 try {
-                    const updRes = await fetch(`${API_BASE}/auth/update-plan`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify({ plan: selectedPlan, utrId: utr, meetLink: data.data.meetLink }) });
+                    const updRes = await fetch(`${API_BASE}/auth/update-plan`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify({ plan: selectedPlan, utrId: utr }) });
                     const updJson = await updRes.json();
                     if (updJson?.status === 'success' && updJson.user) serverUser = updJson.user;
                 } catch (e) { console.warn('update-plan failed', e); }

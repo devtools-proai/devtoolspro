@@ -1,6 +1,10 @@
 -- ═══════════════════════════════════════════════════════════
 -- DevTools Pro — Payments Table Setup
 -- Run this in: Supabase Dashboard → SQL Editor → New Query
+--
+-- IMPORTANT: this script is RLS-restrictive. The backend MUST connect with
+-- the SERVICE_ROLE key (which bypasses RLS). The anon key cannot read or
+-- write this table — that is intentional, payments contain UTR/amount/plan.
 -- ═══════════════════════════════════════════════════════════
 
 -- Create the payments table for real-time verification
@@ -10,7 +14,8 @@ CREATE TABLE IF NOT EXISTS payments (
   plan TEXT NOT NULL,
   upi_id TEXT NOT NULL DEFAULT 'devtoolpro@ybl',
   utr_id TEXT,
-  status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'awaiting_verification', 'verified', 'expired', 'failed')),
+  status TEXT NOT NULL DEFAULT 'pending'
+    CHECK (status IN ('pending', 'awaiting_verification', 'verified', 'expired', 'failed')),
   utr_submitted_at TIMESTAMPTZ,
   verified_at TIMESTAMPTZ,
   expires_at TIMESTAMPTZ NOT NULL,
@@ -18,23 +23,25 @@ CREATE TABLE IF NOT EXISTS payments (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Index for fast status checks (polling)
-CREATE INDEX IF NOT EXISTS idx_payments_status ON payments (status);
-
--- Index for UTR duplicate checking
-CREATE INDEX IF NOT EXISTS idx_payments_utr ON payments (LOWER(utr_id)) WHERE utr_id IS NOT NULL;
-
--- Index for expiry checks
+-- Indices: status (polling), UTR (dedup), expiry (cleanup).
+CREATE INDEX IF NOT EXISTS idx_payments_status  ON payments (status);
+CREATE INDEX IF NOT EXISTS idx_payments_utr     ON payments (LOWER(utr_id)) WHERE utr_id IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_payments_expires ON payments (expires_at) WHERE status = 'pending';
 
 -- Enable Row Level Security
 ALTER TABLE payments ENABLE ROW LEVEL SECURITY;
 
--- Allow all operations from API (anon key)
-CREATE POLICY "Allow all on payments" ON payments
+DROP POLICY IF EXISTS "Allow all on payments" ON payments;
+DROP POLICY IF EXISTS "Allow inserts" ON payments;
+DROP POLICY IF EXISTS "Allow reads" ON payments;
+DROP POLICY IF EXISTS "Allow updates" ON payments;
+
+-- Default-deny.
+CREATE POLICY "payments_deny_anon" ON payments
   FOR ALL
-  USING (true)
-  WITH CHECK (true);
+  TO anon, authenticated
+  USING (false)
+  WITH CHECK (false);
 
 -- ═══════════════════════════════════════════════════════════
 -- DONE! Payments table ready for real-time verification.

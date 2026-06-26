@@ -1,5 +1,9 @@
 # Render.com deployment configuration
-# Connect your GitHub repo and this will auto-deploy
+# Connect your GitHub repo and this will auto-deploy.
+#
+# All `sync: false` entries are managed in Render's dashboard — never
+# committed. Set these before the first deploy; the server hard-fails on
+# missing JWT_SECRET / GOOGLE_CLIENT_ID in production.
 services:
   - type: web
     name: devtools-pro-backend
@@ -10,17 +14,39 @@ services:
     envVars:
       - key: NODE_ENV
         value: production
+
+      # Supabase — must be the SERVICE_ROLE key (not anon) since RLS is now restrictive.
       - key: SUPABASE_URL
         sync: false
       - key: SUPABASE_KEY
         sync: false
+
+      # Auth secrets — required in production
+      - key: JWT_SECRET
+        sync: false
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+
+      # Admin console
+      - key: ADMIN_USERNAME
+        sync: false
+      - key: ADMIN_PASSWORD
+        sync: false
+      # Optional: legacy fallback password if ADMIN_PASSWORD is unset
+      - key: ADMIN_KEY
+        sync: false
+
+      # Meet link pool
       - key: MEET_LINK_1
         sync: false
       - key: MEET_LINK_2
         sync: false
       - key: MEET_LINK_3
         sync: false
+
       - key: WHATSAPP_NUMBER
         value: "919019879108"
+
+      # Comma-separated list of allowed frontend origins.
       - key: FRONTEND_URL
         sync: false

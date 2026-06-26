@@ -3,11 +3,13 @@
  * Defines the plan ranking and provides upgrade option filtering.
  */
 
+// Authoritative INR/USD prices. Keep in sync with the frontend pricing
+// table (index.html data-* attrs and dashboard.html plan-card data-amount).
 const PLAN_HIERARCHY = [
-  { name: 'Pro', price: 946, priceUSD: 10 },
-  { name: 'Pro+', price: 1892, priceUSD: 20 },
-  { name: 'Pro Max', price: 4730, priceUSD: 50 },
-  { name: 'Power', price: 9461, priceUSD: 100 }
+  { name: 'Pro',     price: 946,  priceUSD: 10 },
+  { name: 'Pro+',    price: 1892, priceUSD: 20 },
+  { name: 'Pro Max', price: 4731, priceUSD: 50 },
+  { name: 'Power',   price: 9461, priceUSD: 100 }
 ];
 
 /**
