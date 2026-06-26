@@ -112,7 +112,10 @@
         .admin-main { flex: 1; padding: 1.5rem 1.75rem 2rem; max-width: 1500px; margin: 0; width: 100%; display: flex; flex-direction: column; gap: 1.25rem; }
 
         /* Stats grid */
-        .stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0.85rem; }
+        /* Stats grid — auto-fit so additional metrics can be added without
+           rebalancing the grid by hand. Drops to 1-2 columns on narrow
+           screens via the natural minmax behaviour. */
+        .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 0.85rem; }
         .stat { padding: 1.05rem 1.2rem; display: flex; flex-direction: column; gap: 4px; }
         .stat-label { font-size: 10.5px; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase; color: var(--ink-2); }
         .stat-value { font-size: 28px; font-weight: 800; color: var(--ink-0); letter-spacing: -0.025em; line-height: 1.1; }
@@ -144,6 +147,70 @@
         .user-avatar img { width: 100%; height: 100%; object-fit: cover; }
         .user-name { display: block; color: var(--ink-0); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 200px; }
         .user-email { display: block; font-size: 11.5px; color: var(--ink-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 220px; }
+        /* "Username" column — replaces the legacy UTR column. We render the
+           email's local part with an @ prefix so admins can scan a list of
+           accounts at a glance without parsing full email addresses. UTR is
+           still editable via the per-row modal. */
+        .user-handle { font-family: ui-monospace, monospace; font-size: 12.5px; color: var(--violet-soft); }
+
+        /* ─── Admin overlay loader (mirrors the dashboard's app-loader) ─── */
+        @keyframes ad-spin { to { transform: rotate(360deg); } }
+        @keyframes ad-pulse { 0%,100% { transform: translate(-50%,-50%) scale(1); } 50% { transform: translate(-50%,-50%) scale(0.9); box-shadow: 0 0 36px rgba(168,85,247,0.7); } }
+        @keyframes ad-overlay-in { from { opacity: 0; transform: translateY(10px) scale(0.96); } to { opacity: 1; transform: translateY(0) scale(1); } }
+        @keyframes ad-bar { 0% { transform: translateX(-100%); } 100% { transform: translateX(385%); } }
+        @keyframes ad-text { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+        .admin-loader-overlay {
+            position: fixed; inset: 0; z-index: 200;
+            display: flex; align-items: center; justify-content: center;
+            background: radial-gradient(ellipse 60% 50% at 50% 50%, rgba(20,16,42,0.55), rgba(8,5,18,0.82));
+            backdrop-filter: blur(18px) saturate(140%);
+            -webkit-backdrop-filter: blur(18px) saturate(140%);
+            opacity: 0; visibility: hidden; pointer-events: none;
+            transition: opacity .3s, visibility .3s;
+        }
+        .admin-loader-overlay.show { opacity: 1; visibility: visible; pointer-events: auto; }
+        .admin-loader-card {
+            display: flex; flex-direction: column; align-items: center; gap: 1.4rem;
+            padding: 2.25rem 2.75rem; border-radius: 22px;
+            background: linear-gradient(180deg, rgba(28,22,56,0.62) 0%, rgba(14,10,30,0.82) 100%);
+            border: 1px solid rgba(168,85,247,0.2);
+            box-shadow: 0 40px 100px -30px rgba(0,0,0,0.85), 0 0 70px rgba(168,85,247,0.22);
+            animation: ad-overlay-in .5s cubic-bezier(.2,.8,.2,1) both;
+        }
+        .admin-loader-orb { position: relative; width: 100px; height: 100px; }
+        .admin-loader-orb .ring {
+            position: absolute; border-radius: 50%;
+            -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 3px));
+                    mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 3px));
+        }
+        .admin-loader-orb .ring.r1 { inset: 0;     background: conic-gradient(from 0deg, transparent 0deg 240deg, #c084fc 300deg, #a855f7 360deg);   animation: ad-spin 1.4s cubic-bezier(.5,.05,.5,.95) infinite;          filter: drop-shadow(0 0 5px rgba(168,85,247,0.55)); }
+        .admin-loader-orb .ring.r2 { inset: 10px;  background: conic-gradient(from 180deg, transparent 0deg 240deg, #f9a8d4 290deg, #ec4899 360deg); animation: ad-spin 1.9s cubic-bezier(.5,.05,.5,.95) infinite reverse;  filter: drop-shadow(0 0 5px rgba(236,72,153,0.45)); }
+        .admin-loader-orb .ring.r3 { inset: 20px;  background: conic-gradient(from 90deg, transparent 0deg 280deg, #a5b4fc 340deg, #818cf8 360deg);  animation: ad-spin 2.4s cubic-bezier(.5,.05,.5,.95) infinite;          filter: drop-shadow(0 0 4px rgba(129,140,248,0.45)); }
+        .admin-loader-orb .core {
+            position: absolute; top: 50%; left: 50%; width: 42px; height: 42px;
+            transform: translate(-50%, -50%);
+            border-radius: 13px;
+            background: linear-gradient(135deg, #a855f7, #ec4899);
+            display: flex; align-items: center; justify-content: center; color: white;
+            box-shadow: 0 0 24px rgba(168,85,247,0.6), 0 0 50px rgba(236,72,153,0.3), inset 0 1px 0 rgba(255,255,255,0.2);
+            animation: ad-pulse 2s cubic-bezier(.45,.05,.55,.95) infinite;
+        }
+        .admin-loader-orb .core svg { width: 20px; height: 20px; }
+        .admin-loader-label {
+            font-size: 13px; font-weight: 600; letter-spacing: 0.005em;
+            background: linear-gradient(90deg, rgba(203,199,224,0.6) 0%, rgba(245,243,255,1) 50%, rgba(203,199,224,0.6) 100%);
+            background-size: 200% 100%; -webkit-background-clip: text; background-clip: text; color: transparent;
+            animation: ad-text 2.4s linear infinite;
+        }
+        .admin-loader-bar { width: 170px; height: 2px; background: rgba(255,255,255,0.05); border-radius: 999px; overflow: hidden; position: relative; }
+        .admin-loader-bar::after {
+            content: ''; position: absolute; top: 0; left: 0; width: 35%; height: 100%;
+            background: linear-gradient(90deg, transparent 0%, #a855f7 50%, transparent 100%); border-radius: 999px;
+            animation: ad-bar 1.6s cubic-bezier(.65,.05,.36,1) infinite;
+        }
+        @media (prefers-reduced-motion: reduce) {
+            .admin-loader-orb .ring, .admin-loader-orb .core, .admin-loader-label, .admin-loader-bar::after { animation-duration: 4s !important; }
+        }
         .pill { display: inline-block; padding: 3px 10px; border-radius: 999px; font-size: 10.5px; font-weight: 700; letter-spacing: 0.06em; }
         .pill.green  { background: rgba(34,197,94,0.14);  color: var(--green); border: 1px solid rgba(34,197,94,0.25); }
         .pill.amber  { background: rgba(245,158,11,0.14); color: var(--amber); border: 1px solid rgba(245,158,11,0.25); }
@@ -178,6 +245,25 @@
 </head>
 <body>
     <div class="bg" aria-hidden="true"></div>
+
+    <!-- Admin overlay loader — sits on top of the current view. Toggled by
+         showAdminLoading() / hideAdminLoading() in the script below. Same
+         pattern as dashboard's #app-loader so the brand experience is
+         consistent across both consoles. -->
+    <div id="admin-loader" class="admin-loader-overlay" aria-hidden="true" role="status" aria-live="polite">
+        <div class="admin-loader-card">
+            <div class="admin-loader-orb" aria-hidden="true">
+                <span class="ring r1"></span>
+                <span class="ring r2"></span>
+                <span class="ring r3"></span>
+                <span class="core">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"/></svg>
+                </span>
+            </div>
+            <p class="admin-loader-label" id="admin-loader-label">Loading admin registry</p>
+            <div class="admin-loader-bar" aria-hidden="true"></div>
+        </div>
+    </div>
 
     <!-- ─── LOGIN VIEW ─── -->
     <div id="login-view" class="login-stage">
@@ -214,7 +300,8 @@
 
         <main class="admin-main">
             <div class="stats">
-                <div class="glass stat"><span class="stat-label">Total users</span><span class="stat-value" id="s-total">0</span></div>
+                <div class="glass stat"><span class="stat-label">Visitors</span><span class="stat-value" id="s-total">0</span><span class="stat-foot">Signed-in users (lifetime)</span></div>
+                <div class="glass stat"><span class="stat-label">Revenue</span><span class="stat-value green" id="s-revenue">₹0</span><span class="stat-foot" id="s-revenue-foot">From verified payments</span></div>
                 <div class="glass stat"><span class="stat-label">Active plans</span><span class="stat-value green" id="s-active">0</span></div>
                 <div class="glass stat"><span class="stat-label">Processing</span><span class="stat-value amber" id="s-processing">0</span><span class="stat-foot">Awaiting verification</span></div>
                 <div class="glass stat"><span class="stat-label">Cancelled</span><span class="stat-value red" id="s-cancelled">0</span></div>
@@ -255,7 +342,7 @@
                                 <th>Status</th>
                                 <th>Started</th>
                                 <th>Renews</th>
-                                <th>UTR</th>
+                                <th>Username</th>
                                 <th>Joined</th>
                             </tr>
                         </thead>
@@ -347,6 +434,45 @@
         const getToken  = () => localStorage.getItem(STORE_KEY);
         const setToken  = (t) => t ? localStorage.setItem(STORE_KEY, t) : localStorage.removeItem(STORE_KEY);
 
+        // ─── Overlay loader helpers ───
+        // The admin shell shows this overlay on initial boot (while we
+        // resolve the JWT against /admin/me) and during the first stats /
+        // users load after a successful sign-in. Any async work after that
+        // uses inline spinners (modal save, refresh button, etc.) so the
+        // user never loses the table they were looking at.
+        function showAdminLoading(label) {
+            const el = document.getElementById('admin-loader');
+            if (!el) return;
+            if (label) {
+                const t = document.getElementById('admin-loader-label');
+                if (t) t.textContent = label;
+            }
+            el.classList.add('show');
+            el.setAttribute('aria-hidden', 'false');
+        }
+        function hideAdminLoading() {
+            const el = document.getElementById('admin-loader');
+            if (!el) return;
+            el.classList.remove('show');
+            el.setAttribute('aria-hidden', 'true');
+        }
+
+        // Derive a public-facing username from an email. Drops the domain
+        // part so admins can match accounts at a glance without parsing
+        // full emails. Falls back to a placeholder if the value is missing.
+        function usernameFromEmail(email) {
+            if (!email || typeof email !== 'string') return '—';
+            const at = email.indexOf('@');
+            const local = at > 0 ? email.slice(0, at) : email;
+            return '@' + local.toLowerCase();
+        }
+
+        // Format an INR amount with the rupee symbol and Indian grouping.
+        function fmtINR(n) {
+            const v = Number(n || 0);
+            return '₹' + (Number.isFinite(v) ? Math.round(v).toLocaleString('en-IN') : '0');
+        }
+
         // ─── Authed fetch with auto-logout on 401 ───
         async function api(path, opts = {}) {
             const headers = Object.assign(
@@ -363,16 +489,23 @@
 
         // ─── View switching ───
         function showLogin(msg) {
+            hideAdminLoading();
             document.getElementById('login-view').style.display = '';
             document.getElementById('admin-view').style.display = 'none';
             const err = document.getElementById('login-error');
             if (err) err.textContent = msg || '';
         }
-        function showAdmin() {
+        async function showAdmin() {
             document.getElementById('login-view').style.display = 'none';
             document.getElementById('admin-view').style.display = '';
-            loadStats();
-            loadUsers();
+            showAdminLoading('Loading admin registry');
+            try {
+                // Issue both queries in parallel so the table and stats land
+                // together; the overlay drops as soon as both resolve.
+                await Promise.all([loadStats(), loadUsers()]);
+            } finally {
+                hideAdminLoading();
+            }
         }
 
         // ─── Login ───
@@ -413,10 +546,21 @@
         async function loadStats() {
             try {
                 const { stats } = await api('/admin/stats');
-                document.getElementById('s-total').textContent = stats.totalUsers;
-                document.getElementById('s-active').textContent = stats.active;
-                document.getElementById('s-processing').textContent = stats.processing;
-                document.getElementById('s-cancelled').textContent = stats.cancelled;
+                document.getElementById('s-total').textContent = stats.totalVisitors ?? stats.totalUsers ?? 0;
+                document.getElementById('s-active').textContent = stats.active ?? 0;
+                document.getElementById('s-processing').textContent = stats.processing ?? 0;
+                document.getElementById('s-cancelled').textContent = stats.cancelled ?? 0;
+                // Revenue + footer count come from the new totalRevenue +
+                // verifiedPayments fields. We tolerate either being absent
+                // (older backends or partial Supabase responses) so the
+                // dashboard never breaks on a degraded read.
+                const revEl = document.getElementById('s-revenue');
+                if (revEl) revEl.textContent = fmtINR(stats.totalRevenue || 0);
+                const footEl = document.getElementById('s-revenue-foot');
+                if (footEl) {
+                    const n = Number(stats.verifiedPayments || 0);
+                    footEl.textContent = n === 1 ? '1 verified payment' : `${n} verified payments`;
+                }
             } catch {}
         }
 
@@ -473,7 +617,7 @@
                         <td>${statusPill(u.planStatus)}</td>
                         <td>${escapeHTML(fmtDate(u.planStartDate))}</td>
                         <td>${escapeHTML(fmtDate(u.planEndDate))}</td>
-                        <td><span class="mono">${escapeHTML(u.utrId || '—')}</span></td>
+                        <td><span class="user-handle" title="${escapeHTML(u.email || '')}">${escapeHTML(usernameFromEmail(u.email))}</span></td>
                         <td>${escapeHTML(fmtDate(u.createdAt))}</td>
                     </tr>
                 `).join('');
@@ -565,9 +709,13 @@
         (async function boot() {
             const t = getToken();
             if (!t) return showLogin();
+            // Validate the token against /admin/me before swapping into
+            // the admin shell. Show the overlay loader during this round
+            // trip so a slow API doesn't leave the page visibly blank.
+            showAdminLoading('Verifying admin session');
             try {
                 await api('/admin/me');
-                showAdmin();
+                await showAdmin();
             } catch {
                 showLogin();
             }

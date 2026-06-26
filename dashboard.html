@@ -2237,10 +2237,12 @@
 
     function routeUser(user) {
         if (!user.registrationComplete) { showView('view-register'); prefillRegForm(user); }
-        // Existing users with a plan (any non-terminal status — processing, active, etc.)
-        // go straight to the dashboard. Only force the plan picker if they truly have
-        // no plan, or their plan was cancelled / expired.
-        else if (!user.currentPlan || user.planStatus === 'cancelled' || user.planStatus === 'expired') { showView('view-plans'); }
+        // First-time users with no plan history go to the legacy plan
+        // picker for initial onboarding. Cancelled / expired users stay
+        // on the dashboard and resubscribe via the in-page "Select Plan"
+        // modal — that way they don't get yanked out of context every
+        // time they refresh after cancelling.
+        else if (!user.currentPlan) { showView('view-plans'); }
         else { showView('view-dashboard'); renderDashboard(user); }
     }
 

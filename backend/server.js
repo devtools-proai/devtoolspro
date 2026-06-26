@@ -437,17 +437,42 @@ app.get('/admin/me', requireAdminAuth, (req, res) => {
 app.get('/admin/stats', requireAdminAuth, async (req, res) => {
   try {
     const client = getClient();
-    const { data, error } = await client.from('users').select('plan_status,current_plan,registration_complete,created_at');
-    if (error) {
-      console.error('admin/stats error:', error);
+    // Fetch users + payments in parallel — both feed the stats tiles on the
+    // admin home and we want a single round-trip cost.
+    const [usersRes, paymentsRes] = await Promise.all([
+      client.from('users').select('plan_status,current_plan,registration_complete,created_at'),
+      client.from('payments').select('amount,status,verified_at'),
+    ]);
+    if (usersRes.error) {
+      console.error('admin/stats users error:', usersRes.error);
       return res.status(500).json({ status: 'error', message: 'Failed to fetch stats' });
     }
-    const list = data || [];
+    if (paymentsRes.error) {
+      // Non-fatal — we still return user counts even if payments lookup hiccups.
+      console.warn('admin/stats payments warning:', paymentsRes.error.message || paymentsRes.error);
+    }
+    const list = usersRes.data || [];
+    const payments = paymentsRes.data || [];
     const by = (k, v) => list.filter(u => u[k] === v).length;
+
+    // Revenue = sum of payments.amount for rows the admin has verified.
+    // Stays in INR because that's what we charge — the admin UI prefixes
+    // the symbol on render.
+    const revenue = payments
+      .filter(p => p && p.status === 'verified')
+      .reduce((sum, p) => sum + Number(p.amount || 0), 0);
+
+    // "Visitors" = every user who has signed in at least once. That's the
+    // most defensible interpretation of website traffic we can support
+    // without bolting on analytics — anonymous landing-page hits live in
+    // GitHub Pages / CloudFront logs, not here.
     res.json({
       status: 'success',
       stats: {
         totalUsers: list.length,
+        totalVisitors: list.length,
+        totalRevenue: revenue,
+        verifiedPayments: payments.filter(p => p && p.status === 'verified').length,
         active: by('plan_status', 'active'),
         processing: by('plan_status', 'processing'),
         cancelled: by('plan_status', 'cancelled'),
@@ -462,6 +487,7 @@ app.get('/admin/stats', requireAdminAuth, async (req, res) => {
       },
     });
   } catch (e) {
+    console.error('admin/stats exception:', e.message);
     res.status(500).json({ status: 'error', message: 'Internal error' });
   }
 });
