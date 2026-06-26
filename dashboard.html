@@ -888,6 +888,273 @@
             .dash-history-table tbody td:last-child { text-align: left !important; }
             .dash-history-table tbody tr { display: block; padding: 0.85rem 0; border-bottom: 1px solid rgba(255,255,255,0.05); }
         }
+
+        /* ═══════════════════════════════════════════════════════════════
+           Plan Action Modal — used by Upgrade / Renew / Cancel buttons
+           on the dashboard. Self-contained: never swaps views, never
+           navigates away. Multi-step flow rendered into #plan-modal-body.
+           ═══════════════════════════════════════════════════════════════ */
+        .plan-modal-backdrop {
+            position: fixed; inset: 0; z-index: 150;
+            background: rgba(8,5,18,0.78);
+            backdrop-filter: blur(16px) saturate(140%);
+            -webkit-backdrop-filter: blur(16px) saturate(140%);
+            display: flex; align-items: center; justify-content: center;
+            padding: 1.5rem;
+            opacity: 0; visibility: hidden;
+            transition: opacity .3s ease, visibility .3s;
+            pointer-events: none;
+            overflow-y: auto;
+        }
+        .plan-modal-backdrop.show { opacity: 1; visibility: visible; pointer-events: auto; }
+
+        .plan-modal {
+            position: relative; width: 100%; max-width: 720px;
+            max-height: calc(100vh - 3rem);
+            display: flex; flex-direction: column;
+            padding: 2rem 2.25rem;
+            border-radius: 22px;
+            background: linear-gradient(180deg, rgba(28,22,56,0.92) 0%, rgba(14,10,30,0.97) 100%);
+            border: 1px solid rgba(168,85,247,0.22);
+            box-shadow: 0 50px 120px -30px rgba(0,0,0,0.9), 0 0 60px rgba(168,85,247,0.18);
+            transform: translateY(20px) scale(.96);
+            transition: transform .35s cubic-bezier(.2,.8,.2,1);
+        }
+        .plan-modal-backdrop.show .plan-modal { transform: translateY(0) scale(1); }
+        .plan-modal::before {
+            content: ''; position: absolute; inset: 0; border-radius: inherit; padding: 1px;
+            background: linear-gradient(180deg, rgba(255,255,255,0.18), rgba(255,255,255,0.02) 35%, transparent 60%);
+            -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+                    mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+            -webkit-mask-composite: xor; mask-composite: exclude;
+            pointer-events: none;
+        }
+
+        .plan-modal-close {
+            position: absolute; top: 1rem; right: 1rem;
+            width: 36px; height: 36px; border-radius: 10px;
+            background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);
+            color: rgb(180,175,200); cursor: pointer; font-family: inherit;
+            display: inline-flex; align-items: center; justify-content: center;
+            transition: all .2s; z-index: 1;
+        }
+        .plan-modal-close:hover { background: rgba(255,255,255,0.08); border-color: rgba(255,255,255,0.16); color: white; }
+        .plan-modal-close svg { width: 18px; height: 18px; }
+
+        .plan-modal-head { padding-right: 2.5rem; margin-bottom: 1.5rem; position: relative; }
+        .plan-modal-title { font-size: 24px; font-weight: 800; color: #f5f3ff; margin: 0 0 0.4rem; letter-spacing: -0.02em; }
+        .plan-modal-sub { font-size: 13.5px; color: rgb(170,165,195); margin: 0; line-height: 1.55; }
+
+        .plan-modal-body { overflow-y: auto; min-height: 0; }
+
+        /* Currency toggle inside modal */
+        .modal-curr-toggle {
+            display: inline-flex; padding: 4px; border-radius: 999px;
+            background: rgba(15,10,28,0.7); border: 1px solid rgba(255,255,255,0.08);
+            margin-bottom: 1.25rem;
+        }
+        .modal-curr-toggle button {
+            padding: 6px 18px; border: none; background: transparent;
+            color: rgb(170,165,195); font-size: 11.5px; font-weight: 700;
+            letter-spacing: 0.06em; cursor: pointer; border-radius: 999px;
+            font-family: inherit; transition: background .2s, color .2s;
+        }
+        .modal-curr-toggle button:hover { color: #f5f3ff; }
+        .modal-curr-toggle button.active {
+            background: linear-gradient(135deg, #d8b4fe, #a855f7);
+            color: #1e1b4b; box-shadow: 0 4px 12px -2px rgba(168,85,247,0.4);
+        }
+        .plan-modal-body[data-modal-curr="USD"] [data-modal-curr-show="INR"] { display: none; }
+        .plan-modal-body[data-modal-curr="INR"] [data-modal-curr-show="USD"] { display: none; }
+
+        /* Plan tiles */
+        .modal-plan-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.75rem; margin-bottom: 1rem; }
+        @media (max-width: 560px) { .modal-plan-grid { grid-template-columns: 1fr; } }
+        .modal-plan-tile {
+            position: relative; padding: 1.15rem 1.2rem; border-radius: 14px;
+            background: rgba(15,10,28,0.55); border: 1px solid rgba(255,255,255,0.08);
+            color: var(--ink-0); font-family: inherit; text-align: left;
+            cursor: pointer; display: flex; flex-direction: column; gap: 4px;
+            transition: all .2s ease;
+        }
+        .modal-plan-tile:not([disabled]):hover {
+            transform: translateY(-2px);
+            border-color: rgba(168,85,247,0.4);
+            background: rgba(20,16,42,0.7);
+            box-shadow: 0 14px 30px -10px rgba(168,85,247,0.25);
+        }
+        .modal-plan-tile.selected {
+            border-color: rgba(168,85,247,0.6);
+            background: linear-gradient(180deg, rgba(99,102,241,0.14) 0%, rgba(139,92,246,0.06) 100%);
+            box-shadow: 0 0 0 1px rgba(168,85,247,0.4), 0 14px 30px -10px rgba(168,85,247,0.35);
+        }
+        .modal-plan-tile[disabled] { opacity: 0.5; cursor: not-allowed; }
+        .modal-plan-tile.is-current {
+            opacity: 1; cursor: default;
+            border-color: rgba(34,197,94,0.3); background: rgba(34,197,94,0.05);
+        }
+        .modal-plan-tile.is-current:hover { transform: none; box-shadow: none; background: rgba(34,197,94,0.05); }
+        .modal-plan-badge {
+            position: absolute; top: 0.75rem; right: 0.85rem;
+            font-size: 9px; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase;
+            padding: 3px 9px; border-radius: 999px;
+        }
+        .modal-plan-badge.current { background: rgba(34,197,94,0.14); color: #4ade80; border: 1px solid rgba(34,197,94,0.28); }
+        .modal-plan-badge.muted { background: rgba(255,255,255,0.04); color: rgb(155,150,180); border: 1px solid rgba(255,255,255,0.08); }
+        .modal-plan-name { font-size: 17px; font-weight: 800; color: #f5f3ff; letter-spacing: -0.015em; }
+        .modal-plan-price-row { display: flex; align-items: baseline; gap: 4px; margin-top: 2px; }
+        .modal-plan-price {
+            font-size: 22px; font-weight: 800;
+            background: linear-gradient(135deg, #c084fc, #ec4899);
+            -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+        }
+        .modal-plan-cycle { font-size: 12px; color: rgb(155,150,180); font-weight: 500; }
+        .modal-plan-credits { font-size: 11.5px; color: rgb(155,150,180); padding-top: 4px; }
+
+        .modal-info-row {
+            display: flex; align-items: center; gap: 8px;
+            padding: 0.7rem 0.95rem; border-radius: 11px;
+            background: rgba(168,85,247,0.06); border: 1px solid rgba(168,85,247,0.18);
+            font-size: 12.5px; color: rgb(195,190,215); line-height: 1.5;
+            margin-bottom: 0.5rem;
+        }
+        .modal-info-row svg { width: 15px; height: 15px; color: #c4b5fd; flex-shrink: 0; }
+        .modal-info-row b { color: #f5f3ff; font-weight: 700; }
+
+        /* Action row */
+        .modal-actions {
+            display: flex; gap: 0.75rem; justify-content: space-between; align-items: center;
+            margin-top: 1.25rem; padding-top: 1.25rem;
+            border-top: 1px solid rgba(255,255,255,0.06);
+        }
+        .modal-actions-single { justify-content: center; }
+        .modal-actions-single .modal-btn { min-width: 200px; }
+        .modal-btn {
+            display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+            padding: 0.8rem 1.25rem; border-radius: 12px;
+            font-size: 13.5px; font-weight: 700; font-family: inherit;
+            cursor: pointer; border: 1px solid transparent;
+            transition: transform .15s, box-shadow .2s, background .2s, color .2s, border-color .2s;
+        }
+        .modal-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none !important; }
+        .modal-btn-primary {
+            background: linear-gradient(135deg, #a855f7 0%, #9333ea 100%);
+            color: white;
+            box-shadow: 0 12px 28px -8px rgba(168,85,247,0.5), inset 0 1px 0 rgba(255,255,255,0.15);
+        }
+        .modal-btn-primary:hover:not(:disabled) {
+            transform: translateY(-1px);
+            background: linear-gradient(135deg, #9333ea 0%, #7e22ce 100%);
+            box-shadow: 0 16px 36px -10px rgba(168,85,247,0.65);
+        }
+        .modal-btn-ghost { background: transparent; color: rgb(180,175,200); border-color: rgba(255,255,255,0.1); }
+        .modal-btn-ghost:hover:not(:disabled) { background: rgba(255,255,255,0.04); color: white; border-color: rgba(255,255,255,0.18); }
+        .modal-btn-danger { background: rgba(248,113,113,0.14); color: #fca5a5; border-color: rgba(248,113,113,0.32); }
+        .modal-btn-danger:hover:not(:disabled) { background: rgba(248,113,113,0.22); color: #fee2e2; border-color: rgba(248,113,113,0.5); }
+        .modal-btn svg { width: 14px; height: 14px; }
+
+        /* Payment step */
+        .modal-pay-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; margin-bottom: 0.5rem; }
+        @media (max-width: 600px) { .modal-pay-grid { grid-template-columns: 1fr; } }
+        .modal-pay-qr-wrap {
+            display: flex; flex-direction: column; align-items: center; gap: 0.75rem;
+            padding: 1.1rem; background: rgba(255,255,255,0.96); border-radius: 16px;
+        }
+        .modal-pay-qr { width: 170px; height: 170px; display: flex; align-items: center; justify-content: center; }
+        .modal-pay-qr canvas, .modal-pay-qr img { display: block; max-width: 100%; height: auto; }
+        .modal-pay-upi {
+            display: inline-flex; align-items: center; gap: 6px;
+            background: #f5f3ff; color: #1e1b4b; padding: 6px 10px; border-radius: 10px; font-size: 11.5px;
+        }
+        .modal-pay-upi .k { font-weight: 700; color: rgb(91,33,182); }
+        .modal-pay-upi code { font-family: ui-monospace, monospace; font-size: 12px; }
+        .modal-pay-upi button { background: transparent; border: none; padding: 2px; cursor: pointer; color: rgb(91,33,182); display: inline-flex; }
+
+        .modal-pay-summary {
+            display: flex; flex-direction: column; gap: 0.9rem;
+            padding: 1.1rem; background: rgba(15,10,28,0.55);
+            border: 1px solid rgba(255,255,255,0.06); border-radius: 16px;
+        }
+        .modal-pay-amount { display: flex; flex-direction: column; gap: 4px; }
+        .modal-pay-amount .k { font-size: 10.5px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: rgb(140,135,165); }
+        .modal-pay-amount .v {
+            font-size: 26px; font-weight: 800; letter-spacing: -0.02em;
+            background: linear-gradient(135deg, #c084fc, #ec4899);
+            -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+        }
+        .modal-pay-amount .sub { font-size: 11.5px; color: rgb(140,135,165); }
+        .modal-pay-steps { list-style: none; counter-reset: pay-step; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 0.5rem; }
+        .modal-pay-steps li {
+            counter-increment: pay-step;
+            font-size: 12px; color: rgb(180,175,200);
+            padding-left: 26px; position: relative; line-height: 1.5;
+        }
+        .modal-pay-steps li::before {
+            content: counter(pay-step);
+            position: absolute; left: 0; top: 0;
+            width: 18px; height: 18px; border-radius: 50%;
+            background: rgba(168,85,247,0.18); color: #c4b5fd;
+            font-size: 10px; font-weight: 800;
+            display: flex; align-items: center; justify-content: center;
+            border: 1px solid rgba(168,85,247,0.3);
+        }
+        .modal-pay-steps li b { color: #f5f3ff; font-weight: 600; }
+
+        /* UTR step */
+        .modal-field-label { display: block; font-size: 11px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: rgb(180,175,200); margin-bottom: 0.5rem; }
+        .modal-field-input {
+            width: 100%; padding: 0.95rem 1rem;
+            background: rgba(15,10,28,0.6); border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 12px; color: var(--ink-0); font-size: 14.5px;
+            outline: none; transition: all .2s; font-family: ui-monospace, monospace; letter-spacing: 0.04em;
+        }
+        .modal-field-input:focus { border-color: rgba(168,85,247,0.5); box-shadow: 0 0 0 3px rgba(168,85,247,0.12); background: rgba(20,16,42,0.85); }
+        .modal-utr-help { display: flex; align-items: center; gap: 6px; font-size: 12px; color: rgb(155,150,180); margin: 0.6rem 0 0; }
+        .modal-utr-help svg { width: 14px; height: 14px; color: #c4b5fd; flex-shrink: 0; }
+        .modal-error { font-size: 12.5px; color: #f87171; margin: 0.75rem 0 0; }
+
+        /* Done step */
+        .modal-done { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 0.85rem; padding: 0.5rem 0 1rem; }
+        .modal-done-icon {
+            width: 60px; height: 60px; border-radius: 50%;
+            background: rgba(34,197,94,0.14); border: 1px solid rgba(34,197,94,0.3);
+            display: inline-flex; align-items: center; justify-content: center;
+            color: #4ade80; box-shadow: 0 0 30px rgba(34,197,94,0.3);
+            animation: modal-done-pop .55s cubic-bezier(.2,.8,.2,1.4) both;
+        }
+        .modal-done-icon svg { width: 26px; height: 26px; }
+        @keyframes modal-done-pop {
+            0%   { opacity: 0; transform: scale(0.5); }
+            50%  { transform: scale(1.12); }
+            100% { opacity: 1; transform: scale(1); }
+        }
+        .modal-done-msg { font-size: 13.5px; color: rgb(203,199,224); line-height: 1.6; max-width: 460px; margin: 0; }
+        .modal-done-msg b { color: #f5f3ff; font-weight: 700; }
+        .modal-done-list { list-style: none; padding: 0; margin: 0.25rem auto 0; display: flex; flex-direction: column; gap: 5px; max-width: 400px; text-align: left; }
+        .modal-done-list li { font-size: 12px; color: rgb(155,150,180); padding-left: 16px; position: relative; line-height: 1.5; }
+        .modal-done-list li::before { content: ''; position: absolute; left: 0; top: 8px; width: 5px; height: 5px; border-radius: 50%; background: var(--violet-soft); }
+
+        /* Cancel step */
+        .modal-cancel-summary {
+            padding: 0.85rem 1.1rem; background: rgba(15,10,28,0.55);
+            border: 1px solid rgba(255,255,255,0.06); border-radius: 14px; margin-bottom: 0.85rem;
+        }
+        .modal-cancel-row { display: flex; justify-content: space-between; align-items: center; padding: 0.5rem 0; }
+        .modal-cancel-row + .modal-cancel-row { border-top: 1px solid rgba(255,255,255,0.04); }
+        .modal-cancel-row .k { font-size: 11.5px; color: rgb(155,150,180); font-weight: 600; }
+        .modal-cancel-row .v { font-size: 13px; color: #f5f3ff; font-weight: 700; }
+        .modal-cancel-row.highlight { padding: 0.65rem 0; }
+        .modal-cancel-row.highlight .v { color: #fbbf24; font-size: 14.5px; }
+
+        .modal-cancel-notice {
+            display: flex; gap: 10px; align-items: flex-start;
+            padding: 0.9rem 1.05rem; border-radius: 12px;
+            background: rgba(245,158,11,0.06); border: 1px solid rgba(245,158,11,0.20);
+        }
+        .modal-cancel-notice svg { width: 17px; height: 17px; flex-shrink: 0; color: #fbbf24; margin-top: 2px; }
+        .modal-cancel-notice p { font-size: 12px; color: rgb(203,199,224); line-height: 1.55; margin: 0; }
+        .modal-cancel-notice p b { color: #f5f3ff; }
+
     </style>
 </head>
 <body class="bg-gray-950 text-gray-100 antialiased min-h-screen relative overflow-x-hidden">
@@ -1804,6 +2071,23 @@
         </div>
     </main>
 
+    <!-- Plan Action Modal — overlay for Upgrade / Renew / Cancel flows.
+         Rendered outside <main> so it can sit above the entire dashboard
+         shell (including the sidebar). Body content is rendered into
+         #plan-modal-body by the JS step renderers below. -->
+    <div id="plan-modal" class="plan-modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="plan-modal-title" hidden>
+        <div class="plan-modal" role="document">
+            <button type="button" id="plan-modal-close" class="plan-modal-close" aria-label="Close">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>
+            <header class="plan-modal-head">
+                <h2 class="plan-modal-title" id="plan-modal-title">…</h2>
+                <p class="plan-modal-sub" id="plan-modal-sub">…</p>
+            </header>
+            <div class="plan-modal-body" id="plan-modal-body" data-modal-curr="INR"></div>
+        </div>
+    </div>
+
     <!-- Premium overlay loader — sits on top of the current view; toggled
          by showLoading() / hideLoading() in the script below. Rendered
          outside <main> so it always covers the viewport regardless of
@@ -2389,9 +2673,10 @@
     }
 
     /* ─── Subscription actions ─── */
-    // Shared helper: any "go pick a plan" entry point should start clean — clear any
-    // prior selection, clear the UTR input, and clear the in-memory utrId. That way
-    // a returning user (upgrade / renew) doesn't see a pre-filled stale UTR.
+    // Legacy startUpgradeFlow kept available — used only by paths that need
+    // to swap the user into the full view-plans onboarding screen. The
+    // dashboard's three buttons now open the in-page #plan-modal instead so
+    // the user never loses context.
     function startUpgradeFlow() {
         selectedPlan = ''; selectedAmount = 0; selectedCredits = '';
         currentPaymentId = null;
@@ -2404,30 +2689,633 @@
         if (utrErr) { utrErr.textContent = ''; utrErr.classList.add('hidden'); }
         const utrStatus = document.getElementById('utr-status');
         if (utrStatus) { utrStatus.textContent = ''; utrStatus.classList.add('hidden'); }
-        // Drop the stored utrId on the local user copy so renderDashboard, etc. don't
-        // re-surface it. The backend will overwrite when a new UTR is submitted.
         try {
             const u = getUser();
             if (u) { u.utrId = null; setUser(u); }
         } catch {}
         showView('view-plans');
     }
-    document.getElementById('btn-upgrade').addEventListener('click', startUpgradeFlow);
-    document.getElementById('btn-renew').addEventListener('click', startUpgradeFlow);
-    document.getElementById('btn-cancel').addEventListener('click', async (e) => {
-        if (!confirm('Cancel your subscription? It stays active until the end of the billing cycle.')) return;
-        const btn = e.currentTarget;
-        setBtnLoading(btn, true, 'Cancelling…');
+    // Wire the dashboard buttons to the in-page modal flow defined below.
+    document.getElementById('btn-upgrade').addEventListener('click', () => openPlanModal('upgrade'));
+    document.getElementById('btn-renew').addEventListener('click', () => openPlanModal('renew'));
+    document.getElementById('btn-cancel').addEventListener('click', () => openPlanModal('cancel'));
+
+    /* ═══════════════════════════════════════════════════════════════
+       Plan Action Modal · Upgrade / Renew / Cancel
+       Self-contained multi-step flow rendered into #plan-modal.
+       Never swaps views; always sits on top of the dashboard so the
+       user keeps visual context throughout the entire flow.
+       ═══════════════════════════════════════════════════════════════ */
+
+    // Authoritative pricing — mirrors backend/plan-hierarchy.js. If these
+    // drift, the in-modal display will desync from the QR amount the user
+    // actually pays. The security tests under backend/tests/security.test.js
+    // guard the canonical numbers; this object is the client mirror.
+    const PLAN_INR = { 'Pro': 946, 'Pro+': 1892, 'Pro Max': 4731, 'Power': 9461 };
+    const PLAN_USD = { 'Pro': 10,  'Pro+': 20,   'Pro Max': 50,   'Power': 100  };
+    const PLAN_TIERS = ['Pro', 'Pro+', 'Pro Max', 'Power'];
+    const USD_RATE_MODAL = 94.61; // display-only conversion; QR + DB use INR
+    const WHATSAPP_NUMBER = '919019879108';
+
+    // Per-flow ephemeral state. Reset on every openPlanModal() call.
+    let planModalState = { flow: null, step: null, selectedPlan: null, paymentId: null };
+
+    function openPlanModal(flow) {
+        const user = getUser() || {};
+        planModalState = { flow, step: null, selectedPlan: null, paymentId: null };
+
+        if (flow === 'upgrade') {
+            // If user is already on the highest tier, jump to a soft message
+            // instead of an empty picker.
+            planModalState.step = 'pick';
+        } else if (flow === 'renew') {
+            if (!user.currentPlan) {
+                // Edge case: user has no plan but clicked Renew. Fall back to
+                // the regular plan picker.
+                planModalState.flow = 'upgrade';
+                planModalState.step = 'pick';
+            } else {
+                planModalState.selectedPlan = user.currentPlan;
+                planModalState.step = 'pay';
+            }
+        } else if (flow === 'cancel') {
+            planModalState.step = 'cancel-confirm';
+        }
+        showPlanModalElement();
+        renderPlanModalStep();
+    }
+
+    function closePlanModal() {
+        hidePlanModalElement();
+        planModalState = { flow: null, step: null, selectedPlan: null, paymentId: null };
+    }
+
+    function showPlanModalElement() {
+        const m = document.getElementById('plan-modal');
+        if (!m) return;
+        m.hidden = false;
+        // Force a reflow so the transition runs from the hidden state
+        void m.offsetWidth;
+        m.classList.add('show');
+        document.body.style.overflow = 'hidden';
+    }
+    function hidePlanModalElement() {
+        const m = document.getElementById('plan-modal');
+        if (!m) return;
+        m.classList.remove('show');
+        document.body.style.overflow = '';
+        // Remove from layout after the transition so the dashboard regains focus
+        setTimeout(() => { if (m && !m.classList.contains('show')) m.hidden = true; }, 320);
+    }
+
+    // Wire the modal's close button + outside-click + Escape key once.
+    document.getElementById('plan-modal-close')?.addEventListener('click', closePlanModal);
+    document.getElementById('plan-modal')?.addEventListener('click', (e) => {
+        if (e.target === document.getElementById('plan-modal')) closePlanModal();
+    });
+    document.addEventListener('keydown', (e) => {
+        if (e.key !== 'Escape') return;
+        const m = document.getElementById('plan-modal');
+        if (m && m.classList.contains('show')) closePlanModal();
+    });
+
+    function setPlanModalCurrency(c) {
+        const body = document.getElementById('plan-modal-body');
+        if (body) body.dataset.modalCurr = c;
+        const inrBtn = document.getElementById('modal-curr-inr');
+        const usdBtn = document.getElementById('modal-curr-usd');
+        if (inrBtn) inrBtn.classList.toggle('active', c === 'INR');
+        if (usdBtn) usdBtn.classList.toggle('active', c === 'USD');
+    }
+
+    function renderPlanModalStep() {
+        const titleEl = document.getElementById('plan-modal-title');
+        const subEl = document.getElementById('plan-modal-sub');
+        const bodyEl = document.getElementById('plan-modal-body');
+        if (!titleEl || !subEl || !bodyEl) return;
+
+        switch (planModalState.step) {
+            case 'pick':           return renderModalPick(titleEl, subEl, bodyEl);
+            case 'pay':            return renderModalPay(titleEl, subEl, bodyEl);
+            case 'utr':            return renderModalUtr(titleEl, subEl, bodyEl);
+            case 'done':           return renderModalDone(titleEl, subEl, bodyEl);
+            case 'cancel-confirm': return renderModalCancelConfirm(titleEl, subEl, bodyEl);
+            case 'cancel-done':    return renderModalCancelDone(titleEl, subEl, bodyEl);
+        }
+    }
+
+    /* ─── Step: plan picker (upgrade only) ─── */
+    function renderModalPick(titleEl, subEl, bodyEl) {
+        const user = getUser() || {};
+        const current = user.currentPlan;
+        const currentIdx = PLAN_TIERS.indexOf(current);
+        const isOnHighest = currentIdx === PLAN_TIERS.length - 1;
+
+        titleEl.textContent = 'Upgrade your plan';
+        subEl.textContent = current
+            ? `You're currently on ${current}. Pick a higher tier to upgrade — your dashboard updates the moment you confirm payment.`
+            : 'Pick a plan to start. You can upgrade or cancel anytime.';
+
+        // Currency toggle + tiles
+        const toggleHtml = `
+            <div class="modal-curr-toggle" role="tablist" aria-label="Currency">
+                <button type="button" id="modal-curr-inr" class="active">INR ₹</button>
+                <button type="button" id="modal-curr-usd">USD $</button>
+            </div>`;
+
+        const tilesHtml = PLAN_TIERS.map((plan, idx) => {
+            const isCurrent = plan === current;
+            const isLower = current && idx < currentIdx;
+            const isUpgrade = !current || idx > currentIdx;
+            const inr = PLAN_INR[plan];
+            const usd = PLAN_USD[plan];
+            const credits = (PLAN_CREDITS[plan] || 0).toLocaleString('en-IN');
+            const cls = ['modal-plan-tile'];
+            if (isCurrent) cls.push('is-current');
+            const disabled = (!isUpgrade) ? 'disabled' : '';
+            const badge = isCurrent
+                ? `<span class="modal-plan-badge current">Current plan</span>`
+                : (isLower ? `<span class="modal-plan-badge muted">Lower tier</span>` : '');
+            return `
+                <button class="${cls.join(' ')}" data-plan="${plan}" ${disabled} type="button" aria-label="${plan} plan">
+                    ${badge}
+                    <span class="modal-plan-name">${plan}</span>
+                    <span class="modal-plan-price-row">
+                        <span class="modal-plan-price">
+                            <span data-modal-curr-show="INR">₹${inr.toLocaleString('en-IN')}</span>
+                            <span data-modal-curr-show="USD">$${usd}</span>
+                        </span>
+                        <span class="modal-plan-cycle">/mo</span>
+                    </span>
+                    <span class="modal-plan-credits">${credits} credits / month</span>
+                </button>`;
+        }).join('');
+
+        const noUpgradesMsg = isOnHighest ? `
+            <div class="modal-info-row">
+                <svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                <span>You're already on <b>Power</b>, our highest tier. You can renew or cancel from the dashboard — there's nothing higher to upgrade to.</span>
+            </div>` : '';
+
+        bodyEl.innerHTML = `
+            ${toggleHtml}
+            ${noUpgradesMsg}
+            <div class="modal-plan-grid">${tilesHtml}</div>
+            <div class="modal-actions">
+                <button class="modal-btn modal-btn-ghost" type="button" id="modal-pick-cancel">Cancel</button>
+                <button class="modal-btn modal-btn-primary" type="button" id="modal-pick-continue" data-label="Loading…" disabled>
+                    Continue to payment
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.4"><path stroke-linecap="round" stroke-linejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+                </button>
+            </div>`;
+
+        document.getElementById('modal-curr-inr').addEventListener('click', () => setPlanModalCurrency('INR'));
+        document.getElementById('modal-curr-usd').addEventListener('click', () => setPlanModalCurrency('USD'));
+        document.getElementById('modal-pick-cancel').addEventListener('click', closePlanModal);
+
+        const continueBtn = document.getElementById('modal-pick-continue');
+        bodyEl.querySelectorAll('.modal-plan-tile:not([disabled])').forEach(tile => {
+            tile.addEventListener('click', () => {
+                bodyEl.querySelectorAll('.modal-plan-tile').forEach(t => t.classList.remove('selected'));
+                tile.classList.add('selected');
+                planModalState.selectedPlan = tile.dataset.plan;
+                continueBtn.disabled = false;
+            });
+        });
+
+        continueBtn.addEventListener('click', async () => {
+            if (!planModalState.selectedPlan) return;
+            setBtnLoading(continueBtn, true, 'Loading…');
+            await createModalPayment();
+            planModalState.step = 'pay';
+            renderPlanModalStep();
+            // No need to clear the loader — the body re-renders.
+        });
+    }
+
+    /* ─── Server-side payment record ───
+       For upgrade/renew we charge the FULL monthly price (the user paid
+       a prorated amount on first signup; from now on the cycle aligns
+       to the 1st of each month). Server side will also enforce the
+       allowed-plans list. */
+    async function createModalPayment() {
+        const plan = planModalState.selectedPlan;
+        if (!plan) return;
+        const amount = PLAN_INR[plan];
         try {
-            const res = await fetch(`${API_BASE}/auth/cancel-plan`, { method: 'POST', headers: { 'Authorization': `Bearer ${getToken()}`, 'Content-Type': 'application/json' } });
-            const data = await res.json();
-            if (data.status === 'success') { alert('Plan cancelled. Active until renewal date.'); location.reload(); }
-            else { alert(data.message || 'Failed.'); setBtnLoading(btn, false); }
-        } catch {
-            alert('Failed. Contact support on WhatsApp.');
+            const r = await fetch(`${API_BASE}/api/payment/create`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ amount, plan })
+            });
+            const j = await r.json();
+            if (j.status === 'success' && j.paymentId) planModalState.paymentId = j.paymentId;
+        } catch (e) {
+            console.warn('modal payment/create failed', e);
+        }
+    }
+
+    /* ─── Step: payment QR ─── */
+    function renderModalPay(titleEl, subEl, bodyEl) {
+        const plan = planModalState.selectedPlan;
+        const isRenew = planModalState.flow === 'renew';
+        const inr = PLAN_INR[plan];
+        const usd = PLAN_USD[plan];
+
+        titleEl.textContent = isRenew ? `Renew ${plan}` : `Upgrade to ${plan}`;
+        subEl.textContent = isRenew
+            ? `Pay for the next billing cycle. Your plan will continue uninterrupted.`
+            : `One month of full ${plan} access — Claude Opus, Sonnet, and all premium models.`;
+
+        // Ensure currency toggle state matches the current modal currency
+        const curr = bodyEl.dataset.modalCurr || 'INR';
+        bodyEl.innerHTML = `
+            <div class="modal-pay-grid">
+                <div class="modal-pay-qr-wrap">
+                    <div id="modal-pay-qr" class="modal-pay-qr"><span class="brand-spinner md"></span></div>
+                    <div class="modal-pay-upi">
+                        <span class="k">UPI</span>
+                        <code>devtoolpro@ybl</code>
+                        <button id="modal-pay-copy" type="button" aria-label="Copy UPI ID">
+                            <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+                        </button>
+                    </div>
+                </div>
+                <div class="modal-pay-summary">
+                    <div class="modal-pay-amount">
+                        <span class="k">Amount due</span>
+                        <span class="v">
+                            <span data-modal-curr-show="INR">₹${inr.toLocaleString('en-IN')}</span>
+                            <span data-modal-curr-show="USD">$${usd}</span>
+                        </span>
+                        <span class="sub" data-modal-curr-show="USD">Charged in INR via UPI (₹${inr.toLocaleString('en-IN')})</span>
+                        <span class="sub" data-modal-curr-show="INR">≈ $${usd}/mo · billed monthly</span>
+                    </div>
+                    <ol class="modal-pay-steps">
+                        <li>Open any UPI app (GPay, PhonePe, Paytm, BHIM)</li>
+                        <li><b>Scan</b> the QR or paste the UPI ID</li>
+                        <li>Confirm payment of <b>₹${inr.toLocaleString('en-IN')}</b></li>
+                        <li>Click <b>I've paid</b> and enter your UTR</li>
+                    </ol>
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button class="modal-btn modal-btn-ghost" type="button" id="modal-pay-back">${isRenew ? 'Cancel' : '← Pick another plan'}</button>
+                <button class="modal-btn modal-btn-primary" type="button" id="modal-pay-done">
+                    I've paid · Enter UTR
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.4"><path stroke-linecap="round" stroke-linejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+                </button>
+            </div>`;
+        // Re-apply currency now that the markup is back in the DOM
+        setPlanModalCurrency(curr);
+
+        // Render QR (let the spinner show for one tick first so the user
+        // sees a deliberate transition)
+        const qrEl = document.getElementById('modal-pay-qr');
+        const upiStr = `upi://pay?pa=devtoolpro@ybl&pn=DevTools%20Pro&am=${inr}&cu=INR&tn=${encodeURIComponent('DevTools Pro - ' + plan)}`;
+        setTimeout(() => {
+            qrEl.innerHTML = '';
+            if (typeof QRCode !== 'undefined') {
+                new QRCode(qrEl, { text: upiStr, width: 170, height: 170, colorDark: '#000', colorLight: '#fff', correctLevel: QRCode.CorrectLevel.M });
+            } else {
+                qrEl.textContent = 'QR unavailable';
+            }
+        }, 120);
+
+        document.getElementById('modal-pay-copy').addEventListener('click', () => {
+            navigator.clipboard.writeText('devtoolpro@ybl');
+            const btn = document.getElementById('modal-pay-copy');
+            const orig = btn.innerHTML;
+            btn.innerHTML = '<svg width="14" height="14" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>';
+            setTimeout(() => { btn.innerHTML = orig; }, 1500);
+        });
+
+        document.getElementById('modal-pay-back').addEventListener('click', () => {
+            if (planModalState.flow === 'renew') {
+                closePlanModal();
+            } else {
+                planModalState.step = 'pick';
+                renderPlanModalStep();
+            }
+        });
+        document.getElementById('modal-pay-done').addEventListener('click', () => {
+            planModalState.step = 'utr';
+            renderPlanModalStep();
+        });
+    }
+
+    /* ─── Step: UTR entry ─── */
+    function renderModalUtr(titleEl, subEl, bodyEl) {
+        const plan = planModalState.selectedPlan;
+        const isRenew = planModalState.flow === 'renew';
+
+        titleEl.textContent = isRenew ? `Confirm renewal · ${plan}` : `Confirm upgrade · ${plan}`;
+        subEl.textContent = 'Enter the UTR / Transaction ID from your UPI app to verify the payment.';
+
+        bodyEl.innerHTML = `
+            <div>
+                <label class="modal-field-label" for="modal-utr-input">UTR / Transaction ID</label>
+                <input type="text" id="modal-utr-input" class="modal-field-input" placeholder="e.g. 412345678901" autocomplete="off" inputmode="numeric" maxlength="22">
+                <p class="modal-utr-help">
+                    <svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><circle cx="12" cy="8" r="0.6" fill="currentColor"/></svg>
+                    Find this under "transaction details" in your UPI app. Usually 12 digits.
+                </p>
+                <p id="modal-utr-err" class="modal-error hidden"></p>
+            </div>
+            <div class="modal-actions">
+                <button class="modal-btn modal-btn-ghost" type="button" id="modal-utr-back">← Back to payment</button>
+                <button class="modal-btn modal-btn-primary" type="button" id="modal-utr-submit" data-label="Submitting…">
+                    Submit &amp; connect on WhatsApp
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.4"><path stroke-linecap="round" stroke-linejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+                </button>
+            </div>`;
+        document.getElementById('modal-utr-back').addEventListener('click', () => {
+            planModalState.step = 'pay';
+            renderPlanModalStep();
+        });
+        document.getElementById('modal-utr-submit').addEventListener('click', submitModalUtr);
+        // Autofocus the input after the panel mounts
+        setTimeout(() => document.getElementById('modal-utr-input')?.focus(), 50);
+    }
+
+    /* ─── Submit modal UTR — runs the same backend trio as the legacy flow:
+       1) POST /api/submit          (creates submissions row, assigns Meet link)
+       2) POST /api/payment/submit-utr (attaches UTR to payments row)
+       3) POST /auth/update-plan    (server-controlled — looks up meetLink, validates plan)
+       Order matters: /api/submit must succeed first so /auth/update-plan
+       can find the matching submission to copy its meet_link from.       */
+    async function submitModalUtr() {
+        const utrInput = document.getElementById('modal-utr-input');
+        const errEl = document.getElementById('modal-utr-err');
+        const btn = document.getElementById('modal-utr-submit');
+        const utr = (utrInput?.value || '').trim();
+
+        errEl.classList.add('hidden');
+        if (!utr || utr.length < 6) {
+            errEl.textContent = 'Enter a valid UTR (at least 6 characters)';
+            errEl.classList.remove('hidden');
+            return;
+        }
+        if (!/^[a-zA-Z0-9]+$/.test(utr)) {
+            errEl.textContent = 'UTR should only contain letters and numbers — no spaces or hyphens';
+            errEl.classList.remove('hidden');
+            return;
+        }
+
+        setBtnLoading(btn, true, 'Submitting…');
+        const user = getUser() || {};
+        const plan = planModalState.selectedPlan;
+
+        try {
+            // 1) Submission row → assigns Meet link, returns WhatsApp URL
+            const subRes = await fetch(`${API_BASE}/api/submit`, {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    firstName: (user.name || '').split(' ')[0] || '',
+                    lastName: (user.name || '').split(' ').slice(1).join(' ') || '',
+                    email: user.email || '',
+                    selectedPlan: plan,
+                    utrId: utr,
+                    submissionTimestamp: new Date().toISOString(),
+                }),
+            });
+            const subData = await subRes.json();
+
+            if (subData.status === 'duplicate') {
+                errEl.textContent = 'This UTR has already been used';
+                errEl.classList.remove('hidden');
+                setBtnLoading(btn, false);
+                return;
+            }
+            if (subData.status !== 'success' || !subData.data) {
+                errEl.textContent = subData.message || 'Submission failed. Try again.';
+                errEl.classList.remove('hidden');
+                setBtnLoading(btn, false);
+                return;
+            }
+
+            // 2) Attach UTR to payments row (best-effort; non-fatal)
+            if (planModalState.paymentId) {
+                try {
+                    await fetch(`${API_BASE}/api/payment/submit-utr`, {
+                        method: 'POST', headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ paymentId: planModalState.paymentId, utrId: utr }),
+                    });
+                } catch (e) { /* admin reconciliation handles this */ }
+            }
+
+            // 3) Update user's plan server-side. Server picks up meet_link from
+            //    the submissions row created in step 1.
+            let serverUser = {};
+            try {
+                const updRes = await fetch(`${API_BASE}/auth/update-plan`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${getToken()}` },
+                    body: JSON.stringify({ plan, utrId: utr }),
+                });
+                const updJson = await updRes.json();
+                if (updJson?.status === 'success' && updJson.user) serverUser = updJson.user;
+            } catch (e) { console.warn('update-plan failed', e); }
+
+            // 4) Update local user cache + redraw dashboard underneath
+            const updatedUser = {
+                ...user,
+                ...serverUser,
+                currentPlan: plan,
+                planStatus: serverUser.planStatus || 'processing',
+                meetLink: serverUser.meetLink || subData.data.meetLink,
+                utrId: utr,
+            };
+            setUser(updatedUser);
+            renderDashboard(updatedUser);
+
+            // 5) Open WhatsApp in a new tab and show the done step
+            if (subData.data.whatsappUrl) {
+                window.open(subData.data.whatsappUrl, '_blank', 'noopener');
+            }
+
+            // Clear the payment id so a future modal open doesn't reuse it
+            planModalState.paymentId = null;
+            planModalState.step = 'done';
+            renderPlanModalStep();
+        } catch (e) {
+            errEl.textContent = 'Connection error. Please try again.';
+            errEl.classList.remove('hidden');
+        } finally {
             setBtnLoading(btn, false);
         }
-    });
+    }
+
+    /* ─── Step: success (upgrade / renew) ─── */
+    function renderModalDone(titleEl, subEl, bodyEl) {
+        const plan = planModalState.selectedPlan;
+        const isRenew = planModalState.flow === 'renew';
+        titleEl.textContent = isRenew ? 'Renewal submitted' : 'Upgrade submitted';
+        subEl.textContent = "We've opened WhatsApp so our team can connect with you for the Google Meet setup.";
+
+        bodyEl.innerHTML = `
+            <div class="modal-done">
+                <div class="modal-done-icon">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+                </div>
+                <p class="modal-done-msg">
+                    Your <b>${plan}</b> ${isRenew ? 'renewal' : 'upgrade'} is now in <b>Processing</b> status.
+                    Your dashboard already reflects the new plan.
+                </p>
+                <ul class="modal-done-list">
+                    <li>Verification typically completes within a few hours</li>
+                    <li>You'll receive a Meet link on WhatsApp for the setup call</li>
+                    <li>Need anything? Reply on the same WhatsApp thread</li>
+                </ul>
+            </div>
+            <div class="modal-actions modal-actions-single">
+                <button class="modal-btn modal-btn-primary" type="button" id="modal-done-close">Done</button>
+            </div>`;
+        document.getElementById('modal-done-close').addEventListener('click', closePlanModal);
+    }
+
+    /* ─── Step: cancellation confirmation ─── */
+    function renderModalCancelConfirm(titleEl, subEl, bodyEl) {
+        const user = getUser() || {};
+        const plan = user.currentPlan || '—';
+        const endDate = user.planEndDate ? new Date(user.planEndDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '—';
+        const startDate = user.planStartDate ? new Date(user.planStartDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '—';
+        const alreadyCancelled = (user.planStatus || '').toLowerCase() === 'cancelled';
+
+        titleEl.textContent = alreadyCancelled ? 'Subscription already cancelled' : 'Cancel subscription';
+        subEl.textContent = alreadyCancelled
+            ? `Your ${plan} plan is set to end on ${endDate}. No further action needed.`
+            : "We'll keep your plan active until the end of the current billing cycle.";
+
+        const submitBtnHtml = alreadyCancelled ? '' : `
+            <button class="modal-btn modal-btn-danger" type="button" id="modal-cancel-submit" data-label="Submitting…">
+                <svg fill="currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347"/></svg>
+                Submit cancellation
+            </button>`;
+
+        bodyEl.innerHTML = `
+            <div class="modal-cancel-summary">
+                <div class="modal-cancel-row">
+                    <span class="k">Account</span>
+                    <span class="v">${escapeHTML(user.name || '—')} · ${escapeHTML(user.email || '—')}</span>
+                </div>
+                <div class="modal-cancel-row">
+                    <span class="k">Current plan</span>
+                    <span class="v">${escapeHTML(plan)}</span>
+                </div>
+                <div class="modal-cancel-row">
+                    <span class="k">Member since</span>
+                    <span class="v">${escapeHTML(startDate)}</span>
+                </div>
+                <div class="modal-cancel-row highlight">
+                    <span class="k">Plan active until</span>
+                    <span class="v">${escapeHTML(endDate)}</span>
+                </div>
+            </div>
+            <div class="modal-cancel-notice">
+                <svg fill="none" stroke="currentColor" stroke-width="1.6" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+                <p>${alreadyCancelled
+                    ? `Your subscription is already cancelled. You'll keep <b>${escapeHTML(plan)}</b> access until <b>${escapeHTML(endDate)}</b>. No renewal charge will be taken after that date.`
+                    : `You'll keep <b>${escapeHTML(plan)}</b> access until <b>${escapeHTML(endDate)}</b>. After that, no renewal charge will be taken and your subscription ends. You can resubscribe anytime. Submitting will open WhatsApp so our team can confirm with you.`}</p>
+            </div>
+            <p id="modal-cancel-err" class="modal-error hidden"></p>
+            <div class="modal-actions">
+                <button class="modal-btn modal-btn-ghost" type="button" id="modal-cancel-keep">${alreadyCancelled ? 'Close' : 'Keep my subscription'}</button>
+                ${submitBtnHtml}
+            </div>`;
+        document.getElementById('modal-cancel-keep').addEventListener('click', closePlanModal);
+        if (!alreadyCancelled) {
+            document.getElementById('modal-cancel-submit').addEventListener('click', submitCancellation);
+        }
+    }
+
+    /* HTML-escape helper for modal templates that interpolate user-controlled
+       strings (name/email). Without this, a hostile name could inject markup
+       into the cancel summary card. */
+    function escapeHTML(s) {
+        return String(s ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
+    }
+
+    async function submitCancellation() {
+        const btn = document.getElementById('modal-cancel-submit');
+        const errEl = document.getElementById('modal-cancel-err');
+        errEl.classList.add('hidden');
+        setBtnLoading(btn, true, 'Submitting…');
+
+        const user = getUser() || {};
+        const plan = user.currentPlan || '—';
+        const endDate = user.planEndDate ? new Date(user.planEndDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '—';
+
+        try {
+            const res = await fetch(`${API_BASE}/auth/cancel-plan`, {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${getToken()}`, 'Content-Type': 'application/json' },
+            });
+            const data = await res.json();
+            if (data.status !== 'success') {
+                errEl.textContent = data.message || 'Failed to submit cancellation';
+                errEl.classList.remove('hidden');
+                setBtnLoading(btn, false);
+                return;
+            }
+
+            // Mirror the new state locally so the dashboard reflects it before
+            // we close the modal.
+            const updatedUser = { ...user, planStatus: 'cancelled' };
+            setUser(updatedUser);
+            renderDashboard(updatedUser);
+
+            // Open WhatsApp with a pre-filled message containing every detail
+            // the team needs to confirm.
+            const waMessage = [
+                "Hi, I'd like to cancel my DevTools Pro subscription.",
+                '',
+                `Name: ${user.name || '—'}`,
+                `Email: ${user.email || '—'}`,
+                `Current plan: ${plan}`,
+                `Active until: ${endDate}`,
+                '',
+                'I understand the plan stays active until the date above, and no renewal charge will be taken after that.',
+                'Please confirm my cancellation. Thanks.',
+            ].join('\n');
+            const waUrl = `https://api.whatsapp.com/send?phone=${WHATSAPP_NUMBER}&text=${encodeURIComponent(waMessage)}`;
+            window.open(waUrl, '_blank', 'noopener');
+
+            planModalState.step = 'cancel-done';
+            renderPlanModalStep();
+        } catch (e) {
+            errEl.textContent = 'Connection error. Please try again.';
+            errEl.classList.remove('hidden');
+        } finally {
+            setBtnLoading(btn, false);
+        }
+    }
+
+    function renderModalCancelDone(titleEl, subEl, bodyEl) {
+        const user = getUser() || {};
+        const endDate = user.planEndDate ? new Date(user.planEndDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '—';
+        titleEl.textContent = 'Cancellation submitted';
+        subEl.textContent = "We've opened WhatsApp so our team can confirm with you.";
+
+        bodyEl.innerHTML = `
+            <div class="modal-done">
+                <div class="modal-done-icon">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+                </div>
+                <p class="modal-done-msg">
+                    You'll keep access to your current plan until <b>${escapeHTML(endDate)}</b>.
+                    After that, your subscription ends automatically — no renewal charge.
+                </p>
+                <ul class="modal-done-list">
+                    <li>Reply on WhatsApp if you need anything before then</li>
+                    <li>You can resubscribe anytime from the dashboard</li>
+                </ul>
+            </div>
+            <div class="modal-actions modal-actions-single">
+                <button class="modal-btn modal-btn-primary" type="button" id="modal-cancel-done-close">Done</button>
+            </div>`;
+        document.getElementById('modal-cancel-done-close').addEventListener('click', closePlanModal);
+    }
 
     document.getElementById('logout-btn').addEventListener('click', () => { clearSession(); location.reload(); });
 
