@@ -2962,19 +2962,63 @@
     }
 
     /* ─── Server-side payment record ───
-       For upgrade/renew we charge the FULL monthly price (the user paid
-       a prorated amount on first signup; from now on the cycle aligns
-       to the 1st of each month). Server side will also enforce the
-       allowed-plans list. */
+       Pricing rules (mirror Kiro's official billing policy):
+         • Active/processing user upgrading to a HIGHER tier mid-cycle:
+           charge the price difference, not the full month. They get the
+           new tier's credits immediately and roll into full-price billing
+           on the 1st of next month.
+         • Everything else (renew, resubscribe after cancellation, first
+           change without an active plan, downgrade to a lower tier):
+           charge the full monthly price. The cycle aligns to the 1st of
+           each month from there.
+       Server still validates the plan against ALLOWED_PLANS; amount
+       passes through as the QR target value (admin reconciles UTR + amount). */
+    function computeChargeAmount(newPlan) {
+        const user = getUser() || {};
+        const currentPlan = user.currentPlan;
+        const status = (user.planStatus || '').toLowerCase();
+        const newIdx = PLAN_TIERS.indexOf(newPlan);
+        const currentIdx = PLAN_TIERS.indexOf(currentPlan);
+        const hasActiveSubscription = currentPlan && (status === 'active' || status === 'processing');
+        const isUpgrade = hasActiveSubscription && currentIdx >= 0 && newIdx > currentIdx;
+
+        if (planModalState.flow === 'change' && isUpgrade) {
+            const diff = PLAN_INR[newPlan] - PLAN_INR[currentPlan];
+            // Floor at ₹1 so the QR is never zero / negative. This branch
+            // only fires when newIdx > currentIdx, so the diff is always
+            // positive for the standard 10 / 20 / 50 / 100 USD ladder —
+            // but the floor is cheap insurance against future price
+            // tweaks that could narrow the gap.
+            return {
+                inr: Math.max(1, diff),
+                usd: Math.max(1, PLAN_USD[newPlan] - PLAN_USD[currentPlan]),
+                isUpgradeDiff: true,
+                fromPlan: currentPlan,
+            };
+        }
+        return {
+            inr: PLAN_INR[newPlan],
+            usd: PLAN_USD[newPlan],
+            isUpgradeDiff: false,
+            fromPlan: null,
+        };
+    }
+
     async function createModalPayment() {
         const plan = planModalState.selectedPlan;
         if (!plan) return;
-        const amount = PLAN_INR[plan];
+        const charge = computeChargeAmount(plan);
+        // Stash on state so renderModalPay can read the same numbers without
+        // recomputing (avoids drift if PLAN_INR is ever edited mid-flow).
+        planModalState.chargedInr = charge.inr;
+        planModalState.chargedUsd = charge.usd;
+        planModalState.isUpgradeDiff = charge.isUpgradeDiff;
+        planModalState.upgradeFromPlan = charge.fromPlan;
         try {
             const r = await fetch(`${API_BASE}/api/payment/create`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ amount, plan })
+                body: JSON.stringify({ amount: charge.inr, plan })
             });
             const j = await r.json();
             if (j.status === 'success' && j.paymentId) planModalState.paymentId = j.paymentId;
@@ -3005,11 +3049,20 @@
     function renderModalPay(titleEl, subEl, bodyEl) {
         const plan = planModalState.selectedPlan;
         const isRenew = planModalState.flow === 'renew';
-        const inr = PLAN_INR[plan];
-        const usd = PLAN_USD[plan];
         const verb = planChangeVerb(plan);
         const user = getUser() || {};
         const isCancelled = (user.planStatus || '').toLowerCase() === 'cancelled';
+
+        // Authoritative charge values come from computeChargeAmount() — for
+        // active-user upgrades they're the price *diff*, otherwise the full
+        // monthly price. Defaults are a safety net in case the modal is
+        // rendered without an upstream createModalPayment() call.
+        const isUpgradeDiff = !!planModalState.isUpgradeDiff;
+        const chargedInr = planModalState.chargedInr ?? PLAN_INR[plan];
+        const chargedUsd = planModalState.chargedUsd ?? PLAN_USD[plan];
+        const fullInr = PLAN_INR[plan];
+        const fullUsd = PLAN_USD[plan];
+        const fromPlan = planModalState.upgradeFromPlan;
 
         titleEl.textContent = isRenew ? `Renew ${plan}` : `${verb} ${plan}`;
         if (isRenew) {
@@ -3018,15 +3071,34 @@
             subEl.textContent = `One month of full ${plan} access — your subscription resumes from Processing once we verify the payment.`;
         } else if (verb === 'Downgrade to') {
             subEl.textContent = `Your current plan stays active until the end of this billing cycle. The ${plan} tier takes effect from next month — that's when you'll see the lower credit cap.`;
+        } else if (isUpgradeDiff && fromPlan) {
+            // Active-user upgrade: explain the price-diff billing so the
+            // payment amount on the QR (₹X) doesn't look like a mistake.
+            subEl.textContent = `You only pay the difference between ${fromPlan} (₹${PLAN_INR[fromPlan].toLocaleString('en-IN')}) and ${plan} (₹${fullInr.toLocaleString('en-IN')}) for this cycle. Full ${plan} access kicks in immediately; from 1st of next month you'll be billed ₹${fullInr.toLocaleString('en-IN')}/mo.`;
         } else if (verb === 'Upgrade to') {
             subEl.textContent = `One month of full ${plan} access — Claude Opus, Sonnet, and all premium models with the bigger monthly credit cap.`;
         } else {
             subEl.textContent = `One month of full ${plan} access — Claude Opus, Sonnet, and all premium models.`;
         }
 
-        // Ensure currency toggle state matches the current modal currency
+        // The pre-summary diff breakdown — only shown for the upgrade-diff
+        // case so the user can see exactly how ₹X was computed.
+        const diffBreakdownHtml = isUpgradeDiff && fromPlan ? `
+            <div class="modal-info-row" style="margin-bottom: 0.85rem;">
+                <svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 7h6m-6 5h6m-6 5h6M5 4h14a2 2 0 012 2v12a2 2 0 01-2 2H5a2 2 0 01-2-2V6a2 2 0 012-2z"/></svg>
+                <span>
+                    <b>${plan}</b> ₹${fullInr.toLocaleString('en-IN')}/mo
+                    <span style="color: rgb(155,150,180);"> − </span>
+                    <b>${fromPlan}</b> ₹${PLAN_INR[fromPlan].toLocaleString('en-IN')}/mo
+                    <span style="color: rgb(155,150,180);"> = </span>
+                    <b style="color: #c4b5fd;">₹${chargedInr.toLocaleString('en-IN')}</b> for the rest of this cycle.
+                </span>
+            </div>` : '';
+
+        // Currency toggle state preserved across re-renders
         const curr = bodyEl.dataset.modalCurr || 'INR';
         bodyEl.innerHTML = `
+            ${diffBreakdownHtml}
             <div class="modal-pay-grid">
                 <div class="modal-pay-qr-wrap">
                     <div id="modal-pay-qr" class="modal-pay-qr"><span class="brand-spinner md"></span></div>
@@ -3040,18 +3112,22 @@
                 </div>
                 <div class="modal-pay-summary">
                     <div class="modal-pay-amount">
-                        <span class="k">Amount due</span>
+                        <span class="k">${isUpgradeDiff ? 'Pay now (upgrade diff)' : 'Amount due'}</span>
                         <span class="v">
-                            <span data-modal-curr-show="INR">₹${inr.toLocaleString('en-IN')}</span>
-                            <span data-modal-curr-show="USD">$${usd}</span>
+                            <span data-modal-curr-show="INR">₹${chargedInr.toLocaleString('en-IN')}</span>
+                            <span data-modal-curr-show="USD">$${chargedUsd}</span>
                         </span>
-                        <span class="sub" data-modal-curr-show="USD">Charged in INR via UPI (₹${inr.toLocaleString('en-IN')})</span>
-                        <span class="sub" data-modal-curr-show="INR">≈ $${usd}/mo · billed monthly</span>
+                        ${isUpgradeDiff ? `
+                            <span class="sub">Full <b style="color:#f5f3ff;">${plan}</b> billing of <b style="color:#f5f3ff;">₹${fullInr.toLocaleString('en-IN')}/mo</b> begins 1st of next month.</span>
+                        ` : `
+                            <span class="sub" data-modal-curr-show="USD">Charged in INR via UPI (₹${chargedInr.toLocaleString('en-IN')})</span>
+                            <span class="sub" data-modal-curr-show="INR">≈ $${chargedUsd}/mo · billed monthly</span>
+                        `}
                     </div>
                     <ol class="modal-pay-steps">
                         <li>Open any UPI app (GPay, PhonePe, Paytm, BHIM)</li>
                         <li><b>Scan</b> the QR or paste the UPI ID</li>
-                        <li>Confirm payment of <b>₹${inr.toLocaleString('en-IN')}</b></li>
+                        <li>Confirm payment of <b>₹${chargedInr.toLocaleString('en-IN')}</b></li>
                         <li>Click <b>I've paid</b> and enter your UTR</li>
                     </ol>
                 </div>
@@ -3066,10 +3142,11 @@
         // Re-apply currency now that the markup is back in the DOM
         setPlanModalCurrency(curr);
 
-        // Render QR (let the spinner show for one tick first so the user
-        // sees a deliberate transition)
+        // Render QR using the *charged* amount (= diff for upgrades, full
+        // month otherwise). Letting the spinner show for one tick keeps
+        // the transition feeling deliberate.
         const qrEl = document.getElementById('modal-pay-qr');
-        const upiStr = `upi://pay?pa=devtoolpro@ybl&pn=DevTools%20Pro&am=${inr}&cu=INR&tn=${encodeURIComponent('DevTools Pro - ' + plan)}`;
+        const upiStr = `upi://pay?pa=devtoolpro@ybl&pn=DevTools%20Pro&am=${chargedInr}&cu=INR&tn=${encodeURIComponent('DevTools Pro - ' + plan + (isUpgradeDiff && fromPlan ? ` (upgrade from ${fromPlan})` : ''))}`;
         setTimeout(() => {
             qrEl.innerHTML = '';
             if (typeof QRCode !== 'undefined') {
