@@ -31,10 +31,159 @@
         .brand-spinner.md { width: 2.25rem; height: 2.25rem; -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 4px), #000 calc(100% - 4px)); mask: radial-gradient(farthest-side, transparent calc(100% - 4px), #000 calc(100% - 4px)); }
         .brand-spinner.lg { width: 3rem; height: 3rem; -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 5px), #000 calc(100% - 5px)); mask: radial-gradient(farthest-side, transparent calc(100% - 5px), #000 calc(100% - 5px)); }
 
-        .brand-page-loader { position: relative; width: 112px; height: 112px; }
-        .brand-page-loader .ring { position: absolute; inset: 0; border-radius: 50%; background: conic-gradient(from 0deg, #6366f1, #8b5cf6, #a78bfa, #6366f1); -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 5px), #000 calc(100% - 5px)); mask: radial-gradient(farthest-side, transparent calc(100% - 5px), #000 calc(100% - 5px)); animation: brand-spin 1.4s linear infinite; }
-        .brand-page-loader .core { position: absolute; top: 50%; left: 50%; width: 64px; height: 64px; border-radius: 16px; background: linear-gradient(135deg, #6366f1, #8b5cf6); display: flex; align-items: center; justify-content: center; animation: pulse-core 2s ease-in-out infinite; }
-        .brand-page-loader .core svg { width: 32px; height: 32px; color: white; }
+        /* ─── Premium overlay loader ─────────────────────────────────
+           Sits on top of the current view (sign-in / dashboard / …) so
+           navigation context is preserved while async work is in flight.
+           Three concentric rings rotate at different speeds + directions
+           around a pulsing brand glyph, with a shimmer label and a
+           sliding-highlight progress bar underneath. */
+        .app-loader-overlay {
+            position: fixed; inset: 0; z-index: 9999;
+            display: flex; align-items: center; justify-content: center;
+            background: radial-gradient(ellipse 60% 50% at 50% 50%, rgba(20,16,42,0.55), rgba(8,5,18,0.82));
+            backdrop-filter: blur(18px) saturate(140%);
+            -webkit-backdrop-filter: blur(18px) saturate(140%);
+            opacity: 0; visibility: hidden;
+            transition: opacity .35s cubic-bezier(.2,.8,.2,1), visibility .35s;
+            pointer-events: none;
+        }
+        .app-loader-overlay.show { opacity: 1; visibility: visible; pointer-events: auto; }
+
+        .app-loader {
+            position: relative;
+            display: flex; flex-direction: column; align-items: center; gap: 1.55rem;
+            padding: 2.5rem 3rem;
+            border-radius: 24px;
+            background: linear-gradient(180deg, rgba(28,22,56,0.62) 0%, rgba(14,10,30,0.82) 100%);
+            border: 1px solid rgba(168,85,247,0.20);
+            box-shadow:
+                0 40px 100px -30px rgba(0,0,0,0.85),
+                0 0 80px rgba(168,85,247,0.22),
+                inset 0 1px 0 rgba(255,255,255,0.06);
+            animation: app-loader-in .55s cubic-bezier(.2,.8,.2,1) both;
+        }
+        .app-loader::before {
+            content: ''; position: absolute; inset: 0; border-radius: inherit; padding: 1px;
+            background: linear-gradient(180deg, rgba(255,255,255,0.16), rgba(255,255,255,0.02) 35%, transparent 60%);
+            -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+                    mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+            -webkit-mask-composite: xor; mask-composite: exclude;
+            pointer-events: none;
+        }
+        @keyframes app-loader-in {
+            from { opacity: 0; transform: translateY(16px) scale(.96); }
+            to   { opacity: 1; transform: translateY(0) scale(1); }
+        }
+
+        /* Orbital ring container */
+        .app-loader-orb { position: relative; width: 116px; height: 116px; }
+        .app-loader-orb .ring {
+            position: absolute;
+            border-radius: 50%;
+            -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 3px));
+                    mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 3px));
+            will-change: transform;
+        }
+        .app-loader-orb .ring-1 {
+            inset: 0;
+            background: conic-gradient(from 0deg, transparent 0deg 240deg, #c084fc 300deg, #a855f7 360deg);
+            animation: orb-spin 1.4s cubic-bezier(.5,.05,.5,.95) infinite;
+            filter: drop-shadow(0 0 6px rgba(168,85,247,0.6));
+        }
+        .app-loader-orb .ring-2 {
+            inset: 12px;
+            background: conic-gradient(from 180deg, transparent 0deg 240deg, #f9a8d4 290deg, #ec4899 360deg);
+            animation: orb-spin 1.9s cubic-bezier(.5,.05,.5,.95) infinite reverse;
+            filter: drop-shadow(0 0 5px rgba(236,72,153,0.5));
+        }
+        .app-loader-orb .ring-3 {
+            inset: 24px;
+            background: conic-gradient(from 90deg, transparent 0deg 280deg, #a5b4fc 340deg, #818cf8 360deg);
+            animation: orb-spin 2.4s cubic-bezier(.5,.05,.5,.95) infinite;
+            filter: drop-shadow(0 0 5px rgba(129,140,248,0.5));
+        }
+        @keyframes orb-spin { to { transform: rotate(360deg); } }
+
+        /* Pulsing brand glyph at the centre */
+        .app-loader-orb .core {
+            position: absolute;
+            top: 50%; left: 50%;
+            width: 48px; height: 48px;
+            transform: translate(-50%, -50%);
+            border-radius: 14px;
+            background: linear-gradient(135deg, #a855f7 0%, #ec4899 100%);
+            display: flex; align-items: center; justify-content: center;
+            color: white;
+            box-shadow:
+                0 0 30px rgba(168,85,247,0.65),
+                0 0 60px rgba(236,72,153,0.32),
+                inset 0 1px 0 rgba(255,255,255,0.25);
+            animation: core-pulse 2s cubic-bezier(.45,.05,.55,.95) infinite;
+        }
+        .app-loader-orb .core svg { width: 22px; height: 22px; }
+        @keyframes core-pulse {
+            0%, 100% { transform: translate(-50%, -50%) scale(1); }
+            50%      { transform: translate(-50%, -50%) scale(.88);
+                       box-shadow: 0 0 44px rgba(168,85,247,.85),
+                                   0 0 80px rgba(236,72,153,.48),
+                                   inset 0 1px 0 rgba(255,255,255,.3); }
+        }
+
+        /* Shimmer label */
+        .app-loader-text {
+            font-size: 13.5px; font-weight: 600; letter-spacing: 0.005em;
+            display: inline-flex; align-items: baseline; gap: 4px;
+            background: linear-gradient(90deg, rgba(203,199,224,0.6) 0%, rgba(245,243,255,1) 50%, rgba(203,199,224,0.6) 100%);
+            background-size: 200% 100%;
+            -webkit-background-clip: text;
+                    background-clip: text;
+            color: transparent;
+            animation: text-shimmer 2.4s linear infinite;
+        }
+        @keyframes text-shimmer {
+            0%   { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+        .app-loader-dots { display: inline-flex; gap: 3px; margin-left: 2px; }
+        .app-loader-dots span {
+            display: inline-block; width: 3px; height: 3px; border-radius: 50%; background: #c4b5fd;
+            opacity: 0; animation: loader-dot 1.4s ease-in-out infinite;
+        }
+        .app-loader-dots span:nth-child(1) { animation-delay: 0s; }
+        .app-loader-dots span:nth-child(2) { animation-delay: 0.18s; }
+        .app-loader-dots span:nth-child(3) { animation-delay: 0.36s; }
+        @keyframes loader-dot {
+            0%, 60%, 100% { opacity: 0; transform: translateY(0); }
+            30%           { opacity: 1; transform: translateY(-2px); }
+        }
+
+        /* Sliding-highlight progress bar */
+        .app-loader-bar {
+            width: 180px; height: 2px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 999px; overflow: hidden;
+            position: relative;
+        }
+        .app-loader-bar::after {
+            content: '';
+            position: absolute; top: 0; left: 0;
+            width: 35%; height: 100%;
+            background: linear-gradient(90deg, transparent 0%, #a855f7 50%, transparent 100%);
+            border-radius: 999px;
+            animation: bar-slide 1.6s cubic-bezier(.65,.05,.36,1) infinite;
+        }
+        @keyframes bar-slide {
+            0%   { transform: translateX(-100%); }
+            100% { transform: translateX(385%); }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .app-loader-orb .ring,
+            .app-loader-orb .core,
+            .app-loader-text,
+            .app-loader-dots span,
+            .app-loader-bar::after { animation-duration: 4s !important; }
+        }
 
         /* ─── Pane / Card ─── */
         .pane { background: linear-gradient(180deg, rgba(17,24,39,0.65), rgba(11,15,25,0.6)); border: 1px solid rgba(55,65,81,0.55); border-radius: 1.25rem; padding: 1.5rem; backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); transition: border-color .25s ease; }
@@ -768,14 +917,9 @@
     <main class="px-4 sm:px-6 lg:px-8 pt-8 pb-16">
         <div class="max-w-7xl mx-auto">
 
-            <!-- VIEW: Initial Loading (full overlay-style, big brand loader) -->
-            <div id="view-loading" class="flex flex-col items-center justify-center py-24">
-                <div class="brand-page-loader" aria-hidden="true">
-                    <span class="ring"></span>
-                    <span class="core"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"/></svg></span>
-                </div>
-                <p class="mt-6 text-sm text-gray-400">Loading your workspace…</p>
-            </div>
+            <!-- (Loading state is rendered by the #app-loader overlay below,
+                 outside <main> — it sits on top of the current view instead
+                 of replacing it.) -->
 
             <!-- VIEW: Sign In (2026 flagship welcome) -->
             <div id="view-signin" class="hidden animate-fade-in">
@@ -1660,6 +1804,28 @@
         </div>
     </main>
 
+    <!-- Premium overlay loader — sits on top of the current view; toggled
+         by showLoading() / hideLoading() in the script below. Rendered
+         outside <main> so it always covers the viewport regardless of
+         which dashboard sub-view is active. -->
+    <div id="app-loader" class="app-loader-overlay" aria-hidden="true" role="status" aria-live="polite">
+        <div class="app-loader">
+            <div class="app-loader-orb" aria-hidden="true">
+                <span class="ring ring-1"></span>
+                <span class="ring ring-2"></span>
+                <span class="ring ring-3"></span>
+                <span class="core">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"/></svg>
+                </span>
+            </div>
+            <p class="app-loader-text" id="app-loader-text">
+                <span>Loading your workspace</span>
+                <span class="app-loader-dots" aria-hidden="true"><span></span><span></span><span></span></span>
+            </p>
+            <div class="app-loader-bar" aria-hidden="true"></div>
+        </div>
+    </div>
+
     <script>
     const API_BASE = 'https://devtools-pro.onrender.com';
     function getToken() { return localStorage.getItem('dt_token'); }
@@ -1683,8 +1849,12 @@
     }
 
     /* ─── View switching ─── */
-    const views = ['view-loading','view-signin','view-register','view-plans','view-payment','view-utr','view-dashboard'];
+    const views = ['view-signin','view-register','view-plans','view-payment','view-utr','view-dashboard'];
     function showView(id) {
+        // Any view swap implicitly dismisses the overlay loader — if some
+        // async path forgets to call hideLoading(), the next showView() is
+        // a safety net.
+        hideLoading();
         // Defensive: any missing view (removed in a redesign) shouldn't crash the swap.
         views.forEach(v => {
             const node = document.getElementById(v);
@@ -1699,7 +1869,31 @@
         el.classList.remove('animate-fade-in','animate-slide-up');
         void el.offsetWidth;
         if (id === 'view-signin' || id === 'view-dashboard') el.classList.add('animate-fade-in');
-        else if (id !== 'view-loading') el.classList.add('animate-slide-up');
+        else el.classList.add('animate-slide-up');
+    }
+
+    /* ─── Overlay loader controls ───
+       The loader is purely a visual overlay; it does NOT swap views. That
+       means whatever the user is looking at (sign-in screen, dashboard,
+       etc.) stays mounted underneath, header and ambient orbs included. */
+    function showLoading(label) {
+        const el = document.getElementById('app-loader');
+        if (!el) return;
+        if (label) {
+            const textEl = document.getElementById('app-loader-text');
+            if (textEl) {
+                // Preserve the trailing animated dots element
+                textEl.firstElementChild.textContent = label;
+            }
+        }
+        el.classList.add('show');
+        el.setAttribute('aria-hidden', 'false');
+    }
+    function hideLoading() {
+        const el = document.getElementById('app-loader');
+        if (!el) return;
+        el.classList.remove('show');
+        el.setAttribute('aria-hidden', 'true');
     }
 
     /* ─── Button loading helper ─── */
@@ -1723,6 +1917,10 @@
     async function init() {
         const token = getToken();
         if (!token) { showView('view-signin'); initGoogleSignIn(); return; }
+        // Show overlay while we resolve the session — sits on top of
+        // whatever was last rendered (typically a blank body on a hard
+        // reload) so the page never appears empty.
+        showLoading('Restoring your session');
         try {
             const res = await fetch(`${API_BASE}/auth/me`, { headers: { 'Authorization': `Bearer ${token}` } });
             // Explicit 401 means the token is no longer valid. Always clear
@@ -1783,18 +1981,22 @@
     }
 
     async function handleGoogleAuth(response) {
-        // Show full-page loader while we exchange the token
-        showView('view-loading');
+        // Overlay loader on top of the sign-in screen while we exchange
+        // the Google ID token for our session JWT. Sign-in view stays
+        // mounted underneath so the user keeps visual context.
+        showLoading('Signing you in');
         try {
             const res = await fetch(`${API_BASE}/auth/google`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ idToken: response.credential }) });
             const data = await res.json();
             if (data.status === 'success') {
                 setToken(data.token); setUser(data.user); showHeader(data.user); routeUser(data.user);
             } else {
+                hideLoading();
                 showView('view-signin'); initGoogleSignIn();
                 alert('Sign-in failed: ' + (data.message || 'Unknown error'));
             }
         } catch {
+            hideLoading();
             showView('view-signin'); initGoogleSignIn();
             alert('Connection error. Please try again.');
         }
