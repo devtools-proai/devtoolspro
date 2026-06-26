@@ -343,11 +343,13 @@
                                 <th>Started</th>
                                 <th>Renews</th>
                                 <th>Username</th>
+                                <th>UTR</th>
+                                <th>Updated</th>
                                 <th>Joined</th>
                             </tr>
                         </thead>
                         <tbody id="users-rows">
-                            <tr><td colspan="7" class="empty">Loading…</td></tr>
+                            <tr><td colspan="9" class="empty">Loading…</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -589,7 +591,7 @@
             const plan   = document.getElementById('filter-plan').value;
             const tbody = document.getElementById('users-rows');
             const meta = document.getElementById('count-meta');
-            tbody.innerHTML = '<tr><td colspan="7" class="empty">Loading…</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="9" class="empty">Loading…</td></tr>';
             try {
                 const params = new URLSearchParams();
                 if (search) params.set('search', search);
@@ -599,7 +601,7 @@
                 allUsers = users;
                 meta.textContent = `${count} user${count === 1 ? '' : 's'}`;
                 if (!users.length) {
-                    tbody.innerHTML = '<tr><td colspan="7" class="empty">No users match the current filters.</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="9" class="empty">No users match the current filters.</td></tr>';
                     return;
                 }
                 tbody.innerHTML = users.map(u => `
@@ -618,6 +620,8 @@
                         <td>${escapeHTML(fmtDate(u.planStartDate))}</td>
                         <td>${escapeHTML(fmtDate(u.planEndDate))}</td>
                         <td><span class="user-handle" title="${escapeHTML(u.email || '')}">${escapeHTML(usernameFromEmail(u.email))}</span></td>
+                        <td><span class="mono" title="${escapeHTML(u.utrId || '')}">${escapeHTML(u.utrId || '—')}</span></td>
+                        <td>${escapeHTML(fmtDate(u.updatedAt))}</td>
                         <td>${escapeHTML(fmtDate(u.createdAt))}</td>
                     </tr>
                 `).join('');
@@ -625,7 +629,7 @@
                     tr.addEventListener('click', () => openEdit(tr.dataset.id));
                 });
             } catch (e) {
-                tbody.innerHTML = `<tr><td colspan="7" class="empty">${escapeHTML(e.message || 'Failed to load')}</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="9" class="empty">${escapeHTML(e.message || 'Failed to load')}</td></tr>`;
             }
         }
 

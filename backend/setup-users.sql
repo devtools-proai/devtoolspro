@@ -36,6 +36,11 @@ CREATE TABLE IF NOT EXISTS users (
   pending_plan TEXT,
   pending_plan_effective TIMESTAMPTZ,
   last_login TIMESTAMPTZ DEFAULT NOW(),
+  -- updated_at is auto-maintained by the trg_users_bump_updated_at trigger
+  -- below; it only changes when business-relevant fields change (plan,
+  -- status, UTR, meet link, name, etc.) so passive logins / avatar
+  -- refreshes don't pollute the "last activity" timestamp shown in admin.
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
@@ -44,6 +49,49 @@ CREATE TABLE IF NOT EXISTS users (
 -- — IF NOT EXISTS makes this a no-op once applied.
 ALTER TABLE users ADD COLUMN IF NOT EXISTS pending_plan TEXT;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS pending_plan_effective TIMESTAMPTZ;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ;
+
+-- Backfill updated_at on existing rows: prefer plan_start_date (last
+-- known business event) and fall back to created_at. Without this the
+-- column would be NULL on every existing row and the admin "Updated"
+-- column would show '—' for everyone until they next interact.
+UPDATE users
+  SET updated_at = COALESCE(plan_start_date, created_at, NOW())
+  WHERE updated_at IS NULL;
+
+-- Lock down the column once backfilled.
+ALTER TABLE users ALTER COLUMN updated_at SET DEFAULT NOW();
+ALTER TABLE users ALTER COLUMN updated_at SET NOT NULL;
+
+-- Trigger function: bump updated_at only when business-significant
+-- fields change. last_login and picture explicitly excluded so the
+-- avatar refresh on every login doesn't masquerade as activity.
+CREATE OR REPLACE FUNCTION users_bump_updated_at()
+RETURNS TRIGGER AS $$
+BEGIN
+  IF NEW.current_plan            IS DISTINCT FROM OLD.current_plan
+     OR NEW.plan_status          IS DISTINCT FROM OLD.plan_status
+     OR NEW.plan_start_date      IS DISTINCT FROM OLD.plan_start_date
+     OR NEW.plan_end_date        IS DISTINCT FROM OLD.plan_end_date
+     OR NEW.utr_id               IS DISTINCT FROM OLD.utr_id
+     OR NEW.meet_link            IS DISTINCT FROM OLD.meet_link
+     OR NEW.pending_plan         IS DISTINCT FROM OLD.pending_plan
+     OR NEW.pending_plan_effective IS DISTINCT FROM OLD.pending_plan_effective
+     OR NEW.name                 IS DISTINCT FROM OLD.name
+     OR NEW.phone                IS DISTINCT FROM OLD.phone
+     OR NEW.source               IS DISTINCT FROM OLD.source
+     OR NEW.registration_complete IS DISTINCT FROM OLD.registration_complete THEN
+    NEW.updated_at = NOW();
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_users_bump_updated_at ON users;
+CREATE TRIGGER trg_users_bump_updated_at
+BEFORE UPDATE ON users
+FOR EACH ROW
+EXECUTE FUNCTION users_bump_updated_at();
 
 -- Index the effective-date column so the "apply due downgrades" admin
 -- query stays fast as the table grows. Partial index keeps it tiny —

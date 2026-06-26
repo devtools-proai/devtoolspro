@@ -3520,78 +3520,118 @@
         btn.addEventListener('click', () => showDashPage(btn.dataset.dashNav));
     });
 
-    /* ─── Payment History rendering ─── */
-    function renderHistory(user) {
+    /* ─── Payment History rendering ───
+       Async fetch from /api/submissions/me so every transaction the
+       user has ever submitted shows up in the table, not just the
+       latest one. Totals are summed from the actual paid amounts the
+       backend joined in via UTR (with full-plan-price fallback if no
+       payment row matched). */
+    const PLAN_AMOUNT_INR = { 'Pro': 946, 'Pro+': 1892, 'Pro Max': 4731, 'Power': 9461 };
+
+    async function renderHistory(user) {
         if (!user) return;
-        const PLAN_AMOUNT_INR = { 'Pro': 946, 'Pro+': 1892, 'Pro Max': 4731, 'Power': 9461 };
-        const planAmount = PLAN_AMOUNT_INR[user.currentPlan] || 0;
-        const fmtINR = (n) => '₹' + Math.round(n).toLocaleString('en-IN');
+        const fmtINR = (n) => '₹' + Math.round(Number(n) || 0).toLocaleString('en-IN');
+        const fmtDateOnly = (d) => d
+            ? new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
+            : '—';
+        const escape = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
 
-        // Total spent: best-effort estimate using the user's prorated first
-        // payment derived from their plan_start_date / plan_end_date. Server-
-        // authoritative once we wire /api/payments/me; for now this stays
-        // consistent with what selectPlanCard charged.
-        let proratedAmount = 0;
-        let proratedDays = 0;
-        if (user.planStartDate && user.planEndDate && planAmount) {
-            const start = new Date(user.planStartDate);
-            const end = new Date(user.planEndDate);
-            const startOnly = new Date(start.getFullYear(), start.getMonth(), start.getDate());
-            const endOnly = new Date(end.getFullYear(), end.getMonth(), end.getDate());
-            const daysInMonth = new Date(start.getFullYear(), start.getMonth() + 1, 0).getDate();
-            proratedDays = Math.max(0, Math.round((endOnly - startOnly) / 86400000));
-            proratedAmount = Math.round((proratedDays / daysInMonth) * planAmount);
-        } else if (user.currentPlan && planAmount) {
-            proratedAmount = planAmount;
-        }
-
-        setText('hist-total-spent', proratedAmount ? fmtINR(proratedAmount) : '₹0');
-        // 50% off vs Kiro market price, so savings == amount paid
-        setText('hist-total-saved', proratedAmount ? fmtINR(proratedAmount) : '₹0');
-        setText('hist-next-renewal', user.planEndDate ? new Date(user.planEndDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '—');
+        // Static tiles that come from the user row — render immediately
+        // so the page doesn't feel empty while we fetch.
         setText('hist-active-plan', user.currentPlan || 'No plan');
+        setText('hist-next-renewal', user.planEndDate ? fmtDateOnly(user.planEndDate) : '—');
 
-        // Build the table — for now this surfaces the user's most recent
-        // subscription pulled from their account record. Once /api/payments/me
-        // is in place we'll replace this with the full payments[] list.
         const tbody = document.getElementById('dash-history-rows');
         if (!tbody) return;
-        if (!user.currentPlan || !user.planStartDate) {
-            tbody.innerHTML = `<tr><td colspan="5" class="dash-history-empty">No payment history yet — your subscriptions will appear here.</td></tr>`;
+
+        // Loading state
+        tbody.innerHTML = `<tr><td colspan="5" class="dash-history-empty"><span class="brand-spinner md" style="margin-right:10px;vertical-align:middle;"></span>Loading transactions…</td></tr>`;
+        setText('hist-total-spent', '—');
+        setText('hist-total-saved', '—');
+
+        let history = [];
+        try {
+            const res = await fetch(`${API_BASE}/api/submissions/me`, {
+                headers: { 'Authorization': `Bearer ${getToken()}` },
+            });
+            if (res.status === 401) {
+                // Token expired while the user was idle on the dashboard.
+                // Don't silently fail; let the auto-logout path handle it.
+                clearSession();
+                location.reload();
+                return;
+            }
+            const data = await res.json();
+            if (data.status === 'success' && Array.isArray(data.history)) {
+                history = data.history;
+            }
+        } catch (e) {
+            console.warn('history fetch failed:', e.message);
+            tbody.innerHTML = `<tr><td colspan="5" class="dash-history-empty">Couldn't load transaction history. Refresh to retry.</td></tr>`;
+            setText('hist-total-spent', '—');
+            setText('hist-total-saved', '—');
             return;
         }
 
-        const start = new Date(user.planStartDate);
-        const fmtDate = start.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
-        const fmtTime = start.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }).toUpperCase();
+        if (history.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="5" class="dash-history-empty">No payment history yet — your subscriptions will appear here.</td></tr>`;
+            setText('hist-total-spent', '₹0');
+            setText('hist-total-saved', '₹0');
+            return;
+        }
 
-        const status = (user.planStatus || 'processing').toLowerCase();
-        const statusLabel = status === 'active' ? 'Successful'
-                          : status === 'cancelled' ? 'Cancelled'
-                          : 'Pending';
-        const statusClass = status === 'active' ? 'success'
-                          : status === 'cancelled' ? 'cancel'
-                          : 'pending';
-        const dotClass = status === 'active' ? '' : status === 'processing' ? 'amber' : '';
-        const planLabel = `${user.currentPlan}${proratedDays && proratedDays < 28 ? ' (prorated)' : ' Monthly'}`;
+        // Totals: sum of actual amounts (server side, via payments join)
+        // with the plan's full monthly price as a fallback when no payment
+        // row matched. Savings == spent because every plan is 50% off the
+        // Kiro market price — what they paid equals what they saved.
+        const totalSpent = history.reduce((sum, h) => {
+            const amount = Number(h.amount);
+            const fallback = PLAN_AMOUNT_INR[h.plan] || 0;
+            return sum + (Number.isFinite(amount) && amount > 0 ? amount : fallback);
+        }, 0);
+        setText('hist-total-spent', fmtINR(totalSpent));
+        setText('hist-total-saved', fmtINR(totalSpent));
 
-        const escape = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
-        tbody.innerHTML = `
-            <tr>
-                <td>
-                    <span class="dash-history-date-day">${escape(fmtDate)}</span>
-                    <span class="dash-history-date-time">${escape(fmtTime)}</span>
-                </td>
-                <td>
-                    <span class="dash-history-plan">
-                        <span class="dash-history-plan-dot ${dotClass}"></span>${escape(planLabel)}
-                    </span>
-                </td>
-                <td class="dash-history-amount">${escape(fmtINR(proratedAmount))}</td>
-                <td><span class="dash-history-status ${statusClass}">${escape(statusLabel)}</span></td>
-                <td class="${user.utrId ? 'dash-history-utr' : 'dash-history-utr dash-history-utr-pending'}">${escape(user.utrId || 'Processing…')}</td>
-            </tr>
-        `;
+        // One row per transaction, newest first.
+        tbody.innerHTML = history.map(h => {
+            const d = new Date(h.date);
+            const dateStr = d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+            const timeStr = d.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }).toUpperCase();
+            const amount = Number(h.amount) > 0 ? Number(h.amount) : (PLAN_AMOUNT_INR[h.plan] || 0);
+
+            // Map the payment row's status to a user-friendly label.
+            // Falls back to a Pending pill when no payment row exists yet
+            // (e.g., the user submitted a submissions row but the
+            // payments row wasn't created — rare but possible).
+            const ps = (h.paymentStatus || '').toLowerCase();
+            let statusLabel, statusClass, dotClass;
+            if (ps === 'verified') {
+                statusLabel = 'Successful'; statusClass = 'success'; dotClass = '';
+            } else if (ps === 'expired' || ps === 'failed') {
+                statusLabel = ps === 'expired' ? 'Expired' : 'Failed'; statusClass = 'cancel'; dotClass = '';
+            } else if (ps === 'awaiting_verification') {
+                statusLabel = 'Verifying'; statusClass = 'pending'; dotClass = 'amber';
+            } else {
+                statusLabel = 'Pending'; statusClass = 'pending'; dotClass = 'amber';
+            }
+
+            return `
+                <tr>
+                    <td>
+                        <span class="dash-history-date-day">${escape(dateStr)}</span>
+                        <span class="dash-history-date-time">${escape(timeStr)}</span>
+                    </td>
+                    <td>
+                        <span class="dash-history-plan">
+                            <span class="dash-history-plan-dot ${dotClass}"></span>${escape(h.plan || '—')}
+                        </span>
+                    </td>
+                    <td class="dash-history-amount">${escape(fmtINR(amount))}</td>
+                    <td><span class="dash-history-status ${statusClass}">${escape(statusLabel)}</span></td>
+                    <td class="${h.utrId ? 'dash-history-utr' : 'dash-history-utr dash-history-utr-pending'}">${escape(h.utrId || 'Processing…')}</td>
+                </tr>
+            `;
+        }).join('');
     }
 
     init();

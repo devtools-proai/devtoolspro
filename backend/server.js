@@ -508,8 +508,15 @@ function rowToAdminUser(u) {
     planEndDate: u.plan_end_date,
     utrId: u.utr_id,
     meetLink: u.meet_link,
+    pendingPlan: u.pending_plan,
+    pendingPlanEffective: u.pending_plan_effective,
     registrationComplete: u.registration_complete,
     createdAt: u.created_at,
+    // Server-maintained "last business event" timestamp — bumped only
+    // when plan / status / UTR / meet / name / phone / pending fields
+    // change. last_login and picture refreshes intentionally don't move
+    // it (see the users_bump_updated_at trigger in setup-users.sql).
+    updatedAt: u.updated_at,
     lastLogin: u.last_login,
   };
 }
@@ -686,6 +693,83 @@ app.get('/api/submissions', requireAdminAuth, async (req, res) => {
     res.json({ status: 'success', count: submissions.length, data: submissions });
   } catch (error) {
     res.status(500).json({ status: 'error', message: error.message });
+  }
+});
+
+// ─── GET /api/submissions/me ───
+// Returns every submission row for the authenticated user's email, in
+// reverse-chronological order. Used by the dashboard's Payment History
+// page so users see every transaction (not just the most recent plan).
+//
+// Each submission row records: plan, UTR, meet link, submission time.
+// We don't store the *amount* on submissions (legacy schema reason) so
+// we best-effort enrich each row with the matching payments.amount via
+// a single second query keyed on utr_id. Rows without a payment match
+// (rare: payment row deleted or never created) come back with amount=null
+// and the client falls back to the plan's full monthly price.
+app.get('/api/submissions/me', requireAuth, async (req, res) => {
+  try {
+    const client = getClient();
+
+    // Resolve the canonical email from the users table — don't trust
+    // the JWT payload's email field as the join key.
+    const { data: userRow, error: userErr } = await client
+      .from('users')
+      .select('email')
+      .eq('id', req.user.userId)
+      .single();
+    if (userErr || !userRow) {
+      return res.status(404).json({ status: 'error', message: 'User not found' });
+    }
+    const email = userRow.email;
+
+    const { data: subs, error: subErr } = await client
+      .from('submissions')
+      .select('id, email, selected_plan, utr_id, submission_timestamp, subscription_start, subscription_end, status, meet_link, created_at')
+      .ilike('email', email)
+      .order('created_at', { ascending: false })
+      .limit(50);
+    if (subErr) {
+      console.error('submissions/me read error:', subErr.message || subErr);
+      return res.status(500).json({ status: 'error', message: 'Failed to fetch history' });
+    }
+
+    // Best-effort enrichment with the actual paid amount + verification
+    // status. Failure is non-fatal — we still return the submission rows.
+    const utrIds = (subs || []).map(s => s.utr_id).filter(Boolean);
+    let paymentsByUtr = {};
+    if (utrIds.length > 0) {
+      const { data: pays } = await client
+        .from('payments')
+        .select('utr_id, amount, status, verified_at, created_at')
+        .in('utr_id', utrIds);
+      paymentsByUtr = Object.fromEntries(
+        (pays || []).map(p => [String(p.utr_id || '').toLowerCase(), p])
+      );
+    }
+
+    const history = (subs || []).map(s => {
+      const matched = s.utr_id ? paymentsByUtr[String(s.utr_id).toLowerCase()] : null;
+      return {
+        id: s.id,
+        date: s.submission_timestamp || s.created_at,
+        plan: s.selected_plan,
+        utrId: s.utr_id,
+        submissionStatus: s.status,
+        meetLink: s.meet_link,
+        // The actual charged amount lives on payments.amount — pulled
+        // through the UTR join above. null means "no payment row found";
+        // the client substitutes the full plan price as a fallback.
+        amount: matched ? Number(matched.amount) : null,
+        paymentStatus: matched ? matched.status : null,
+        verifiedAt: matched ? matched.verified_at : null,
+      };
+    });
+
+    res.json({ status: 'success', count: history.length, history });
+  } catch (e) {
+    console.error('submissions/me exception:', e.message);
+    res.status(500).json({ status: 'error', message: 'Internal error' });
   }
 });
 
