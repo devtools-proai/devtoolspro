@@ -22,6 +22,9 @@ CREATE INDEX IF NOT EXISTS idx_reviews_approved ON reviews (approved, created_at
 ALTER TABLE reviews ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "Allow all on reviews" ON reviews;
+-- Drop the new policy too if it exists, so re-running this script
+-- after the lockdown has already been applied is a safe no-op.
+DROP POLICY IF EXISTS "reviews_deny_anon" ON reviews;
 
 -- Default-deny. The backend (service_role) bypasses RLS for both inserts
 -- (POST /api/reviews) and reads (GET /api/reviews) so behavior is unchanged

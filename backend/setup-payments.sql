@@ -35,6 +35,9 @@ DROP POLICY IF EXISTS "Allow all on payments" ON payments;
 DROP POLICY IF EXISTS "Allow inserts" ON payments;
 DROP POLICY IF EXISTS "Allow reads" ON payments;
 DROP POLICY IF EXISTS "Allow updates" ON payments;
+-- Drop the new policy too if it exists, so re-running this script
+-- after the lockdown has already been applied is a safe no-op.
+DROP POLICY IF EXISTS "payments_deny_anon" ON payments;
 
 -- Default-deny.
 CREATE POLICY "payments_deny_anon" ON payments

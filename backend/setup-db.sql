@@ -38,6 +38,9 @@ DROP POLICY IF EXISTS "Allow inserts" ON submissions;
 DROP POLICY IF EXISTS "Allow reads" ON submissions;
 DROP POLICY IF EXISTS "Allow updates" ON submissions;
 DROP POLICY IF EXISTS "Allow all on submissions" ON submissions;
+-- Drop the new policy too if it exists, so re-running this script
+-- after the lockdown has already been applied is a safe no-op.
+DROP POLICY IF EXISTS "submissions_deny_anon" ON submissions;
 
 -- Default-deny.
 CREATE POLICY "submissions_deny_anon" ON submissions

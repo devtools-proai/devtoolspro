@@ -130,6 +130,9 @@ DROP POLICY IF EXISTS "Allow all on users" ON users;
 DROP POLICY IF EXISTS "Allow inserts" ON users;
 DROP POLICY IF EXISTS "Allow reads" ON users;
 DROP POLICY IF EXISTS "Allow updates" ON users;
+-- Drop the new policy too if it exists, so re-running this script is
+-- safe even after the lockdown has already been applied.
+DROP POLICY IF EXISTS "users_deny_anon" ON users;
 
 -- Default-deny. The backend uses the service_role key which bypasses RLS,
 -- so it can still read/write freely. The anon key — which a browser-side
