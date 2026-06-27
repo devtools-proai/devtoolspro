@@ -176,6 +176,15 @@ app.post('/auth/google', async (req, res) => {
     if (!user) {
       return res.status(500).json({ status: 'error', message: 'Failed to create user' });
     }
+    if (user.deleted_at) {
+      // Account was soft-deleted by an admin. Refuse the session so a
+      // returning user can't keep using the service; admin can restore
+      // from the registry to undo.
+      return res.status(403).json({
+        status: 'error',
+        message: 'This account has been suspended. Please contact support.',
+      });
+    }
 
     const sessionToken = generateSessionToken(user);
 
@@ -205,6 +214,16 @@ app.get('/auth/me', requireAuth, async (req, res) => {
 
     if (error || !user) {
       return res.status(404).json({ status: 'error', message: 'User not found' });
+    }
+    if (user.deleted_at) {
+      // Soft-deleted account — refuse to materialise the session so
+      // a stale JWT can't keep the dashboard alive after an admin
+      // suspension. Frontend treats 403 as "log out and show signin".
+      return res.status(403).json({
+        status: 'error',
+        code: 'ACCOUNT_SUSPENDED',
+        message: 'This account has been suspended.',
+      });
     }
 
     // Lazy backfill: if this row predates the username column, stamp
@@ -559,9 +578,10 @@ app.get('/admin/stats', requireAdminAuth, async (req, res) => {
   try {
     const client = getClient();
     // Fetch users + payments in parallel — both feed the stats tiles on the
-    // admin home and we want a single round-trip cost.
+    // admin home and we want a single round-trip cost. Soft-deleted users
+    // are excluded from every count (they're not "real" any more).
     const [usersRes, paymentsRes] = await Promise.all([
-      client.from('users').select('plan_status,current_plan,registration_complete,created_at'),
+      client.from('users').select('plan_status,current_plan,registration_complete,created_at,deleted_at').is('deleted_at', null),
       client.from('payments').select('amount,status,verified_at'),
     ]);
     if (usersRes.error) {
@@ -646,6 +666,10 @@ function rowToAdminUser(u) {
     // template (so they don't hammer the same person every day).
     lastRemindedAt: u.last_reminded_at,
     lastRemindedTemplate: u.last_reminded_template,
+    // Soft-delete marker. NULL for active users; ISO timestamp when an
+    // admin has deleted them via DELETE /admin/users/:id. Rows still
+    // exist in the table — restore by POST /admin/users/:id/restore.
+    deletedAt: u.deleted_at,
   };
 }
 
@@ -657,8 +681,19 @@ app.get('/admin/users', requireAdminAuth, async (req, res) => {
     const plan = (req.query.plan || '').toString().trim();
     const limit = Math.min(parseInt(req.query.limit, 10) || 200, 1000);
 
+    // ?deleted= controls visibility of soft-deleted rows:
+    //   (omitted | 'no')   → only live users  [default]
+    //   'only'             → only soft-deleted users (recovery view)
+    //   'all'              → both, with deletedAt surfaced per row
+    const deletedFilter = (req.query.deleted || '').toString().trim().toLowerCase();
+
     const client = getClient();
     let query = client.from('users').select('*').order('created_at', { ascending: false }).limit(limit);
+    if (deletedFilter === 'only') {
+      query = query.not('deleted_at', 'is', null);
+    } else if (deletedFilter !== 'all') {
+      query = query.is('deleted_at', null);
+    }
     if (status && ALLOWED_PLAN_STATUSES.has(status)) query = query.eq('plan_status', status);
     if (plan && ALLOWED_PLANS.has(plan))             query = query.eq('current_plan', plan);
     if (search) {
@@ -756,6 +791,65 @@ app.patch('/admin/users/:id', requireAdminAuth, async (req, res) => {
     console.log(`admin: patched uid=${data.id} fields=${Object.keys(updates).join(',')}`);
   } catch (e) {
     console.error('admin patch exception:', e.message);
+    res.status(500).json({ status: 'error', message: 'Internal error' });
+  }
+});
+
+// ─── DELETE /admin/users/:id ───
+// Soft-delete: sets users.deleted_at to NOW(). Row stays in the
+// database (payment audit trail, history, restorability) but is
+// hidden from default admin views and blocks future sign-ins.
+// Restore via POST /admin/users/:id/restore (idempotent + reversible).
+app.delete('/admin/users/:id', requireAdminAuth, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const client = getClient();
+
+    // Make the operation idempotent — re-deleting an already-deleted
+    // user is a no-op rather than a 404 (admin toast can race a
+    // refresh in either direction).
+    const { data, error } = await client
+      .from('users')
+      .update({ deleted_at: new Date().toISOString() })
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error || !data) {
+      console.error('admin delete error:', error);
+      return res.status(404).json({ status: 'error', message: 'User not found' });
+    }
+    res.json({ status: 'success', user: rowToAdminUser(data) });
+    console.log(`admin: soft-deleted uid=${data.id}`);
+  } catch (e) {
+    console.error('admin delete exception:', e.message);
+    res.status(500).json({ status: 'error', message: 'Internal error' });
+  }
+});
+
+// ─── POST /admin/users/:id/restore ───
+// Reverses a soft-delete by clearing deleted_at. Idempotent for users
+// who are already active. Used by the toast "Undo" affordance and the
+// recovery view's per-row restore button.
+app.post('/admin/users/:id/restore', requireAdminAuth, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const client = getClient();
+    const { data, error } = await client
+      .from('users')
+      .update({ deleted_at: null })
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error || !data) {
+      console.error('admin restore error:', error);
+      return res.status(404).json({ status: 'error', message: 'User not found' });
+    }
+    res.json({ status: 'success', user: rowToAdminUser(data) });
+    console.log(`admin: restored uid=${data.id}`);
+  } catch (e) {
+    console.error('admin restore exception:', e.message);
     res.status(500).json({ status: 'error', message: 'Internal error' });
   }
 });

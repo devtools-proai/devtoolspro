@@ -51,6 +51,14 @@ CREATE TABLE IF NOT EXISTS users (
   -- ping sent 3d ago". Both are NULL until the first nudge.
   last_reminded_at TIMESTAMPTZ,
   last_reminded_template TEXT,
+  -- Soft-delete marker. When non-NULL the user is considered deleted:
+  -- hidden from /admin/users by default, blocked from signing in via
+  -- /auth/me + /auth/google, and excluded from /admin/stats counts.
+  -- The row itself stays in the table so admin can restore by
+  -- clearing this column (the toast UI exposes a 10-second undo).
+  -- Manual hard-delete is intentionally NOT supported through the
+  -- API — payment audit trails depend on these rows existing.
+  deleted_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
@@ -63,6 +71,7 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS username TEXT;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS last_reminded_at TIMESTAMPTZ;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS last_reminded_template TEXT;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ;
 
 -- Backfill updated_at on existing rows: prefer plan_start_date (last
 -- known business event) and fall back to created_at. Without this the
@@ -94,6 +103,7 @@ BEGIN
      OR NEW.phone                IS DISTINCT FROM OLD.phone
      OR NEW.source               IS DISTINCT FROM OLD.source
      OR NEW.username             IS DISTINCT FROM OLD.username
+     OR NEW.deleted_at           IS DISTINCT FROM OLD.deleted_at
      OR NEW.registration_complete IS DISTINCT FROM OLD.registration_complete THEN
     NEW.updated_at = NOW();
   END IF;
@@ -147,6 +157,12 @@ CREATE INDEX IF NOT EXISTS idx_users_email ON users (LOWER(email));
 CREATE INDEX IF NOT EXISTS idx_users_username
   ON users (LOWER(username))
   WHERE username IS NOT NULL;
+-- Default admin queries filter WHERE deleted_at IS NULL, so a partial
+-- index on the active subset keeps the dashboard list query cheap as
+-- the soft-deleted tail accumulates.
+CREATE INDEX IF NOT EXISTS idx_users_alive
+  ON users (created_at DESC)
+  WHERE deleted_at IS NULL;
 
 ALTER TABLE users ENABLE ROW LEVEL SECURITY;
 

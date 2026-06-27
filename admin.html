@@ -240,6 +240,83 @@
         }
         .wa-popover-foot.warn { color: var(--amber); }
 
+        /* ─── Deleted-row styling ─── */
+        /* Subtle dim + strikethrough so admins instantly see which
+           rows are tombstones when the 'Show deleted' filter is on. */
+        tbody tr.is-deleted { opacity: 0.55; }
+        tbody tr.is-deleted .user-name { text-decoration: line-through; }
+        tbody tr.is-deleted .wa-btn { display: none; }
+        .pill.tombstone { background: rgba(248,113,113,0.12); color: var(--red); border: 1px solid rgba(248,113,113,0.28); }
+
+        /* ─── Toast (delete undo) ─── */
+        @keyframes toast-in  { from { opacity: 0; transform: translateX(-50%) translateY(120%); } to { opacity: 1; transform: translateX(-50%) translateY(0); } }
+        @keyframes toast-out { to   { opacity: 0; transform: translateX(-50%) translateY(120%); } }
+        @keyframes toast-countdown { from { width: 100%; } to { width: 0%; } }
+        .toast {
+            position: fixed; left: 50%; bottom: 1.5rem; z-index: 300;
+            transform: translateX(-50%) translateY(120%);
+            display: flex; align-items: center; gap: 14px;
+            padding: 0.85rem 1.1rem;
+            border-radius: 14px;
+            background: linear-gradient(180deg, rgba(28,22,56,0.96), rgba(14,10,30,0.99));
+            border: 1px solid rgba(248,113,113,0.32);
+            box-shadow: 0 30px 70px -20px rgba(0,0,0,0.85), 0 0 30px rgba(248,113,113,0.16);
+            min-width: 360px;
+            max-width: calc(100vw - 2rem);
+            pointer-events: auto;
+            overflow: hidden;
+            visibility: hidden;
+        }
+        .toast.show { visibility: visible; animation: toast-in .35s cubic-bezier(.2,.8,.2,1) forwards; }
+        .toast.hide { animation: toast-out .25s cubic-bezier(.4,0,1,1) forwards; }
+        .toast-icon {
+            width: 32px; height: 32px; border-radius: 50%;
+            background: rgba(248,113,113,0.14); border: 1px solid rgba(248,113,113,0.32);
+            display: inline-flex; align-items: center; justify-content: center; color: var(--red);
+            flex-shrink: 0;
+        }
+        .toast-icon svg { width: 16px; height: 16px; }
+        .toast-text { font-size: 13.5px; color: var(--ink-1); flex: 1; min-width: 0; line-height: 1.4; }
+        .toast-text strong { color: var(--ink-0); }
+        .toast-undo {
+            display: inline-flex; align-items: center; gap: 6px;
+            padding: 7px 14px; border-radius: 10px;
+            background: rgba(168,85,247,0.18); color: var(--violet-soft);
+            border: 1px solid rgba(168,85,247,0.4);
+            font-size: 12.5px; font-weight: 700; cursor: pointer;
+            font-family: inherit;
+            transition: background .15s, color .15s, border-color .15s, transform .12s;
+        }
+        .toast-undo:hover { background: rgba(168,85,247,0.32); color: white; transform: translateY(-1px); }
+        .toast-undo svg { width: 12px; height: 12px; }
+        .toast-progress {
+            position: absolute; bottom: 0; left: 0; height: 2px;
+            background: linear-gradient(90deg, var(--red), var(--amber));
+            width: 100%;
+        }
+        .toast.show .toast-progress { animation: toast-countdown 10s linear forwards; }
+
+        /* ─── Delete button in edit modal footer ─── */
+        .btn-delete {
+            background: transparent; border: 1px solid rgba(248,113,113,0.32);
+            color: var(--red); padding: 10px 14px; border-radius: 10px;
+            font-size: 12.5px; font-weight: 600; cursor: pointer;
+            transition: all .15s; font-family: inherit;
+            display: inline-flex; align-items: center; gap: 6px;
+        }
+        .btn-delete:hover:not(:disabled) { background: rgba(248,113,113,0.12); border-color: rgba(248,113,113,0.55); color: #fca5a5; }
+        .btn-delete:disabled { opacity: 0.45; cursor: not-allowed; }
+        .btn-delete svg { width: 14px; height: 14px; }
+        .btn-restore {
+            background: rgba(34,197,94,0.14); border: 1px solid rgba(34,197,94,0.32);
+            color: var(--green); padding: 10px 14px; border-radius: 10px;
+            font-size: 12.5px; font-weight: 600; cursor: pointer;
+            transition: all .15s; font-family: inherit;
+            display: inline-flex; align-items: center; gap: 6px;
+        }
+        .btn-restore:hover { background: rgba(34,197,94,0.22); color: #86efac; }
+        .btn-restore svg { width: 14px; height: 14px; }
+
         /* ─── Admin overlay loader (mirrors the dashboard's app-loader) ─── */
         @keyframes ad-spin { to { transform: rotate(360deg); } }
         @keyframes ad-pulse { 0%,100% { transform: translate(-50%,-50%) scale(1); } 50% { transform: translate(-50%,-50%) scale(0.9); box-shadow: 0 0 36px rgba(168,85,247,0.7); } }
@@ -462,6 +539,11 @@
                         <option value="Pro Max">Pro Max</option>
                         <option value="Power">Power</option>
                     </select>
+                    <select id="filter-deleted" aria-label="Filter deleted users">
+                        <option value="">Active only</option>
+                        <option value="all">Include deleted</option>
+                        <option value="only">Deleted only</option>
+                    </select>
                     <span class="spacer"></span>
                     <span class="meta-count" id="count-meta">— users</span>
                     <button class="btn-ghost" id="refresh-btn" title="Refresh">↻</button>
@@ -573,9 +655,41 @@
                         </button>
                     </div>
                 </div>
+                <!-- Soft-delete banner (hidden by default; shown by
+                     openEdit() when the user has been deleted). The
+                     wording makes it clear the row still exists and is
+                     reversible — the toast that triggered this state
+                     is only a brief UX affordance; this banner is the
+                     long-term restore path. -->
+                <div class="field full" id="edit-deleted-block" style="display:none;">
+                    <div class="modal-pending-row" style="border-color: rgba(248,113,113,0.32); background: rgba(248,113,113,0.08);">
+                        <svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24" style="color: var(--red);"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01M5 19h14a2 2 0 001.84-2.75L13.74 4a2 2 0 00-3.5 0L3.16 16.25A2 2 0 005 19z"/></svg>
+                        <div class="modal-pending-text">
+                            <span class="modal-pending-title" style="color: var(--red);">Account deleted</span>
+                            <span class="modal-pending-detail">
+                                Deleted on <strong id="edit-deleted-date">…</strong>.
+                                Sign-in is blocked. Restore to bring this user back.
+                            </span>
+                        </div>
+                    </div>
+                </div>
             </form>
 
             <footer class="modal-foot">
+                <!-- Delete (active rows) / Restore (deleted rows) — only
+                     one of these is visible at a time; openEdit() toggles
+                     them based on editingUser.deletedAt. Placed at the
+                     left edge so it's clearly separated from the save
+                     action, mirroring the pattern most CRMs use to
+                     prevent accidental destructive clicks. -->
+                <button class="btn-delete" id="delete-btn" type="button" style="display:none;">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.9"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M1 7h22M9 7V4a1 1 0 011-1h4a1 1 0 011 1v3"/></svg>
+                    <span id="delete-label">Delete user</span>
+                </button>
+                <button class="btn-restore" id="restore-btn" type="button" style="display:none;">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"/></svg>
+                    <span id="restore-label">Restore user</span>
+                </button>
                 <span id="modal-msg" class="modal-msg"></span>
                 <span class="spacer"></span>
                 <button class="btn-ghost" id="modal-cancel" type="button">Cancel</button>
@@ -597,6 +711,22 @@
         <footer class="wa-popover-foot" id="wa-pop-foot">
             Opens WhatsApp Web / app with the message pre-filled.
         </footer>
+    </div>
+
+    <!-- Soft-delete confirmation toast — shown after DELETE /admin/users/:id.
+         The 10-second countdown is a CSS animation on .toast-progress; the
+         JS timer mirrors that and fires the auto-dismiss. Undo restores
+         the row indefinitely (the toast is just admin UX). -->
+    <div class="toast" id="undo-toast" role="status" aria-live="polite">
+        <span class="toast-icon">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.7"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M1 7h22M9 7V4a1 1 0 011-1h4a1 1 0 011 1v3"/></svg>
+        </span>
+        <span class="toast-text" id="undo-toast-text">Deleted user.</span>
+        <button class="toast-undo" id="undo-toast-btn" type="button">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.4"><path stroke-linecap="round" stroke-linejoin="round" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"/></svg>
+            Undo
+        </button>
+        <span class="toast-progress" aria-hidden="true"></span>
     </div>
 
     <script>
@@ -774,6 +904,7 @@
             const search = document.getElementById('search').value.trim();
             const status = document.getElementById('filter-status').value;
             const plan   = document.getElementById('filter-plan').value;
+            const deleted = document.getElementById('filter-deleted').value;
             const tbody = document.getElementById('users-rows');
             const meta = document.getElementById('count-meta');
             tbody.innerHTML = '<tr><td colspan="10" class="empty">Loading…</td></tr>';
@@ -782,6 +913,7 @@
                 if (search) params.set('search', search);
                 if (status) params.set('status', status);
                 if (plan)   params.set('plan', plan);
+                if (deleted) params.set('deleted', deleted);
                 const { users, count } = await api('/admin/users' + (params.toString() ? '?' + params.toString() : ''));
                 allUsers = users;
                 meta.textContent = `${count} user${count === 1 ? '' : 's'}`;
@@ -845,8 +977,18 @@
                         <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
                         ${escapeHTML(u.pendingPlan)} on ${escapeHTML(fmtDate(u.pendingPlanEffective))}
                     </span>` : '';
+                // Soft-deleted users get a row-level visual treatment
+                // (dim + strikethrough handled by .is-deleted CSS) and
+                // their status cell is replaced with a tombstone pill
+                // so the "Deleted" state is unmissable when 'Include
+                // deleted' / 'Deleted only' is selected.
+                const isDeleted = !!u.deletedAt;
+                const rowClass = isDeleted ? ' class="is-deleted"' : '';
+                const statusCell = isDeleted
+                    ? `<span class="pill tombstone" title="Deleted ${escapeHTML(fmtDate(u.deletedAt))}">Deleted</span>`
+                    : statusPill(u.planStatus);
                 return `
-                    <tr data-id="${escapeHTML(u.id)}">
+                    <tr${rowClass} data-id="${escapeHTML(u.id)}">
                         <td>
                             <div class="user-cell">
                                 <span class="user-avatar">${u.picture ? `<img src="${escapeHTML(u.picture)}" alt="" referrerpolicy="no-referrer">` : escapeHTML(initials(u.name))}</span>
@@ -861,7 +1003,7 @@
                             ${planPill(u.currentPlan)}
                             ${pendingLine}
                         </td>
-                        <td>${statusPill(u.planStatus)}</td>
+                        <td>${statusCell}</td>
                         <td>${escapeHTML(fmtDate(u.planStartDate))}</td>
                         <td>${escapeHTML(fmtDate(u.planEndDate))}</td>
                         <td><span class="user-handle" title="${escapeHTML(u.email || '')}">${escapeHTML(displayHandle(u))}</span></td>
@@ -902,6 +1044,7 @@
         });
         document.getElementById('filter-status').addEventListener('change', loadUsers);
         document.getElementById('filter-plan').addEventListener('change', loadUsers);
+        document.getElementById('filter-deleted').addEventListener('change', loadUsers);
         document.getElementById('refresh-btn').addEventListener('click', () => { loadUsers(); loadStats(); });
 
         // ═══════════════════════════════════════════════════════════
@@ -1324,6 +1467,26 @@
             } else {
                 pendingBlock.style.display = 'none';
             }
+            // Soft-delete state: swap the footer Delete button for the
+            // green Restore button and surface a red banner inside the
+            // modal so the admin can't miss it. When the row is active
+            // we do the reverse. Save stays enabled in both modes so
+            // an admin can edit a tombstoned profile if needed (rare
+            // but useful for fixing typos on a row that's still
+            // restorable).
+            const deletedBlock = document.getElementById('edit-deleted-block');
+            const deleteBtn  = document.getElementById('delete-btn');
+            const restoreBtn = document.getElementById('restore-btn');
+            if (u.deletedAt) {
+                document.getElementById('edit-deleted-date').textContent = fmtDate(u.deletedAt);
+                deletedBlock.style.display = '';
+                deleteBtn.style.display  = 'none';
+                restoreBtn.style.display = 'inline-flex';
+            } else {
+                deletedBlock.style.display = 'none';
+                deleteBtn.style.display  = 'inline-flex';
+                restoreBtn.style.display = 'none';
+            }
             modal.classList.add('show');
         }
         function closeEdit() { modal.classList.remove('show'); editingUser = null; }
@@ -1369,6 +1532,162 @@
                 msg.textContent = e.message || 'Failed to apply'; msg.className = 'modal-msg err';
             } finally {
                 btn.disabled = false; lbl.textContent = 'Apply now';
+            }
+        });
+
+        // ═══════════════════════════════════════════════════════════
+        // Soft-delete + Undo toast
+        // ═══════════════════════════════════════════════════════════
+        //
+        // Flow:
+        //   1. Admin clicks Delete in the edit modal → confirm() prompt.
+        //   2. DELETE /admin/users/:id sets users.deleted_at = NOW().
+        //      The row is kept in the table (payment history depends
+        //      on it), only hidden from default admin views.
+        //   3. We mark the row deleted in-memory, re-render, close the
+        //      modal, and show a 10-second toast at the bottom.
+        //   4. Clicking "Undo" inside that window calls
+        //      POST /admin/users/:id/restore and brings the row back.
+        //   5. Auto-dismiss after 10s. The row is still restorable
+        //      indefinitely from the edit modal — the toast is just
+        //      the immediate-regret affordance.
+        //
+        // Only one toast can be queued at a time; opening a new toast
+        // first dismisses the previous one + finalises any pending
+        // undo (i.e. it does NOT auto-undo a previous deletion).
+
+        // Module-scoped so we can cancel the timer from hideUndoToast()
+        // and from showUndoToast() when chaining.
+        let undoTimer = null;
+        let undoHandler = null;
+
+        function showUndoToast(message, onUndo) {
+            const toast = document.getElementById('undo-toast');
+            const textEl = document.getElementById('undo-toast-text');
+            if (!toast || !textEl) return;
+            // If a toast is already on-screen, snap it shut without
+            // animation — we want the new one to slide in cleanly.
+            if (undoTimer) { clearTimeout(undoTimer); undoTimer = null; }
+            toast.classList.remove('hide');
+            toast.classList.remove('show');
+            // Force a reflow so the next .show triggers the CSS
+            // animation even if the class was just removed.
+            // eslint-disable-next-line no-unused-expressions
+            void toast.offsetWidth;
+            textEl.innerHTML = message;
+            undoHandler = typeof onUndo === 'function' ? onUndo : null;
+            toast.classList.add('show');
+            undoTimer = setTimeout(() => hideUndoToast(), 10000);
+        }
+
+        function hideUndoToast() {
+            const toast = document.getElementById('undo-toast');
+            if (!toast) return;
+            if (undoTimer) { clearTimeout(undoTimer); undoTimer = null; }
+            undoHandler = null;
+            toast.classList.remove('show');
+            toast.classList.add('hide');
+            // Clean up after the slide-out completes so the element
+            // returns to visibility:hidden (matches .toast base state).
+            setTimeout(() => toast.classList.remove('hide'), 300);
+        }
+
+        document.getElementById('undo-toast-btn').addEventListener('click', () => {
+            const handler = undoHandler;
+            // Hide immediately so the admin gets instant feedback;
+            // the restore API call runs in the background.
+            hideUndoToast();
+            if (handler) handler();
+        });
+
+        // Delete user (soft-delete). Confirms first — the wording makes
+        // it explicit that the user will lose access, since that's the
+        // user-facing consequence (rows survive in the database
+        // either way).
+        document.getElementById('delete-btn').addEventListener('click', async () => {
+            if (!editingUser) return;
+            const name = editingUser.name || editingUser.email || 'this user';
+            if (!confirm(`Delete ${name}?\n\nThey will be signed out and blocked from signing back in. You can restore them at any time from the "Deleted only" filter.`)) return;
+
+            const btn = document.getElementById('delete-btn');
+            const lbl = document.getElementById('delete-label');
+            const msg = document.getElementById('modal-msg');
+            msg.className = 'modal-msg'; msg.textContent = '';
+            btn.disabled = true; lbl.innerHTML = '<span class="spinner"></span> Deleting…';
+
+            const userId = editingUser.id;
+            const userName = name;
+
+            try {
+                const { user } = await api(`/admin/users/${encodeURIComponent(userId)}`, { method: 'DELETE' });
+                // Mirror server state locally. The current "Active only"
+                // filter (default) will hide this row on next render —
+                // splice it out so the count stays accurate without a
+                // full refetch.
+                const idx = allUsers.findIndex(x => x.id === userId);
+                const filterDeleted = document.getElementById('filter-deleted').value;
+                if (idx >= 0) {
+                    if (filterDeleted === '') {
+                        allUsers.splice(idx, 1);
+                    } else {
+                        allUsers[idx] = user;
+                    }
+                }
+                const meta = document.getElementById('count-meta');
+                if (meta) meta.textContent = `${allUsers.length} user${allUsers.length === 1 ? '' : 's'}`;
+                renderUserRows();
+                loadStats();
+                closeEdit();
+                showUndoToast(
+                    `Deleted <strong>${escapeHTML(userName)}</strong>.`,
+                    async () => {
+                        // Optimistic: hit restore endpoint then refresh
+                        // the list so the row reappears (or stays in
+                        // place under "Include deleted" / "Deleted only").
+                        try {
+                            await api(`/admin/users/${encodeURIComponent(userId)}/restore`, { method: 'POST' });
+                            loadUsers();
+                            loadStats();
+                        } catch (e) {
+                            alert('Restore failed: ' + (e.message || 'Unknown error'));
+                        }
+                    }
+                );
+            } catch (e) {
+                msg.textContent = e.message || 'Delete failed'; msg.className = 'modal-msg err';
+            } finally {
+                btn.disabled = false; lbl.textContent = 'Delete user';
+            }
+        });
+
+        // Restore button (visible only when editingUser.deletedAt is set).
+        // No confirm prompt — restoring is harmless and easily re-reversed.
+        document.getElementById('restore-btn').addEventListener('click', async () => {
+            if (!editingUser) return;
+            const btn = document.getElementById('restore-btn');
+            const lbl = document.getElementById('restore-label');
+            const msg = document.getElementById('modal-msg');
+            msg.className = 'modal-msg'; msg.textContent = '';
+            btn.disabled = true; lbl.innerHTML = '<span class="spinner"></span> Restoring…';
+
+            try {
+                const { user } = await api(`/admin/users/${encodeURIComponent(editingUser.id)}/restore`, { method: 'POST' });
+                msg.textContent = 'Restored.'; msg.className = 'modal-msg ok';
+                const idx = allUsers.findIndex(x => x.id === user.id);
+                if (idx >= 0) allUsers[idx] = user;
+                editingUser = user;
+                // Toggle the modal back into the "active" presentation.
+                const deletedBlock = document.getElementById('edit-deleted-block');
+                if (deletedBlock) deletedBlock.style.display = 'none';
+                btn.style.display = 'none';
+                document.getElementById('delete-btn').style.display = 'inline-flex';
+                renderUserRows();
+                loadStats();
+                setTimeout(closeEdit, 500);
+            } catch (e) {
+                msg.textContent = e.message || 'Restore failed'; msg.className = 'modal-msg err';
+            } finally {
+                btn.disabled = false; lbl.textContent = 'Restore user';
             }
         });
 

@@ -2281,7 +2281,20 @@
             // session in that case — don't silently fall back to a cached
             // user (which would render a stale dashboard whose actions then
             // all fail).
-            if (res.status === 401) {
+            // 403 with code=ACCOUNT_SUSPENDED means an admin soft-deleted
+            // the user. Treat the same as an invalid session: wipe local
+            // state and force re-auth. If they're restored later the next
+            // sign-in will succeed and pick up where they left off.
+            if (res.status === 401 || res.status === 403) {
+                try {
+                    const errBody = await res.clone().json();
+                    if (res.status === 403 && errBody && errBody.code === 'ACCOUNT_SUSPENDED') {
+                        // Brief user-visible note before the redirect so a
+                        // returning user understands why their session went
+                        // away (otherwise it just looks like a random kick).
+                        alert(errBody.message || 'This account has been deactivated. Please contact support.');
+                    }
+                } catch (_) { /* ignore body parse errors */ }
                 clearSession();
                 showView('view-signin');
                 initGoogleSignIn();
