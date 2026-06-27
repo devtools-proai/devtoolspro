@@ -3042,10 +3042,15 @@
            charge the price difference, not the full month. They get the
            new tier's credits immediately and roll into full-price billing
            on the 1st of next month.
-         • Everything else (renew, resubscribe after cancellation, first
-           change without an active plan, downgrade to a lower tier):
-           charge the full monthly price. The cycle aligns to the 1st of
-           each month from there.
+         • Cancelled / no-plan user resubscribing mid-cycle: prorate by
+           the days remaining in the current month, matching Kiro's
+           "first-time upgrade from Free" policy (also applied to
+           paid -> Free -> paid returns per the official docs).
+         • Renew: full month (the cycle aligns to the 1st of next month
+           anyway, so no proration applies).
+         • Downgrade: handled separately by the deferred-downgrade flow
+           (/auth/schedule-downgrade) — the user pays the lower plan's
+           full month NOW for next cycle.
        Server still validates the plan against ALLOWED_PLANS; amount
        passes through as the QR target value (admin reconciles UTR + amount). */
     function computeChargeAmount(newPlan) {
@@ -3055,26 +3060,53 @@
         const newIdx = PLAN_TIERS.indexOf(newPlan);
         const currentIdx = PLAN_TIERS.indexOf(currentPlan);
         const hasActiveSubscription = currentPlan && (status === 'active' || status === 'processing');
+        const isCancelled = status === 'cancelled';
         const isUpgrade = hasActiveSubscription && currentIdx >= 0 && newIdx > currentIdx;
 
+        // 1) Active-user upgrade → diff billing.
         if (planModalState.flow === 'change' && isUpgrade) {
             const diff = PLAN_INR[newPlan] - PLAN_INR[currentPlan];
-            // Floor at ₹1 so the QR is never zero / negative. This branch
-            // only fires when newIdx > currentIdx, so the diff is always
-            // positive for the standard 10 / 20 / 50 / 100 USD ladder —
-            // but the floor is cheap insurance against future price
-            // tweaks that could narrow the gap.
             return {
                 inr: Math.max(1, diff),
                 usd: Math.max(1, PLAN_USD[newPlan] - PLAN_USD[currentPlan]),
                 isUpgradeDiff: true,
+                isProrated: false,
                 fromPlan: currentPlan,
             };
         }
+
+        // 2) Cancelled / no-plan resubscribe → prorate for remaining days.
+        //    Same math the legacy onboarding flow uses for first-time
+        //    sign-ups. End-of-month boundary is INCLUSIVE — a user
+        //    paying on the 31st still gets one day's worth charged
+        //    rather than zero, so the QR amount is always >0.
+        if (planModalState.flow === 'change' && (isCancelled || !currentPlan)) {
+            const now = new Date();
+            const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+            const remainingDays = Math.max(1, daysInMonth - now.getDate() + 1);
+            const fullInr = PLAN_INR[newPlan];
+            const fullUsd = PLAN_USD[newPlan];
+            const proratedInr = Math.max(1, Math.round((remainingDays / daysInMonth) * fullInr));
+            const proratedUsd = Math.max(1, Math.round((remainingDays / daysInMonth) * fullUsd));
+            return {
+                inr: proratedInr,
+                usd: proratedUsd,
+                isUpgradeDiff: false,
+                isProrated: true,
+                proratedDays: remainingDays,
+                daysInMonth,
+                fullPriceInr: fullInr,
+                fullPriceUsd: fullUsd,
+                fromPlan: null,
+            };
+        }
+
+        // 3) Default → full month.
         return {
             inr: PLAN_INR[newPlan],
             usd: PLAN_USD[newPlan],
             isUpgradeDiff: false,
+            isProrated: false,
             fromPlan: null,
         };
     }
@@ -3083,11 +3115,16 @@
         const plan = planModalState.selectedPlan;
         if (!plan) return;
         const charge = computeChargeAmount(plan);
-        // Stash on state so renderModalPay can read the same numbers without
+        // Stash on state so renderModalPay reads the same numbers without
         // recomputing (avoids drift if PLAN_INR is ever edited mid-flow).
         planModalState.chargedInr = charge.inr;
         planModalState.chargedUsd = charge.usd;
         planModalState.isUpgradeDiff = charge.isUpgradeDiff;
+        planModalState.isProrated = !!charge.isProrated;
+        planModalState.proratedDays = charge.proratedDays || 0;
+        planModalState.daysInMonth = charge.daysInMonth || 0;
+        planModalState.fullPriceInr = charge.fullPriceInr || PLAN_INR[plan];
+        planModalState.fullPriceUsd = charge.fullPriceUsd || PLAN_USD[plan];
         planModalState.upgradeFromPlan = charge.fromPlan;
         try {
             const r = await fetch(`${API_BASE}/api/payment/create`, {
@@ -3129,21 +3166,38 @@
         const isCancelled = (user.planStatus || '').toLowerCase() === 'cancelled';
 
         // Authoritative charge values come from computeChargeAmount() — for
-        // active-user upgrades they're the price *diff*, otherwise the full
-        // monthly price. Defaults are a safety net in case the modal is
-        // rendered without an upstream createModalPayment() call.
+        // active-user upgrades they're the price *diff*; for cancelled /
+        // no-plan resubscribes they're the prorated portion; otherwise
+        // the full monthly price. Defaults below are a safety net for
+        // when renderModalPay is invoked without an upstream
+        // createModalPayment() call (e.g. the user clicks the Pay step
+        // back-arrow then forward again).
         const isUpgradeDiff = !!planModalState.isUpgradeDiff;
+        const isProrated = !!planModalState.isProrated;
         const chargedInr = planModalState.chargedInr ?? PLAN_INR[plan];
         const chargedUsd = planModalState.chargedUsd ?? PLAN_USD[plan];
-        const fullInr = PLAN_INR[plan];
-        const fullUsd = PLAN_USD[plan];
+        const fullInr = planModalState.fullPriceInr ?? PLAN_INR[plan];
+        const fullUsd = planModalState.fullPriceUsd ?? PLAN_USD[plan];
+        const proratedDays = planModalState.proratedDays || 0;
+        const daysInMonth = planModalState.daysInMonth || 0;
         const fromPlan = planModalState.upgradeFromPlan;
+
+        // Compute the date when full-month billing kicks in — used in
+        // both the prorated subtitle and the amount-summary footer.
+        const nextCycleStart = (() => {
+            const now = new Date();
+            const d = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+            return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+        })();
 
         titleEl.textContent = isRenew ? `Renew ${plan}` : `${verb} ${plan}`;
         if (isRenew) {
             subEl.textContent = 'Pay for the next billing cycle. Your plan will continue uninterrupted.';
-        } else if (isCancelled) {
-            subEl.textContent = `One month of full ${plan} access — your subscription resumes from Processing once we verify the payment.`;
+        } else if (isProrated) {
+            // Cancelled / no-plan user resubscribing mid-month. Prorated
+            // by the days remaining; full-month billing starts on the
+            // 1st of next month.
+            subEl.textContent = `You only pay for the ${proratedDays} day${proratedDays === 1 ? '' : 's'} remaining this month. Full ${plan} billing of ₹${fullInr.toLocaleString('en-IN')}/mo begins on ${nextCycleStart}.`;
         } else if (verb === 'Downgrade to') {
             subEl.textContent = `Your current plan stays active until the end of this billing cycle. The ${plan} tier takes effect from next month — that's when you'll see the lower credit cap.`;
         } else if (isUpgradeDiff && fromPlan) {
@@ -3152,28 +3206,54 @@
             subEl.textContent = `You only pay the difference between ${fromPlan} (₹${PLAN_INR[fromPlan].toLocaleString('en-IN')}) and ${plan} (₹${fullInr.toLocaleString('en-IN')}) for this cycle. Full ${plan} access kicks in immediately; from 1st of next month you'll be billed ₹${fullInr.toLocaleString('en-IN')}/mo.`;
         } else if (verb === 'Upgrade to') {
             subEl.textContent = `One month of full ${plan} access — Claude Opus, Sonnet, and all premium models with the bigger monthly credit cap.`;
+        } else if (isCancelled) {
+            // Fallback for cancelled users when proration somehow didn't
+            // get computed (e.g. flow not 'change'). Shouldn't normally
+            // hit this branch.
+            subEl.textContent = `One month of full ${plan} access — your subscription resumes from Processing once we verify the payment.`;
         } else {
             subEl.textContent = `One month of full ${plan} access — Claude Opus, Sonnet, and all premium models.`;
         }
 
-        // The pre-summary diff breakdown — only shown for the upgrade-diff
-        // case so the user can see exactly how ₹X was computed.
-        const diffBreakdownHtml = isUpgradeDiff && fromPlan ? `
-            <div class="modal-info-row" style="margin-bottom: 0.85rem;">
-                <svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 7h6m-6 5h6m-6 5h6M5 4h14a2 2 0 012 2v12a2 2 0 01-2 2H5a2 2 0 01-2-2V6a2 2 0 012-2z"/></svg>
-                <span>
-                    <b>${plan}</b> ₹${fullInr.toLocaleString('en-IN')}/mo
-                    <span style="color: rgb(155,150,180);"> − </span>
-                    <b>${fromPlan}</b> ₹${PLAN_INR[fromPlan].toLocaleString('en-IN')}/mo
-                    <span style="color: rgb(155,150,180);"> = </span>
-                    <b style="color: #c4b5fd;">₹${chargedInr.toLocaleString('en-IN')}</b> for the rest of this cycle.
-                </span>
-            </div>` : '';
+        // Pre-summary breakdown row — shown for upgrade-diff OR prorated
+        // cases so the user can see exactly how ₹X was computed.
+        let breakdownHtml = '';
+        if (isUpgradeDiff && fromPlan) {
+            breakdownHtml = `
+                <div class="modal-info-row" style="margin-bottom: 0.85rem;">
+                    <svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 7h6m-6 5h6m-6 5h6M5 4h14a2 2 0 012 2v12a2 2 0 01-2 2H5a2 2 0 01-2-2V6a2 2 0 012-2z"/></svg>
+                    <span>
+                        <b>${plan}</b> ₹${fullInr.toLocaleString('en-IN')}/mo
+                        <span style="color: rgb(155,150,180);"> − </span>
+                        <b>${fromPlan}</b> ₹${PLAN_INR[fromPlan].toLocaleString('en-IN')}/mo
+                        <span style="color: rgb(155,150,180);"> = </span>
+                        <b style="color: #c4b5fd;">₹${chargedInr.toLocaleString('en-IN')}</b> for the rest of this cycle.
+                    </span>
+                </div>`;
+        } else if (isProrated) {
+            breakdownHtml = `
+                <div class="modal-info-row" style="margin-bottom: 0.85rem;">
+                    <svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 7h6m-6 5h6m-6 5h6M5 4h14a2 2 0 012 2v12a2 2 0 01-2 2H5a2 2 0 01-2-2V6a2 2 0 012-2z"/></svg>
+                    <span>
+                        <b>${plan}</b> ₹${fullInr.toLocaleString('en-IN')}/mo
+                        <span style="color: rgb(155,150,180);"> × </span>
+                        <b>${proratedDays}</b>/${daysInMonth} days
+                        <span style="color: rgb(155,150,180);"> = </span>
+                        <b style="color: #c4b5fd;">₹${chargedInr.toLocaleString('en-IN')}</b> today.
+                    </span>
+                </div>`;
+        }
+
+        // Amount label adapts to the pricing case so the user knows
+        // exactly what ₹X represents on this screen.
+        const amountLabel = isUpgradeDiff ? 'Pay now (upgrade diff)'
+                          : isProrated     ? `Prorated for ${proratedDays} day${proratedDays === 1 ? '' : 's'}`
+                          : 'Amount due';
 
         // Currency toggle state preserved across re-renders
         const curr = bodyEl.dataset.modalCurr || 'INR';
         bodyEl.innerHTML = `
-            ${diffBreakdownHtml}
+            ${breakdownHtml}
             <div class="modal-pay-grid">
                 <div class="modal-pay-qr-wrap">
                     <div id="modal-pay-qr" class="modal-pay-qr"><span class="brand-spinner md"></span></div>
@@ -3187,13 +3267,15 @@
                 </div>
                 <div class="modal-pay-summary">
                     <div class="modal-pay-amount">
-                        <span class="k">${isUpgradeDiff ? 'Pay now (upgrade diff)' : 'Amount due'}</span>
+                        <span class="k">${amountLabel}</span>
                         <span class="v">
                             <span data-modal-curr-show="INR">₹${chargedInr.toLocaleString('en-IN')}</span>
                             <span data-modal-curr-show="USD">$${chargedUsd}</span>
                         </span>
                         ${isUpgradeDiff ? `
                             <span class="sub">Full <b style="color:#f5f3ff;">${plan}</b> billing of <b style="color:#f5f3ff;">₹${fullInr.toLocaleString('en-IN')}/mo</b> begins 1st of next month.</span>
+                        ` : isProrated ? `
+                            <span class="sub">Full <b style="color:#f5f3ff;">${plan}</b> billing of <b style="color:#f5f3ff;">₹${fullInr.toLocaleString('en-IN')}/mo</b> starts ${nextCycleStart}.</span>
                         ` : `
                             <span class="sub" data-modal-curr-show="USD">Charged in INR via UPI (₹${chargedInr.toLocaleString('en-IN')})</span>
                             <span class="sub" data-modal-curr-show="INR">≈ $${chargedUsd}/mo · billed monthly</span>
@@ -3221,7 +3303,15 @@
         // month otherwise). Letting the spinner show for one tick keeps
         // the transition feeling deliberate.
         const qrEl = document.getElementById('modal-pay-qr');
-        const upiStr = `upi://pay?pa=devtoolpro@ybl&pn=DevTools%20Pro&am=${chargedInr}&cu=INR&tn=${encodeURIComponent('DevTools Pro - ' + plan + (isUpgradeDiff && fromPlan ? ` (upgrade from ${fromPlan})` : ''))}`;
+        // Tag the UPI transaction note with context (upgrade diff or
+        // prorated days) so when the admin sees the bank receipt they
+        // can reconcile the partial amount to the right user / flow.
+        const txnNote = (() => {
+            if (isUpgradeDiff && fromPlan) return `DevTools Pro - ${plan} (upgrade from ${fromPlan})`;
+            if (isProrated)                return `DevTools Pro - ${plan} (prorated ${proratedDays}d)`;
+            return `DevTools Pro - ${plan}`;
+        })();
+        const upiStr = `upi://pay?pa=devtoolpro@ybl&pn=DevTools%20Pro&am=${chargedInr}&cu=INR&tn=${encodeURIComponent(txnNote)}`;
         setTimeout(() => {
             qrEl.innerHTML = '';
             if (typeof QRCode !== 'undefined') {
