@@ -176,6 +176,20 @@
         @keyframes wa-pulse-red   { 0%,100% { box-shadow: 0 0 0 0 rgba(248,113,113,0.5);  } 50% { box-shadow: 0 0 0 7px rgba(248,113,113,0); } }
         .wa-btn.due-soon { background: rgba(245,158,11,0.14); border-color: rgba(245,158,11,0.45); color: var(--amber); animation: wa-pulse-amber 1.6s ease-in-out infinite; }
         .wa-btn.expired-glow { background: rgba(248,113,113,0.14); border-color: rgba(248,113,113,0.45); color: var(--red); animation: wa-pulse-red 1.6s ease-in-out infinite; }
+        /* Small grey corner dot stamped on the icon when this user was
+           nudged in the last 48 hours. Sits on top of the urgency
+           styles (which control the ring color) so admins can see at a
+           glance whether they've already pinged a due-soon user. */
+        .wa-btn { position: relative; }
+        .wa-btn .wa-recent-dot {
+            position: absolute; top: -3px; right: -3px;
+            width: 9px; height: 9px; border-radius: 50%;
+            background: rgb(190,185,210);
+            border: 2px solid var(--bg-0);
+            box-shadow: 0 0 0 1px rgba(190,185,210,0.35);
+        }
+        .wa-btn.due-soon .wa-recent-dot,
+        .wa-btn.expired-glow .wa-recent-dot { background: rgba(190,185,210,0.85); }
 
         /* Template picker popover — anchored to the clicked button via
            inline top/left set in JS. Single shared DOM element so we
@@ -531,12 +545,16 @@
                     <input class="field-input" id="edit-meet" type="url" placeholder="https://meet.google.com/…">
                 </div>
                 <div class="field">
-                    <label class="field-label" for="edit-phone">Phone</label>
-                    <input class="field-input" id="edit-phone" type="tel">
+                    <label class="field-label" for="edit-phone">Phone (WhatsApp)</label>
+                    <input class="field-input" id="edit-phone" type="tel" inputmode="tel" placeholder="+91 9019879108">
                 </div>
                 <div class="field">
                     <label class="field-label" for="edit-source">Source</label>
                     <input class="field-input" id="edit-source" type="text">
+                </div>
+                <div class="field full">
+                    <label class="field-label" for="edit-username">Username <span style="color: var(--ink-3); font-weight: 500; letter-spacing: normal; text-transform: none;">— overrides the auto-derived <code style="font-family: ui-monospace, monospace;">@email-handle</code></span></label>
+                    <input class="field-input" id="edit-username" type="text" placeholder="leave blank to auto-derive" maxlength="32" pattern="[A-Za-z0-9._-]+">
                 </div>
                 <!-- Pending plan-change banner (hidden by default; shown
                      by openEdit() when pendingPlan is set on the row) -->
@@ -615,6 +633,20 @@
         // Derive a public-facing username from an email. Drops the domain
         // part so admins can match accounts at a glance without parsing
         // full emails. Falls back to a placeholder if the value is missing.
+        // Derive the username displayed in the admin row. Prefers the
+        // admin-set users.username column when present (so admins can
+        // override generic emails like rishabh.kumar2103@gmail.com with
+        // a clean @rishabh handle), otherwise falls back to the email's
+        // local part. Always prefixed with @ so the column reads
+        // consistently.
+        function displayHandle(user) {
+            if (!user) return '—';
+            if (user.username && String(user.username).trim()) {
+                return '@' + String(user.username).trim().toLowerCase();
+            }
+            return usernameFromEmail(user.email);
+        }
+
         function usernameFromEmail(email) {
             if (!email || typeof email !== 'string') return '—';
             const at = email.indexOf('@');
@@ -832,7 +864,7 @@
                         <td>${statusPill(u.planStatus)}</td>
                         <td>${escapeHTML(fmtDate(u.planStartDate))}</td>
                         <td>${escapeHTML(fmtDate(u.planEndDate))}</td>
-                        <td><span class="user-handle" title="${escapeHTML(u.email || '')}">${escapeHTML(usernameFromEmail(u.email))}</span></td>
+                        <td><span class="user-handle" title="${escapeHTML(u.email || '')}">${escapeHTML(displayHandle(u))}</span></td>
                         <td><span class="mono" title="${escapeHTML(u.utrId || '')}">${escapeHTML(u.utrId || '—')}</span></td>
                         <td>${escapeHTML(fmtDate(u.updatedAt))}</td>
                         <td>${escapeHTML(fmtDate(u.lastLogin))}</td>
@@ -899,10 +931,31 @@
             return Math.floor((b - a) / 86400000);
         }
 
+        // Human-readable "x time ago" for a timestamp. Used in the
+        // WhatsApp popover header to surface when the admin last
+        // nudged this user. Falls back to a locale date for anything
+        // older than a month (rare; better to show the exact day).
+        function relativeTime(iso) {
+            if (!iso) return '';
+            const then = new Date(iso);
+            if (isNaN(then.getTime())) return '';
+            const diffSec = Math.max(0, Math.round((Date.now() - then.getTime()) / 1000));
+            if (diffSec < 60)        return 'just now';
+            if (diffSec < 3600)      return Math.floor(diffSec / 60) + 'm ago';
+            if (diffSec < 86400)     return Math.floor(diffSec / 3600) + 'h ago';
+            if (diffSec < 86400 * 7) return Math.floor(diffSec / 86400) + 'd ago';
+            if (diffSec < 86400 * 30) return Math.floor(diffSec / (86400 * 7)) + 'w ago';
+            return then.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+        }
+
         // Render the per-row WhatsApp icon button. Three visual states
         // driven by daysUntilRenewal — calm / due soon / expired.
         // Cancelled users keep a calm-green button (they'd benefit from
         // a "come back?" template even though there's no renewal due).
+        // A "recently nudged" hint sits as a small grey dot in the
+        // corner if we sent a template to this user in the last 48h —
+        // urgency styles still take priority, but the dot is preserved
+        // so the admin can spot already-contacted users at a glance.
         function renderWaButton(u) {
             const d = daysUntilRenewal(u.planEndDate);
             const status = (u.planStatus || '').toLowerCase();
@@ -917,11 +970,24 @@
                     title = `Renews in ${d} day${d === 1 ? '' : 's'} — send a reminder`;
                 }
             }
+            // Was this user nudged in the last 48 hours? Tack on a
+            // visual hint so the admin doesn't re-ping them.
+            let recentBadge = '';
+            if (u.lastRemindedAt) {
+                const ageHrs = (Date.now() - new Date(u.lastRemindedAt).getTime()) / 3600000;
+                if (ageHrs >= 0 && ageHrs <= 48) {
+                    cls.push('recently-nudged');
+                    const ago = relativeTime(u.lastRemindedAt);
+                    title += ` · last nudged ${ago}`;
+                    recentBadge = `<span class="wa-recent-dot" aria-hidden="true"></span>`;
+                }
+            }
             return `<button class="${cls.join(' ')}" type="button"
                             data-uid="${escapeHTML(u.id)}"
                             title="${title}"
                             aria-label="${title}">
                         <svg fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347"/></svg>
+                        ${recentBadge}
                     </button>`;
         }
 
@@ -1065,7 +1131,10 @@
 
             nameEl.textContent = user.name || user.email || 'User';
 
-            // Header meta — surface the urgency the icon was hinting at.
+            // Header meta — surface the urgency the icon was hinting at,
+            // plus a second line showing when (and which template) we
+            // last nudged this user. Stops admins from accidentally
+            // hammering the same person every day.
             const d = daysUntilRenewal(user.planEndDate);
             let metaHtml = user.currentPlan ? `${escapeHTML(user.currentPlan)} · ` : '';
             if (d === null) {
@@ -1078,6 +1147,13 @@
                 metaHtml += `<span class="urgent">Renews in ${d} day${d === 1 ? '' : 's'}</span>`;
             } else {
                 metaHtml += `Renews in ${d} days`;
+            }
+            if (user.lastRemindedAt) {
+                const ago = relativeTime(user.lastRemindedAt);
+                const tpl = user.lastRemindedTemplate
+                    ? ` · ${escapeHTML(WA_TEMPLATES[user.lastRemindedTemplate]?.label || user.lastRemindedTemplate)}`
+                    : '';
+                metaHtml += `<br><span style="color: rgb(155,150,180);">Last nudged ${escapeHTML(ago)}${tpl}</span>`;
             }
             metaEl.innerHTML = metaHtml;
 
@@ -1104,6 +1180,15 @@
             }).join('');
 
             // Wire each template button to open WhatsApp.
+            //
+            // Flow: mark-reminded → open WhatsApp → close popover.
+            // The mark-reminded POST is non-blocking from the user's
+            // perspective (fire-and-forget): we open the WhatsApp tab
+            // immediately and let the bookkeeping resolve in the
+            // background. If it fails for any reason, the admin's
+            // actual message has already been sent — the worst case is
+            // a missing log entry, which the admin can re-record by
+            // clicking again later.
             listEl.querySelectorAll('button[data-tmpl]').forEach(b => {
                 b.addEventListener('click', (e) => {
                     e.stopPropagation();
@@ -1114,6 +1199,24 @@
                     const url = buildWaUrl(user.phone, message);
                     window.open(url, '_blank', 'noopener');
                     closeWaPopover();
+                    // Bookkeep AFTER opening so a hung POST never
+                    // blocks the WhatsApp tab. Errors are swallowed —
+                    // the admin can re-click to re-record.
+                    api(`/admin/users/${encodeURIComponent(user.id)}/mark-reminded`, {
+                        method: 'POST',
+                        body: JSON.stringify({ template: key }),
+                    }).then(resp => {
+                        if (resp && resp.user) {
+                            const idx = allUsers.findIndex(x => x.id === resp.user.id);
+                            if (idx >= 0) {
+                                allUsers[idx] = resp.user;
+                                // Re-render so the recently-nudged dot
+                                // appears on the row without waiting
+                                // for the next manual refresh.
+                                renderUserRows();
+                            }
+                        }
+                    }).catch(() => {});
                 });
             });
 
@@ -1207,6 +1310,7 @@
             document.getElementById('edit-meet').value  = u.meetLink || '';
             document.getElementById('edit-phone').value = u.phone || '';
             document.getElementById('edit-source').value = u.source || '';
+            document.getElementById('edit-username').value = u.username || '';
             document.getElementById('modal-msg').textContent = '';
             // Pending-change block: visible only when the user has a
             // scheduled downgrade. Admin can click "Apply now" to flip
@@ -1285,6 +1389,7 @@
                 meetLink: document.getElementById('edit-meet').value.trim(),
                 phone: document.getElementById('edit-phone').value.trim(),
                 source: document.getElementById('edit-source').value.trim(),
+                username: document.getElementById('edit-username').value.trim(),
             };
             btn.disabled = true; lbl.innerHTML = '<span class="spinner"></span> Saving…'; msg.className = 'modal-msg'; msg.textContent = '';
             try {

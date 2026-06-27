@@ -1331,6 +1331,11 @@
                                     </div>
                                 </div>
                                 <div>
+                                    <label class="reg-field-label" for="reg-phone">WhatsApp number <span class="reg-field-suffix">(for plan reminders)</span></label>
+                                    <input type="tel" id="reg-phone" inputmode="tel" autocomplete="tel" placeholder="+91 9019879108" maxlength="20" class="reg-input">
+                                    <p class="reg-helper">We'll only message you about your subscription — never marketing. Include the country code (e.g. +91 for India).</p>
+                                </div>
+                                <div>
                                     <label class="reg-field-label" for="reg-source">How did you hear about us?</label>
                                     <select id="reg-source" class="reg-input">
                                         <option value="" disabled selected>Select an option</option>
@@ -2366,15 +2371,31 @@
         const first = document.getElementById('reg-first').value.trim();
         const last = document.getElementById('reg-last').value.trim();
         const source = document.getElementById('reg-source').value;
+        const phoneRaw = document.getElementById('reg-phone')?.value.trim() || '';
         const errEl = document.getElementById('reg-error');
         const btn = document.getElementById('reg-submit');
         errEl.classList.add('hidden');
-        if (!first || !last || !source) { errEl.textContent = 'All fields are required'; errEl.classList.remove('hidden'); return; }
+        if (!first || !last || !source) { errEl.textContent = 'Name and source are required'; errEl.classList.remove('hidden'); return; }
+
+        // Phone is optional but if supplied must be 8-15 digits after
+        // stripping separators. Block the submit locally so the admin
+        // never sees half-baked numbers in the users.phone column.
+        let phoneNorm = '';
+        if (phoneRaw) {
+            phoneNorm = phoneRaw.replace(/\D+/g, '');
+            if (phoneNorm.length < 8 || phoneNorm.length > 15) {
+                errEl.textContent = 'WhatsApp number must be 8-15 digits — include the country code.';
+                errEl.classList.remove('hidden');
+                return;
+            }
+        }
 
         setBtnLoading(btn, true, 'Saving…');
         try {
             const token = getToken();
-            const res = await fetch(`${API_BASE}/auth/register`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify({ firstName: first, lastName: last, source }) });
+            const body = { firstName: first, lastName: last, source };
+            if (phoneNorm) body.phone = phoneNorm;
+            const res = await fetch(`${API_BASE}/auth/register`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify(body) });
             const data = await res.json();
             if (data.status === 'success') { setUser(data.user); showView('view-plans'); }
             else { errEl.textContent = data.message || 'Failed'; errEl.classList.remove('hidden'); }

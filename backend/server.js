@@ -147,6 +147,7 @@ function userRowToDto(u) {
     planStartDate: u.plan_start_date,
     planEndDate: u.plan_end_date,
     phone: u.phone,
+    username: u.username,
     registrationComplete: u.registration_complete,
     utrId: u.utr_id,
     meetLink: u.meet_link,
@@ -398,21 +399,36 @@ app.post('/auth/schedule-downgrade', requireAuth, async (req, res) => {
 // ─── POST /auth/register ───
 app.post('/auth/register', requireAuth, async (req, res) => {
   try {
-    const { firstName, lastName, source } = req.body || {};
+    const { firstName, lastName, source, phone } = req.body || {};
     if (!firstName || !lastName || !source) {
-      return res.status(400).json({ status: 'error', message: 'All fields are required' });
+      return res.status(400).json({ status: 'error', message: 'Name and source are required' });
+    }
+
+    // Phone is optional at registration, but if supplied we normalise
+    // to digits-only and validate the length. Format-strict so the
+    // WhatsApp click-to-chat URL on the admin side just works (no
+    // re-parsing of stray hyphens / spaces / country prefixes there).
+    let phoneNormalised = null;
+    if (phone && String(phone).trim()) {
+      phoneNormalised = String(phone).replace(/\D+/g, '');
+      if (phoneNormalised.length < 8 || phoneNormalised.length > 15) {
+        return res.status(400).json({ status: 'error', message: 'WhatsApp number must be 8-15 digits' });
+      }
     }
 
     const client = getClient();
     const fullName = `${String(firstName).trim()} ${String(lastName).trim()}`;
 
+    const updatePayload = {
+      name: fullName,
+      source: String(source).trim().slice(0, 60),
+      registration_complete: true,
+    };
+    if (phoneNormalised) updatePayload.phone = phoneNormalised;
+
     const { error } = await client
       .from('users')
-      .update({
-        name: fullName,
-        source: String(source).trim().slice(0, 60),
-        registration_complete: true,
-      })
+      .update(updatePayload)
       .eq('id', req.user.userId);
 
     if (error) {
@@ -432,10 +448,11 @@ app.post('/auth/register', requireAuth, async (req, res) => {
         id: req.user.userId,
         email: req.user.email,
         name: fullName,
+        phone: phoneNormalised,
         registrationComplete: true,
       },
     });
-    console.log(`auth: registration uid=${req.user.userId}`);
+    console.log(`auth: registration uid=${req.user.userId} phone=${phoneNormalised ? 'set' : 'none'}`);
   } catch (error) {
     console.error('Register exception:', error.message);
     res.status(500).json({ status: 'error', message: 'Internal error' });
@@ -580,6 +597,7 @@ function rowToAdminUser(u) {
     phone: u.phone,
     source: u.source,
     googleId: u.google_id,
+    username: u.username,
     currentPlan: u.current_plan,
     planStatus: u.plan_status,
     planStartDate: u.plan_start_date,
@@ -591,11 +609,17 @@ function rowToAdminUser(u) {
     registrationComplete: u.registration_complete,
     createdAt: u.created_at,
     // Server-maintained "last business event" timestamp — bumped only
-    // when plan / status / UTR / meet / name / phone / pending fields
-    // change. last_login and picture refreshes intentionally don't move
-    // it (see the users_bump_updated_at trigger in setup-users.sql).
+    // when plan / status / UTR / meet / name / phone / username /
+    // pending fields change. last_login + picture refreshes intentionally
+    // don't move it (see the users_bump_updated_at trigger in
+    // setup-users.sql).
     updatedAt: u.updated_at,
     lastLogin: u.last_login,
+    // WhatsApp reminder bookkeeping — surfaced by the admin's WA popover
+    // so the admin knows when they last nudged this user and via which
+    // template (so they don't hammer the same person every day).
+    lastRemindedAt: u.last_reminded_at,
+    lastRemindedTemplate: u.last_reminded_template,
   };
 }
 
@@ -655,8 +679,31 @@ app.patch('/admin/users/:id', requireAdminAuth, async (req, res) => {
     if ('planEndDate'   in body) updates.plan_end_date   = body.planEndDate   || null;
     if ('utrId'         in body) updates.utr_id          = body.utrId         || null;
     if ('meetLink'      in body) updates.meet_link       = body.meetLink      || null;
-    if ('phone'         in body) updates.phone           = body.phone         || null;
+    if ('phone'         in body) {
+      // Normalise to digits-only so the WhatsApp click-to-chat URL on
+      // every row just works without re-parsing. Empty string clears.
+      const cleaned = body.phone ? String(body.phone).replace(/\D+/g, '') : '';
+      if (cleaned && (cleaned.length < 8 || cleaned.length > 15)) {
+        return res.status(400).json({ status: 'error', message: 'Phone must be 8-15 digits' });
+      }
+      updates.phone = cleaned || null;
+    }
     if ('source'        in body) updates.source          = body.source        || null;
+    if ('username'      in body) {
+      // Admin-editable handle. We strip to a conservative alphanumeric +
+      // dot / underscore / hyphen set so it stays URL-safe and matches
+      // what users would expect from a "username" slot. Empty clears.
+      const raw = body.username == null ? '' : String(body.username).trim();
+      if (raw) {
+        const safe = raw.replace(/[^A-Za-z0-9._-]/g, '').slice(0, 32);
+        if (safe.length < 2) {
+          return res.status(400).json({ status: 'error', message: 'Username must be 2-32 chars (letters, digits, . _ - only)' });
+        }
+        updates.username = safe;
+      } else {
+        updates.username = null;
+      }
+    }
     if ('name'          in body && typeof body.name === 'string' && body.name.trim()) {
       updates.name = body.name.trim().slice(0, 120);
     }
@@ -744,6 +791,52 @@ app.post('/admin/users/:id/apply-pending', requireAdminAuth, async (req, res) =>
     console.log(`admin: applied pending uid=${data.id} plan=${data.current_plan}`);
   } catch (e) {
     console.error('apply-pending exception:', e.message);
+    res.status(500).json({ status: 'error', message: 'Internal error' });
+  }
+});
+
+// ─── POST /admin/users/:id/mark-reminded ───
+// Bookkeeping endpoint for the per-row WhatsApp template picker. The
+// admin calls this just before opening the wa.me URL so we know who
+// was nudged, when, and with which template — surfaced back to the
+// admin UI as "Last nudged 2 days ago · Renewal reminder" so they
+// don't accidentally hammer the same person every day.
+//
+// Note: last_reminded_at is deliberately NOT included in the
+// users_bump_updated_at trigger's change set, so frequent reminder
+// activity doesn't drown out actual plan changes in the "Updated"
+// column. This endpoint is the only writer of these two fields.
+app.post('/admin/users/:id/mark-reminded', requireAdminAuth, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { template } = req.body || {};
+    if (!template) {
+      return res.status(400).json({ status: 'error', message: 'Template is required' });
+    }
+    const cleanedTemplate = String(template).trim().slice(0, 60);
+    if (!cleanedTemplate) {
+      return res.status(400).json({ status: 'error', message: 'Template cannot be empty' });
+    }
+
+    const client = getClient();
+    const { data, error } = await client
+      .from('users')
+      .update({
+        last_reminded_at: new Date().toISOString(),
+        last_reminded_template: cleanedTemplate,
+      })
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error || !data) {
+      console.error('mark-reminded error:', error);
+      return res.status(500).json({ status: 'error', message: 'Failed to record reminder' });
+    }
+    res.json({ status: 'success', user: rowToAdminUser(data) });
+    console.log(`admin: reminder logged uid=${data.id} tpl=${cleanedTemplate}`);
+  } catch (e) {
+    console.error('mark-reminded exception:', e.message);
     res.status(500).json({ status: 'error', message: 'Internal error' });
   }
 });

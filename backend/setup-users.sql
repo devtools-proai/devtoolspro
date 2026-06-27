@@ -41,6 +41,16 @@ CREATE TABLE IF NOT EXISTS users (
   -- status, UTR, meet link, name, etc.) so passive logins / avatar
   -- refreshes don't pollute the "last activity" timestamp shown in admin.
   updated_at TIMESTAMPTZ DEFAULT NOW(),
+  -- Optional admin-editable display handle. When NULL, the admin UI
+  -- falls back to the email's local part. Always nullable (admins
+  -- only set it for users whose emails are generic / hard to scan).
+  username TEXT,
+  -- When the admin last opened a WhatsApp template for this user.
+  -- last_reminded_template records WHICH template was sent so the
+  -- admin can tell apart "renewal nudge sent 3d ago" from "welcome
+  -- ping sent 3d ago". Both are NULL until the first nudge.
+  last_reminded_at TIMESTAMPTZ,
+  last_reminded_template TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
@@ -50,6 +60,9 @@ CREATE TABLE IF NOT EXISTS users (
 ALTER TABLE users ADD COLUMN IF NOT EXISTS pending_plan TEXT;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS pending_plan_effective TIMESTAMPTZ;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS username TEXT;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS last_reminded_at TIMESTAMPTZ;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS last_reminded_template TEXT;
 
 -- Backfill updated_at on existing rows: prefer plan_start_date (last
 -- known business event) and fall back to created_at. Without this the
@@ -80,9 +93,15 @@ BEGIN
      OR NEW.name                 IS DISTINCT FROM OLD.name
      OR NEW.phone                IS DISTINCT FROM OLD.phone
      OR NEW.source               IS DISTINCT FROM OLD.source
+     OR NEW.username             IS DISTINCT FROM OLD.username
      OR NEW.registration_complete IS DISTINCT FROM OLD.registration_complete THEN
     NEW.updated_at = NOW();
   END IF;
+  -- Note: last_reminded_at and last_reminded_template are intentionally
+  -- excluded above. Recording an admin nudge is metadata, not user
+  -- state — including it would cause the "Updated" column to flicker
+  -- every time the admin clicks a WhatsApp template, hiding actual
+  -- changes (plan, status, etc.) under reminder noise.
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
@@ -122,6 +141,12 @@ ALTER TABLE users
 
 CREATE INDEX IF NOT EXISTS idx_users_google_id ON users (google_id);
 CREATE INDEX IF NOT EXISTS idx_users_email ON users (LOWER(email));
+-- Username is admin-editable and may be looked up case-insensitively
+-- from search filters in the future. Partial index keeps it tiny
+-- (only users with a custom username pay for an index entry).
+CREATE INDEX IF NOT EXISTS idx_users_username
+  ON users (LOWER(username))
+  WHERE username IS NOT NULL;
 
 ALTER TABLE users ENABLE ROW LEVEL SECURITY;
 
