@@ -1,4 +1,129 @@
+# ═══════════════════════════════════════════════════════════════════
+# robots.txt — DevTools Pro
+# https://devtools-proai.github.io/devtoolspro/
+#
+# Goal: maximize discoverability for both classic search and
+# AI-Overview / LLM-citation surfaces (AEO + GEO). Application
+# routes (dashboard, admin) are excluded so they never appear
+# in SERPs and don't bleed crawl budget.
+# ═══════════════════════════════════════════════════════════════════
+
+# ─── Default policy ──────────────────────────────────────────────
 User-agent: *
 Allow: /
+Allow: /index.html
+Allow: /og-image.svg
+Allow: /sitemap.xml
+Allow: /manifest.webmanifest
 
+Disallow: /dashboard.html
+Disallow: /admin.html
+Disallow: /backend/
+Disallow: /script.js
+Disallow: /package-lock.json
+Disallow: /.well-known/
+
+# ─── Google ──────────────────────────────────────────────────────
+User-agent: Googlebot
+Allow: /
+Disallow: /dashboard.html
+Disallow: /admin.html
+Disallow: /backend/
+
+# Image carousel + AI Overview thumbnails
+User-agent: Googlebot-Image
+Allow: /og-image.svg
+Allow: /
+
+# Google-Extended controls inclusion in Gemini / AI Overviews.
+# Explicit Allow is required since some properties default to deny.
+User-agent: Google-Extended
+Allow: /
+
+# ─── Bing ────────────────────────────────────────────────────────
+User-agent: Bingbot
+Allow: /
+Disallow: /dashboard.html
+Disallow: /admin.html
+Disallow: /backend/
+
+# ─── AI crawlers (GEO / Answer-Engine Optimization) ──────────────
+# These bots feed the LLM citation surfaces our marketing depends on
+# (ChatGPT search, Claude on the web, Perplexity, Brave Summarizer,
+# You.com, DuckDuckGo AI Assist). Explicitly allowed because some
+# of them treat "missing rule" as deny.
+User-agent: GPTBot
+Allow: /
+Disallow: /dashboard.html
+Disallow: /admin.html
+Disallow: /backend/
+
+User-agent: ChatGPT-User
+Allow: /
+
+User-agent: OAI-SearchBot
+Allow: /
+
+User-agent: ClaudeBot
+Allow: /
+Disallow: /dashboard.html
+Disallow: /admin.html
+
+User-agent: Claude-Web
+Allow: /
+
+User-agent: anthropic-ai
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+Disallow: /dashboard.html
+Disallow: /admin.html
+
+User-agent: Perplexity-User
+Allow: /
+
+User-agent: Applebot
+Allow: /
+
+User-agent: Applebot-Extended
+Allow: /
+
+User-agent: Bytespider
+Allow: /
+Disallow: /dashboard.html
+Disallow: /admin.html
+
+User-agent: DuckAssistBot
+Allow: /
+
+User-agent: MistralAI-User
+Allow: /
+
+User-agent: CCBot
+Allow: /
+Disallow: /dashboard.html
+Disallow: /admin.html
+
+# ─── Block known scrapers / SEO-spam bots ───────────────────────
+# These provide no upside and inflate Render egress bills.
+User-agent: AhrefsBot
+Disallow: /
+
+User-agent: SemrushBot
+Disallow: /
+
+User-agent: MJ12bot
+Disallow: /
+
+User-agent: DotBot
+Disallow: /
+
+User-agent: PetalBot
+Disallow: /
+
+# ─── Sitemap ─────────────────────────────────────────────────────
 Sitemap: https://devtools-proai.github.io/devtoolspro/sitemap.xml
+
+# ─── Host (used by Yandex; harmless elsewhere) ───────────────────
+Host: https://devtools-proai.github.io/devtoolspro/

@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Open Graph / Twitter share card · 1200×630 (Facebook recommended).
+  SVG is widely supported now (X, LinkedIn, Discord) but Facebook
+  still prefers PNG. Run this once through an SVG-to-PNG converter
+  (e.g. https://cloudconvert.com/svg-to-png) and replace this file
+  with og-image.png for 100% client compatibility — then update the
+  og:image meta tags in index.html accordingly.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" width="1200" height="630" role="img" aria-label="DevTools Pro — Kiro IDE at 50% off">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0c0817"/>
+      <stop offset="55%" stop-color="#1a0b30"/>
+      <stop offset="100%" stop-color="#07050d"/>
+    </linearGradient>
+    <radialGradient id="orb1" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#a855f7" stop-opacity="0.55"/>
+      <stop offset="60%" stop-color="#7c3aed" stop-opacity="0.15"/>
+      <stop offset="100%" stop-color="#7c3aed" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="orb2" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#ec4899" stop-opacity="0.45"/>
+      <stop offset="60%" stop-color="#db2777" stop-opacity="0.12"/>
+      <stop offset="100%" stop-color="#db2777" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#a855f7"/>
+      <stop offset="100%" stop-color="#ec4899"/>
+    </linearGradient>
+    <linearGradient id="brandBolt" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#a855f7"/>
+      <stop offset="100%" stop-color="#ec4899"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1200" height="630" fill="url(#bg)"/>
+
+  <!-- Ambient orbs -->
+  <circle cx="180" cy="160" r="320" fill="url(#orb1)"/>
+  <circle cx="1050" cy="520" r="360" fill="url(#orb2)"/>
+
+  <!-- Subtle grid -->
+  <g opacity="0.08" stroke="#ffffff" stroke-width="1">
+    <line x1="0" y1="158" x2="1200" y2="158"/>
+    <line x1="0" y1="316" x2="1200" y2="316"/>
+    <line x1="0" y1="474" x2="1200" y2="474"/>
+    <line x1="300" y1="0" x2="300" y2="630"/>
+    <line x1="600" y1="0" x2="600" y2="630"/>
+    <line x1="900" y1="0" x2="900" y2="630"/>
+  </g>
+
+  <!-- Brand row -->
+  <g transform="translate(80, 80)">
+    <rect width="44" height="44" rx="11" fill="url(#brandBolt)"/>
+    <path d="M16 30l6-22m6 6l6 6-6 6M10 22l-6-6 6-6"
+          transform="translate(8, 6)"
+          stroke="white" stroke-width="3" stroke-linecap="round"
+          stroke-linejoin="round" fill="none"/>
+    <text x="62" y="30" fill="#f5f3ff" font-family="Inter, -apple-system, system-ui, sans-serif"
+          font-weight="800" font-size="26" letter-spacing="-0.5">DevTools Pro</text>
+  </g>
+
+  <!-- Limited-time pill -->
+  <g transform="translate(80, 168)">
+    <rect width="280" height="38" rx="19" fill="rgba(168,85,247,0.16)" stroke="rgba(168,85,247,0.5)" stroke-width="1"/>
+    <circle cx="22" cy="19" r="4" fill="#c4b5fd"/>
+    <text x="40" y="25" fill="#c4b5fd" font-family="Inter, system-ui, sans-serif"
+          font-weight="600" font-size="13" letter-spacing="1">LIMITED · 50% OFF ALL PLANS</text>
+  </g>
+
+  <!-- Headline -->
+  <text x="80" y="290" fill="#f5f3ff" font-family="Inter, system-ui, sans-serif"
+        font-weight="900" font-size="86" letter-spacing="-2.5">Same Power.</text>
+  <text x="80" y="380" font-family="Inter, system-ui, sans-serif"
+        font-weight="900" font-size="86" letter-spacing="-2.5"
+        fill="url(#accent)">Half the Price.</text>
+
+  <!-- Subtitle -->
+  <text x="80" y="442" fill="#cbc7e0" font-family="Inter, system-ui, sans-serif"
+        font-weight="500" font-size="24" letter-spacing="-0.2">
+    Kiro AI coding IDE · Claude Opus + Sonnet · UPI accepted
+  </text>
+
+  <!-- Pricing cards row -->
+  <g transform="translate(80, 490)" font-family="Inter, system-ui, sans-serif">
+    <g>
+      <rect width="240" height="92" rx="14" fill="rgba(255,255,255,0.04)" stroke="rgba(255,255,255,0.10)"/>
+      <text x="20" y="32" fill="#9b96b4" font-size="13" font-weight="600" letter-spacing="1.2">PRO</text>
+      <text x="20" y="68" fill="#f5f3ff" font-size="30" font-weight="800" letter-spacing="-0.5">₹946<tspan fill="#9b96b4" font-size="14" font-weight="500">/mo</tspan></text>
+    </g>
+    <g transform="translate(260, 0)">
+      <rect width="240" height="92" rx="14" fill="rgba(255,255,255,0.04)" stroke="rgba(255,255,255,0.10)"/>
+      <text x="20" y="32" fill="#9b96b4" font-size="13" font-weight="600" letter-spacing="1.2">PRO+</text>
+      <text x="20" y="68" fill="#f5f3ff" font-size="30" font-weight="800" letter-spacing="-0.5">₹1,892<tspan fill="#9b96b4" font-size="14" font-weight="500">/mo</tspan></text>
+    </g>
+    <g transform="translate(520, 0)">
+      <rect width="260" height="92" rx="14" fill="rgba(168,85,247,0.12)" stroke="rgba(168,85,247,0.45)"/>
+      <text x="20" y="32" fill="#c4b5fd" font-size="13" font-weight="600" letter-spacing="1.2">PRO MAX · POPULAR</text>
+      <text x="20" y="68" fill="#f5f3ff" font-size="30" font-weight="800" letter-spacing="-0.5">₹4,731<tspan fill="#9b96b4" font-size="14" font-weight="500">/mo</tspan></text>
+    </g>
+    <g transform="translate(800, 0)">
+      <rect width="240" height="92" rx="14" fill="rgba(255,255,255,0.04)" stroke="rgba(255,255,255,0.10)"/>
+      <text x="20" y="32" fill="#9b96b4" font-size="13" font-weight="600" letter-spacing="1.2">POWER</text>
+      <text x="20" y="68" fill="#f5f3ff" font-size="30" font-weight="800" letter-spacing="-0.5">₹9,461<tspan fill="#9b96b4" font-size="14" font-weight="500">/mo</tspan></text>
+    </g>
+  </g>
+
+  <!-- Bottom URL line -->
+  <text x="80" y="615" fill="#5d5878" font-family="Inter, system-ui, sans-serif"
+        font-weight="500" font-size="14" letter-spacing="0.5">
+    devtools-proai.github.io/devtoolspro
+  </text>
+</svg>

@@ -1,0 +1,16 @@
+/* TEAM */
+DevTools Pro — Kiro IDE subscriptions at 50% off market price.
+Contact: https://api.whatsapp.com/send?phone=919019879108
+Location: India
+
+/* THANKS */
+Kiro (AWS) — for the IDE this site resells.
+Anthropic — for Claude Opus & Sonnet.
+
+/* SITE */
+Last update: 2026-06-27
+Language: English
+Doctype: HTML5
+IDE: Kiro
+Components: Vanilla JS, Tailwind CSS, Node.js (Express), Supabase
+Hosting: GitHub Pages (frontend) · Render (backend)

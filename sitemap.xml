@@ -1,27 +1,30 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+<!--
+  ═══════════════════════════════════════════════════════════════════
+  sitemap.xml — DevTools Pro
+  ═══════════════════════════════════════════════════════════════════
+  Hash-anchor URLs were removed: Google ignores them for indexing
+  (they share a canonical with the root) and including them dilutes
+  per-page authority. The single root entry is what ranks; the
+  image:image extension surfaces og-image.svg in Google Images.
+-->
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:image="http://www.google.com/schemas/sitemap-image/1.1"
+        xmlns:xhtml="http://www.w3.org/1999/xhtml">
+
   <url>
     <loc>https://devtools-proai.github.io/devtoolspro/</loc>
-    <lastmod>2026-06-18</lastmod>
+    <lastmod>2026-06-27</lastmod>
     <changefreq>weekly</changefreq>
     <priority>1.0</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://devtools-proai.github.io/devtoolspro/" />
+    <xhtml:link rel="alternate" hreflang="en-IN" href="https://devtools-proai.github.io/devtoolspro/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://devtools-proai.github.io/devtoolspro/" />
+    <image:image>
+      <image:loc>https://devtools-proai.github.io/devtoolspro/og-image.svg</image:loc>
+      <image:title>DevTools Pro — Kiro IDE at 50% off</image:title>
+      <image:caption>Genuine Kiro AI coding IDE subscriptions resold at half the official price. Pro from ₹946/month.</image:caption>
+    </image:image>
   </url>
-  <url>
-    <loc>https://devtools-proai.github.io/devtoolspro/#pricing</loc>
-    <lastmod>2026-06-18</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.9</priority>
-  </url>
-  <url>
-    <loc>https://devtools-proai.github.io/devtoolspro/#faq</loc>
-    <lastmod>2026-06-18</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://devtools-proai.github.io/devtoolspro/#signup</loc>
-    <lastmod>2026-06-18</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
-  </url>
+
 </urlset>

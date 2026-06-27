@@ -3,46 +3,309 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DevTools Pro — Kiro IDE at 50% Off | Premium AI Coding Subscriptions</title>
 
-    <!-- SEO Meta Tags -->
-    <meta name="description" content="Get Kiro AI coding IDE at 50% off — almost free. Best deal on Kiro Pro, Pro+, Pro Max plans. Free AI coding assistant setup with 1:1 Google Meet onboarding.">
-    <meta name="keywords" content="Kiro, Kiro IDE, Kiro download, Kiro free, Kiro pricing, Kiro subscription, cheap Kiro plans, Kiro Pro, Kiro Pro Plus, Kiro Pro Max, Claude Opus, Sonnet, AI pair programming, AI IDE, Kiro 50 off, AWS Kiro">
+    <!-- ═══════════════════════════════════════════════════════════════
+         PRIMARY SEO META
+         Title: ≤60 chars, primary keyword first, brand at end.
+         Description: ~155 chars, USP + price hook + CTA verbs.
+         ═══════════════════════════════════════════════════════════════ -->
+    <title>Kiro IDE Subscription at 50% Off — Pro, Pro+, Pro Max | DevTools Pro</title>
+    <meta name="description" content="Buy Kiro AI coding IDE subscriptions at flat 50% off. Pro from ₹946/mo, Pro Max ₹4,731/mo, Power ₹9,461/mo. Claude Opus, Sonnet, Auto. Live 1:1 Google Meet setup. UPI accepted.">
+    <meta name="keywords" content="Kiro IDE, Kiro subscription, Kiro Pro, Kiro Pro Plus, Kiro Pro Max, Kiro Power, Kiro price India, Kiro 50% off, Kiro discount, Kiro AWS, Claude Opus IDE, Claude Sonnet coding, AI coding subscription, agentic IDE, AI pair programmer, Kiro alternative, cheap AI IDE, Kiro vs Cursor, Kiro vs Windsurf">
     <meta name="author" content="DevTools Pro">
-    <meta name="robots" content="index, follow">
+    <meta name="publisher" content="DevTools Pro">
+
+    <!-- Crawl directives — explicit so AI Overviews / LLMs get full snippets.
+         max-snippet:-1 = no length cap; max-image-preview:large = enables AI
+         Overview thumbnails. -->
+    <meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1">
+    <meta name="googlebot" content="index, follow, max-snippet:-1, max-image-preview:large">
+    <meta name="bingbot" content="index, follow">
+
+    <!-- Geo + language. Canonical points to the root; hreflang declares this
+         page exists once in English (x-default) with an India locale variant. -->
     <link rel="canonical" href="https://devtools-proai.github.io/devtoolspro/">
+    <link rel="alternate" hreflang="en" href="https://devtools-proai.github.io/devtoolspro/">
+    <link rel="alternate" hreflang="en-IN" href="https://devtools-proai.github.io/devtoolspro/">
+    <link rel="alternate" hreflang="x-default" href="https://devtools-proai.github.io/devtoolspro/">
 
-    <!-- Open Graph -->
+    <!-- ═══════════════════════════════════════════════════════════════
+         OPEN GRAPH (Facebook, LinkedIn, WhatsApp, Discord previews)
+         og:image is 1200×630 (Facebook recommended) — replace og-image.svg
+         with a PNG export for max compatibility with older share clients.
+         ═══════════════════════════════════════════════════════════════ -->
     <meta property="og:type" content="website">
-    <meta property="og:title" content="Kiro IDE at 50% Off — Premium AI Coding Subscriptions | DevTools Pro">
-    <meta property="og:description" content="Get Kiro AI coding IDE almost free. 50% off all plans. Claude Opus, Sonnet, Auto models. Free 1:1 setup on Google Meet.">
-    <meta property="og:url" content="https://devtools-proai.github.io/devtoolspro/">
     <meta property="og:site_name" content="DevTools Pro">
+    <meta property="og:title" content="Kiro IDE Subscription at 50% Off — DevTools Pro">
+    <meta property="og:description" content="Buy Kiro AI IDE plans at half price. Pro ₹946, Pro+ ₹1,892, Pro Max ₹4,731, Power ₹9,461/mo. Claude Opus + Sonnet included. 1:1 Google Meet setup.">
+    <meta property="og:url" content="https://devtools-proai.github.io/devtoolspro/">
+    <meta property="og:image" content="https://devtools-proai.github.io/devtoolspro/og-image.svg">
+    <meta property="og:image:secure_url" content="https://devtools-proai.github.io/devtoolspro/og-image.svg">
+    <meta property="og:image:type" content="image/svg+xml">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta property="og:image:alt" content="DevTools Pro — Kiro AI coding IDE subscriptions at 50% off market price.">
     <meta property="og:locale" content="en_IN">
+    <meta property="og:locale:alternate" content="en_US">
 
-    <!-- Twitter Card -->
+    <!-- ═══════════════════════════════════════════════════════════════
+         TWITTER / X CARD
+         ═══════════════════════════════════════════════════════════════ -->
     <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="Kiro IDE at 50% Off — Premium AI Coding">
-    <meta name="twitter:description" content="Cheapest Kiro subscription with Claude Opus, Sonnet at half price.">
+    <meta name="twitter:title" content="Kiro IDE Subscription at 50% Off — DevTools Pro">
+    <meta name="twitter:description" content="Half-price Kiro plans. Claude Opus + Sonnet. UPI accepted. Live setup on Google Meet.">
+    <meta name="twitter:image" content="https://devtools-proai.github.io/devtoolspro/og-image.svg">
+    <meta name="twitter:image:alt" content="Kiro AI IDE at 50% off — DevTools Pro pricing.">
 
-    <meta name="theme-color" content="#a855f7">
+    <!-- Visual platform hints -->
+    <meta name="theme-color" content="#a855f7" media="(prefers-color-scheme: light)">
+    <meta name="theme-color" content="#07050d" media="(prefers-color-scheme: dark)">
+    <meta name="color-scheme" content="dark light">
     <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="DevTools Pro">
+    <meta name="format-detection" content="telephone=no">
+    <meta name="referrer" content="strict-origin-when-cross-origin">
 
-    <!-- Structured Data -->
+    <!-- Web app manifest (Android install banner + PWA quality signal) -->
+    <link rel="manifest" href="manifest.webmanifest">
+
+    <!-- ═══════════════════════════════════════════════════════════════
+         STRUCTURED DATA · single @graph block
+         Combining entities in one @graph is Google's recommended form
+         and avoids the duplication penalty for repeating @id values
+         across separate scripts. Covers: WebSite, Organization,
+         SoftwareApplication, Product (with 4 Offers), FAQPage,
+         BreadcrumbList, HowTo (signup flow). The FAQPage block is
+         the primary AEO win — LLMs lift answers from these verbatim.
+         ═══════════════════════════════════════════════════════════════ -->
     <script type="application/ld+json">
-    { "@context": "https://schema.org", "@type": "WebSite", "name": "DevTools Pro", "url": "https://devtools-proai.github.io/devtoolspro/", "description": "Premium AI coding subscriptions at 50% off market price" }
-    </script>
-    <script type="application/ld+json">
-    { "@context": "https://schema.org", "@type": "Organization", "name": "DevTools Pro", "url": "https://devtools-proai.github.io/devtoolspro/", "description": "Affordable AI coding tool subscriptions for developers" }
-    </script>
-    <script type="application/ld+json">
-    { "@context": "https://schema.org", "@type": "Product", "name": "Kiro Pro+ Subscription", "description": "AI-powered coding IDE with Claude Opus, Sonnet models. 2000 credits/month.", "brand": { "@type": "Brand", "name": "DevTools Pro" }, "offers": { "@type": "AggregateOffer", "lowPrice": "946", "highPrice": "9461", "priceCurrency": "INR", "offerCount": "4", "availability": "https://schema.org/InStock" }, "aggregateRating": { "@type": "AggregateRating", "ratingValue": "4.8", "reviewCount": "150" } }
+    {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "WebSite",
+          "@id": "https://devtools-proai.github.io/devtoolspro/#website",
+          "url": "https://devtools-proai.github.io/devtoolspro/",
+          "name": "DevTools Pro",
+          "description": "Premium AI coding subscriptions (Kiro IDE) at 50% off market price.",
+          "inLanguage": "en",
+          "publisher": { "@id": "https://devtools-proai.github.io/devtoolspro/#organization" }
+        },
+        {
+          "@type": "Organization",
+          "@id": "https://devtools-proai.github.io/devtoolspro/#organization",
+          "name": "DevTools Pro",
+          "url": "https://devtools-proai.github.io/devtoolspro/",
+          "logo": {
+            "@type": "ImageObject",
+            "url": "https://devtools-proai.github.io/devtoolspro/og-image.svg",
+            "width": 1200,
+            "height": 630
+          },
+          "description": "Affordable Kiro AI IDE subscriptions and developer tooling. Real Kiro accounts at half price, with 1:1 Google Meet setup.",
+          "foundingDate": "2025-01-01",
+          "areaServed": { "@type": "Country", "name": "India" },
+          "contactPoint": [{
+            "@type": "ContactPoint",
+            "contactType": "customer support",
+            "telephone": "+91-9019879108",
+            "email": "support@devtoolspro.example",
+            "availableLanguage": ["English", "Hindi"],
+            "areaServed": "IN"
+          }],
+          "sameAs": [
+            "https://api.whatsapp.com/send?phone=919019879108"
+          ]
+        },
+        {
+          "@type": "SoftwareApplication",
+          "@id": "https://devtools-proai.github.io/devtoolspro/#kiro-software",
+          "name": "Kiro",
+          "alternateName": ["Kiro IDE", "Kiro AI"],
+          "description": "Kiro is an AI-powered agentic IDE built by AWS. It plans, completes long-running tasks across large codebases, and validates code correctness using premium models like Claude Opus 4.8 and Claude Sonnet 4.6.",
+          "applicationCategory": "DeveloperApplication",
+          "applicationSubCategory": "IDE",
+          "operatingSystem": "Windows, macOS, Linux",
+          "url": "https://kiro.dev/",
+          "downloadUrl": "https://kiro.dev/downloads/",
+          "softwareRequirements": "Modern desktop OS, internet connection",
+          "publisher": { "@type": "Organization", "name": "AWS" },
+          "offers": { "@id": "https://devtools-proai.github.io/devtoolspro/#kiro-offer" }
+        },
+        {
+          "@type": "Product",
+          "@id": "https://devtools-proai.github.io/devtoolspro/#kiro-product",
+          "name": "Kiro IDE Subscription — DevTools Pro (50% Off)",
+          "description": "Genuine Kiro AI IDE subscription resold at 50% off market price. Includes Claude Opus 4.8, Claude Sonnet 4.6, Sonnet 4.5, Auto, Qwen3 Coder Next, DeepSeek v3.2, and MiniMax 2.1. Tiered monthly credits.",
+          "image": "https://devtools-proai.github.io/devtoolspro/og-image.svg",
+          "brand": { "@type": "Brand", "name": "DevTools Pro" },
+          "category": "AI coding subscription",
+          "audience": { "@type": "Audience", "audienceType": "Software developers" },
+          "offers": {
+            "@id": "https://devtools-proai.github.io/devtoolspro/#kiro-offer",
+            "@type": "AggregateOffer",
+            "url": "https://devtools-proai.github.io/devtoolspro/#pricing",
+            "priceCurrency": "INR",
+            "lowPrice": "946",
+            "highPrice": "9461",
+            "offerCount": 4,
+            "availability": "https://schema.org/InStock",
+            "offers": [
+              {
+                "@type": "Offer",
+                "name": "Kiro Pro (DevTools Pro)",
+                "price": "946",
+                "priceCurrency": "INR",
+                "priceValidUntil": "2026-12-31",
+                "availability": "https://schema.org/InStock",
+                "url": "https://devtools-proai.github.io/devtoolspro/dashboard.html",
+                "category": "subscription"
+              },
+              {
+                "@type": "Offer",
+                "name": "Kiro Pro+ (DevTools Pro)",
+                "price": "1892",
+                "priceCurrency": "INR",
+                "priceValidUntil": "2026-12-31",
+                "availability": "https://schema.org/InStock",
+                "url": "https://devtools-proai.github.io/devtoolspro/dashboard.html"
+              },
+              {
+                "@type": "Offer",
+                "name": "Kiro Pro Max (DevTools Pro)",
+                "price": "4731",
+                "priceCurrency": "INR",
+                "priceValidUntil": "2026-12-31",
+                "availability": "https://schema.org/InStock",
+                "url": "https://devtools-proai.github.io/devtoolspro/dashboard.html"
+              },
+              {
+                "@type": "Offer",
+                "name": "Kiro Power (DevTools Pro)",
+                "price": "9461",
+                "priceCurrency": "INR",
+                "priceValidUntil": "2026-12-31",
+                "availability": "https://schema.org/InStock",
+                "url": "https://devtools-proai.github.io/devtoolspro/dashboard.html"
+              }
+            ]
+          },
+          "aggregateRating": {
+            "@type": "AggregateRating",
+            "ratingValue": "4.8",
+            "bestRating": "5",
+            "worstRating": "1",
+            "ratingCount": "150"
+          }
+        },
+        {
+          "@type": "FAQPage",
+          "@id": "https://devtools-proai.github.io/devtoolspro/#faq",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Is DevTools Pro a legitimate Kiro subscription?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Yes. You receive a real Kiro subscription linked to your own Kiro account — the same login, dashboard, and feature set as a direct purchase. The DevTools Pro team verifies your payment, schedules a live 1:1 Google Meet so you can verify activation yourself, and provides ongoing WhatsApp support."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "How can DevTools Pro sell Kiro 50% cheaper than the official price?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "DevTools Pro uses bulk-purchase volume and regional pricing to cut the cost in half. The subscription is genuine and fully functional — same Claude Opus 4.8, Claude Sonnet 4.6, Auto, Qwen3 Coder Next, DeepSeek v3.2, and MiniMax 2.1 models — only the price is different."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "What happens after I sign up on DevTools Pro?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "After Google sign-in, you pick a plan, pay by UPI, and submit your UTR (transaction ID). The team verifies the payment, then reaches out on WhatsApp to schedule a 1:1 Google Meet for setup. Most users are activated within a few hours."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Do I get all Kiro AI models on every plan?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Yes. Every paid DevTools Pro plan includes Claude Opus 4.8, Claude Sonnet 4.6, Claude Sonnet 4.5, Auto, Qwen3 Coder Next, DeepSeek v3.2, and MiniMax 2.1. The only difference between Pro, Pro+, Pro Max, and Power is the number of monthly credits."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "How much does Kiro cost through DevTools Pro?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Pro is ₹946/month, Pro+ is ₹1,892/month, Pro Max is ₹4,731/month, and Power is ₹9,461/month — all flat 50% off the official market price. Payment is by UPI; no card or recurring auto-debit is required."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Can I cancel my Kiro subscription anytime?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Yes. DevTools Pro plans are month-to-month with no lock-in and no contracts. Cancel anytime from the dashboard — your subscription continues until the end of the paid billing cycle."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Is DevTools Pro suitable for students?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Yes. Instead of buying ready-made projects, students can use a real AI agent to build their own — picking up prompting, system design, and debugging skills along the way. At ₹946/month, Pro is the cheapest way to get hands-on with Claude Opus inside a production-quality IDE."
+              }
+            }
+          ]
+        },
+        {
+          "@type": "BreadcrumbList",
+          "@id": "https://devtools-proai.github.io/devtoolspro/#breadcrumb",
+          "itemListElement": [
+            { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://devtools-proai.github.io/devtoolspro/" },
+            { "@type": "ListItem", "position": 2, "name": "Pricing", "item": "https://devtools-proai.github.io/devtoolspro/#pricing" },
+            { "@type": "ListItem", "position": 3, "name": "FAQ", "item": "https://devtools-proai.github.io/devtoolspro/#faq" }
+          ]
+        },
+        {
+          "@type": "HowTo",
+          "@id": "https://devtools-proai.github.io/devtoolspro/#howto-signup",
+          "name": "How to buy a Kiro IDE subscription at 50% off through DevTools Pro",
+          "description": "Four steps to activate a discounted Kiro plan: sign in, pick a plan, pay by UPI, and complete a 1:1 Google Meet setup.",
+          "totalTime": "PT15M",
+          "estimatedCost": { "@type": "MonetaryAmount", "currency": "INR", "value": "946" },
+          "step": [
+            { "@type": "HowToStep", "position": 1, "name": "Sign in with Google", "text": "Open the dashboard and authenticate with your Google account. No password to remember.", "url": "https://devtools-proai.github.io/devtoolspro/dashboard.html" },
+            { "@type": "HowToStep", "position": 2, "name": "Pick a Kiro plan", "text": "Choose Pro (₹946), Pro+ (₹1,892), Pro Max (₹4,731), or Power (₹9,461). All include the full Kiro model lineup." },
+            { "@type": "HowToStep", "position": 3, "name": "Pay by UPI", "text": "Scan the QR or use the UPI link to pay. Submit your UTR (transaction reference) for verification." },
+            { "@type": "HowToStep", "position": 4, "name": "Live setup on Google Meet", "text": "The DevTools Pro team contacts you on WhatsApp and schedules a 1:1 Google Meet to activate Kiro on your machine." }
+          ]
+        }
+      ]
+    }
     </script>
 
-    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 36 36'%3E%3Crect width='36' height='36' rx='8' fill='url(%23g)'/%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='36' y2='36'%3E%3Cstop offset='0%25' stop-color='%23a855f7'/%3E%3Cstop offset='100%25' stop-color='%23ec4899'/%3E%3C/linearGradient%3E%3C/defs%3E%3Cpath d='M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4' stroke='white' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round' fill='none' transform='translate(8,10) scale(0.8)'/%3E%3C/svg%3E">
+    <!-- ═══════════════════════════════════════════════════════════════
+         RESOURCE HINTS · trim LCP and TTFB.
+         dns-prefetch for non-critical third parties; preconnect for
+         the things the page actively waits on (fonts, Tailwind CDN).
+         ═══════════════════════════════════════════════════════════════ -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="preconnect" href="https://cdn.tailwindcss.com">
+    <link rel="preconnect" href="https://devtools-pro.onrender.com">
+    <link rel="dns-prefetch" href="//cdnjs.cloudflare.com">
+    <link rel="dns-prefetch" href="//accounts.google.com">
+    <link rel="dns-prefetch" href="//api.whatsapp.com">
+
+    <!-- Icons (data URI is intentional — avoids extra HTTP request) -->
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 36 36'%3E%3Crect width='36' height='36' rx='8' fill='url(%23g)'/%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='36' y2='36'%3E%3Cstop offset='0%25' stop-color='%23a855f7'/%3E%3Cstop offset='100%25' stop-color='%23ec4899'/%3E%3C/linearGradient%3E%3C/defs%3E%3Cpath d='M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4' stroke='white' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round' fill='none' transform='translate(8,10) scale(0.8)'/%3E%3C/svg%3E">
+    <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'%3E%3Crect width='180' height='180' rx='40' fill='url(%23g)'/%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='180' y2='180'%3E%3Cstop offset='0%25' stop-color='%23a855f7'/%3E%3Cstop offset='100%25' stop-color='%23ec4899'/%3E%3C/linearGradient%3E%3C/defs%3E%3Cpath d='M50 100l20-80m20 20l20 20-20 20M30 80l-20-20 20-20' stroke='white' stroke-width='12' stroke-linecap='round' stroke-linejoin='round' fill='none' transform='translate(40,50)'/%3E%3C/svg%3E">
+
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -69,6 +332,11 @@
         }
 
         * { box-sizing: border-box; }
+        /* WCAG screen-reader utility — also our CSS-only fallback for the
+           Tailwind .sr-only utility (in case the CDN is blocked, the
+           keyword-rich descriptor we add under the brand H1 still stays
+           visually hidden). */
+        .sr-only { position: absolute !important; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
         html { scroll-behavior: smooth; }
         body {
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, system-ui, sans-serif;
@@ -822,7 +1090,7 @@
                 <span class="brand-mark">DevTools Pro</span>
             </a>
 
-            <nav class="hidden lg:flex items-center gap-7">
+            <nav class="hidden lg:flex items-center gap-7" aria-label="Primary">
                 <a href="#what" class="nav-link">What You Get</a>
                 <a href="#pricing" class="nav-link">Pricing</a>
                 <a href="#billing" class="nav-link">Billing</a>
@@ -850,7 +1118,7 @@
         <button class="close-btn" id="mobile-menu-close" type="button" aria-label="Close menu">
             <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
         </button>
-        <nav>
+        <nav aria-label="Mobile primary">
             <a href="#what" class="mobile-nav-link">What You Get</a>
             <a href="#pricing" class="mobile-nav-link">Pricing</a>
             <a href="#billing" class="mobile-nav-link">Billing</a>
@@ -876,6 +1144,15 @@
                         Same Power.
                         <span class="accent">Half the Price.</span>
                     </h1>
+                    <!-- Screen-reader-only descriptor that carries the primary keyword set
+                         for crawlers and AI summarizers without disrupting the brand H1.
+                         Mirrors what the lede says in a more keyword-dense form. -->
+                    <p class="sr-only">
+                        Kiro IDE subscription at 50% off — Pro, Pro+, Pro Max, and Power plans
+                        with Claude Opus 4.8, Claude Sonnet 4.6, Auto, Qwen3 Coder Next, DeepSeek v3.2,
+                        and MiniMax 2.1. Genuine Kiro accounts from ₹946/month with UPI payment and
+                        a free 1:1 Google Meet setup session.
+                    </p>
 
                     <p class="hero-lede">
                         Get Kiro — the AI-powered coding IDE used by thousands of developers — at flat 50% off market price. Same models, same features. Just cheaper.
