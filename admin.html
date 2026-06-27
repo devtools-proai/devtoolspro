@@ -153,6 +153,79 @@
            still editable via the per-row modal. */
         .user-handle { font-family: ui-monospace, monospace; font-size: 12.5px; color: var(--violet-soft); }
 
+        /* ─── Per-row WhatsApp action ─── */
+        /* Small WhatsApp button at the right edge of every user cell.
+           Three visual states based on the user's renewal proximity:
+             default   – calm green (no urgency)
+             due-soon  – pulsing amber (≤ 3 days to renewal)
+             expired   – pulsing red  (plan_end_date already passed)
+           The pulse animation only runs on the two urgent states so
+           a long admin table doesn't look like a Christmas tree. */
+        .wa-btn {
+            margin-left: auto; flex-shrink: 0;
+            width: 32px; height: 32px; border-radius: 9px;
+            display: inline-flex; align-items: center; justify-content: center;
+            background: rgba(37,211,102,0.10);
+            border: 1px solid rgba(37,211,102,0.32);
+            color: #25D366; cursor: pointer;
+            transition: background .2s, border-color .2s, transform .12s;
+        }
+        .wa-btn:hover { background: rgba(37,211,102,0.18); border-color: rgba(37,211,102,0.55); transform: scale(1.05); }
+        .wa-btn svg { width: 16px; height: 16px; }
+        @keyframes wa-pulse-amber { 0%,100% { box-shadow: 0 0 0 0 rgba(245,158,11,0.45); } 50% { box-shadow: 0 0 0 7px rgba(245,158,11,0); } }
+        @keyframes wa-pulse-red   { 0%,100% { box-shadow: 0 0 0 0 rgba(248,113,113,0.5);  } 50% { box-shadow: 0 0 0 7px rgba(248,113,113,0); } }
+        .wa-btn.due-soon { background: rgba(245,158,11,0.14); border-color: rgba(245,158,11,0.45); color: var(--amber); animation: wa-pulse-amber 1.6s ease-in-out infinite; }
+        .wa-btn.expired-glow { background: rgba(248,113,113,0.14); border-color: rgba(248,113,113,0.45); color: var(--red); animation: wa-pulse-red 1.6s ease-in-out infinite; }
+
+        /* Template picker popover — anchored to the clicked button via
+           inline top/left set in JS. Single shared DOM element so we
+           don't leak nodes when the admin clicks rapidly through rows. */
+        .wa-popover {
+            position: fixed; z-index: 200;
+            width: 320px; max-width: calc(100vw - 2rem);
+            padding: 0.75rem;
+            border-radius: 14px;
+            background: linear-gradient(180deg, rgba(28,22,56,0.96) 0%, rgba(14,10,30,0.98) 100%);
+            border: 1px solid rgba(168,85,247,0.28);
+            box-shadow: 0 30px 70px -20px rgba(0,0,0,0.85), 0 0 50px rgba(168,85,247,0.18);
+            opacity: 0; visibility: hidden;
+            transform: translateY(-6px);
+            transition: opacity .18s ease, visibility .18s, transform .18s ease;
+        }
+        .wa-popover.show { opacity: 1; visibility: visible; transform: translateY(0); }
+        .wa-popover-head { padding: 4px 8px 10px; border-bottom: 1px solid rgba(255,255,255,0.05); margin-bottom: 6px; }
+        .wa-popover-head .name { display: block; font-size: 13.5px; font-weight: 700; color: var(--ink-0); }
+        .wa-popover-head .meta { display: block; font-size: 11px; color: var(--ink-3); margin-top: 2px; }
+        .wa-popover-head .meta .urgent { color: var(--amber); font-weight: 700; }
+        .wa-popover-head .meta .overdue { color: var(--red); font-weight: 700; }
+        .wa-popover-list { display: flex; flex-direction: column; gap: 4px; }
+        .wa-tmpl-btn {
+            display: flex; align-items: flex-start; gap: 10px;
+            padding: 0.6rem 0.7rem;
+            background: transparent; border: 1px solid transparent;
+            border-radius: 10px; color: var(--ink-0); text-align: left;
+            cursor: pointer; font-family: inherit; transition: all .15s;
+            text-decoration: none;
+        }
+        .wa-tmpl-btn:hover { background: rgba(168,85,247,0.08); border-color: rgba(168,85,247,0.24); }
+        .wa-tmpl-btn .tmpl-icon {
+            width: 28px; height: 28px; border-radius: 8px; flex-shrink: 0;
+            display: inline-flex; align-items: center; justify-content: center;
+        }
+        .wa-tmpl-btn .tmpl-icon svg { width: 14px; height: 14px; }
+        .wa-tmpl-btn.tmpl-renewal  .tmpl-icon { background: rgba(245,158,11,0.14); color: var(--amber); border: 1px solid rgba(245,158,11,0.3); }
+        .wa-tmpl-btn.tmpl-expired  .tmpl-icon { background: rgba(248,113,113,0.14); color: var(--red);    border: 1px solid rgba(248,113,113,0.3); }
+        .wa-tmpl-btn.tmpl-welcome  .tmpl-icon { background: rgba(34,197,94,0.14);   color: var(--green);  border: 1px solid rgba(34,197,94,0.3); }
+        .wa-tmpl-btn.tmpl-general  .tmpl-icon { background: rgba(168,85,247,0.14);  color: var(--violet-soft); border: 1px solid rgba(168,85,247,0.3); }
+        .wa-tmpl-btn .tmpl-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+        .wa-tmpl-btn .tmpl-title { font-size: 13px; font-weight: 600; color: var(--ink-0); }
+        .wa-tmpl-btn .tmpl-desc  { font-size: 11px; color: var(--ink-3); line-height: 1.45; }
+        .wa-popover-foot {
+            margin-top: 8px; padding: 8px 8px 4px; border-top: 1px solid rgba(255,255,255,0.05);
+            font-size: 10.5px; line-height: 1.5; color: var(--ink-3);
+        }
+        .wa-popover-foot.warn { color: var(--amber); }
+
         /* ─── Admin overlay loader (mirrors the dashboard's app-loader) ─── */
         @keyframes ad-spin { to { transform: rotate(360deg); } }
         @keyframes ad-pulse { 0%,100% { transform: translate(-50%,-50%) scale(1); } 50% { transform: translate(-50%,-50%) scale(0.9); box-shadow: 0 0 36px rgba(168,85,247,0.7); } }
@@ -493,6 +566,21 @@
         </section>
     </div>
 
+    <!-- WhatsApp template-picker popover. Single shared element — JS
+         positions it next to the clicked .wa-btn and fills in the
+         user's name/plan/dates so we don't leak DOM nodes when the
+         admin scrolls through dozens of rows clicking icons. -->
+    <div class="wa-popover" id="wa-popover" role="menu" aria-hidden="true">
+        <header class="wa-popover-head">
+            <span class="name" id="wa-pop-name">…</span>
+            <span class="meta" id="wa-pop-meta">…</span>
+        </header>
+        <div class="wa-popover-list" id="wa-pop-list"></div>
+        <footer class="wa-popover-foot" id="wa-pop-foot">
+            Opens WhatsApp Web / app with the message pre-filled.
+        </footer>
+    </div>
+
     <script>
         const API_BASE = 'https://devtools-pro.onrender.com';
         const STORE_KEY = 'dt_admin_token';
@@ -730,10 +818,11 @@
                         <td>
                             <div class="user-cell">
                                 <span class="user-avatar">${u.picture ? `<img src="${escapeHTML(u.picture)}" alt="" referrerpolicy="no-referrer">` : escapeHTML(initials(u.name))}</span>
-                                <div style="min-width:0">
+                                <div style="min-width:0; flex: 1;">
                                     <span class="user-name">${escapeHTML(u.name || '—')}</span>
                                     <span class="user-email">${escapeHTML(u.email || '')}</span>
                                 </div>
+                                ${renderWaButton(u)}
                             </div>
                         </td>
                         <td>
@@ -782,6 +871,322 @@
         document.getElementById('filter-status').addEventListener('change', loadUsers);
         document.getElementById('filter-plan').addEventListener('change', loadUsers);
         document.getElementById('refresh-btn').addEventListener('click', () => { loadUsers(); loadStats(); });
+
+        // ═══════════════════════════════════════════════════════════
+        // WhatsApp template picker — per-row icon → popover → wa.me link
+        // ═══════════════════════════════════════════════════════════
+
+        const WHATSAPP_NUMBER_FALLBACK = '';   // empty = let admin pick contact
+        const DASHBOARD_URL = 'https://devtools-proai.github.io/devtoolspro/dashboard.html';
+
+        // How many days before plan_end_date counts as "renewal due soon"?
+        // Mirrors what we'd want a cron reminder job to use later. Adjust
+        // here only; the row badge + the popover header default both read
+        // from this constant.
+        const RENEWAL_WARN_DAYS = 3;
+
+        // Compute days until renewal from a planEndDate ISO string. Returns
+        // null for users with no plan, a positive integer for future dates,
+        // 0 for today, and a negative integer for overdue.
+        function daysUntilRenewal(planEndDate) {
+            if (!planEndDate) return null;
+            const end = new Date(planEndDate);
+            if (isNaN(end.getTime())) return null;
+            const today = new Date();
+            // Compare date-only (midnight UTC) to dodge timezone slop.
+            const a = Date.UTC(today.getFullYear(), today.getMonth(), today.getDate());
+            const b = Date.UTC(end.getFullYear(), end.getMonth(), end.getDate());
+            return Math.floor((b - a) / 86400000);
+        }
+
+        // Render the per-row WhatsApp icon button. Three visual states
+        // driven by daysUntilRenewal — calm / due soon / expired.
+        // Cancelled users keep a calm-green button (they'd benefit from
+        // a "come back?" template even though there's no renewal due).
+        function renderWaButton(u) {
+            const d = daysUntilRenewal(u.planEndDate);
+            const status = (u.planStatus || '').toLowerCase();
+            const cls = ['wa-btn'];
+            let title = `Send a WhatsApp to ${escapeHTML(u.name || u.email || 'user')}`;
+            if (status === 'active' || status === 'processing') {
+                if (d !== null && d < 0) {
+                    cls.push('expired-glow');
+                    title = `Plan expired ${-d} day${-d === 1 ? '' : 's'} ago — send a renewal nudge`;
+                } else if (d !== null && d <= RENEWAL_WARN_DAYS) {
+                    cls.push('due-soon');
+                    title = `Renews in ${d} day${d === 1 ? '' : 's'} — send a reminder`;
+                }
+            }
+            return `<button class="${cls.join(' ')}" type="button"
+                            data-uid="${escapeHTML(u.id)}"
+                            title="${title}"
+                            aria-label="${title}">
+                        <svg fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347"/></svg>
+                    </button>`;
+        }
+
+        // Plan price table mirrors the rest of the codebase. Used by the
+        // renewal template so the message includes the exact INR figure
+        // the user will be paying next.
+        const WA_PLAN_INR = { 'Pro': 946, 'Pro+': 1892, 'Pro Max': 4731, 'Power': 9461 };
+
+        // ─── Template registry ─────────────────────────────────────────
+        // Each template returns a plain-string WhatsApp message body.
+        // The popover renders one button per entry in this object — to
+        // add or tweak a template, edit this map only; the rest of the
+        // UI surface re-derives from `id` / `label` / `desc`.
+        const WA_TEMPLATES = {
+            renewal: {
+                cls: 'tmpl-renewal',
+                label: 'Renewal reminder',
+                desc: (u) => {
+                    const d = daysUntilRenewal(u.planEndDate);
+                    if (d === null) return 'No renewal date on file.';
+                    if (d < 0) return `Plan expired ${-d} day${-d === 1 ? '' : 's'} ago.`;
+                    if (d === 0) return 'Plan renews today.';
+                    return `Renews in ${d} day${d === 1 ? '' : 's'}.`;
+                },
+                icon: '<svg fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>',
+                build: (u) => {
+                    const plan = u.currentPlan || 'your plan';
+                    const renewBy = u.planEndDate
+                        ? new Date(u.planEndDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
+                        : 'soon';
+                    const price = WA_PLAN_INR[u.currentPlan];
+                    return [
+                        `Hi ${u.name || 'there'},`,
+                        ``,
+                        `Quick reminder from DevTools Pro — your *${plan}* subscription renews on *${renewBy}*.`,
+                        ``,
+                        `To keep your IDE access uninterrupted, please complete the renewal payment before that date.`,
+                        price ? `Renewal amount: *₹${price.toLocaleString('en-IN')}*.` : '',
+                        ``,
+                        `Sign in and tap *Renew Now* on your dashboard:`,
+                        DASHBOARD_URL,
+                        ``,
+                        `Reply here if you'd like help with the renewal — happy to walk you through it.`,
+                        ``,
+                        `— Team DevTools Pro`,
+                    ].filter(Boolean).join('\n');
+                },
+            },
+            expired: {
+                cls: 'tmpl-expired',
+                label: 'Expired — reactivate',
+                desc: () => 'Plan past renewal date — bring them back.',
+                icon: '<svg fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 2m6-2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>',
+                build: (u) => {
+                    const plan = u.currentPlan || 'your plan';
+                    const endedOn = u.planEndDate
+                        ? new Date(u.planEndDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
+                        : 'recently';
+                    return [
+                        `Hi ${u.name || 'there'},`,
+                        ``,
+                        `We noticed your *${plan}* DevTools Pro subscription ended on *${endedOn}* and wanted to check if you'd like to renew.`,
+                        ``,
+                        `Your account, projects, and Meet link are all preserved — reactivation takes 2 minutes via UPI.`,
+                        ``,
+                        `Sign in and tap *Select Plan* on your dashboard:`,
+                        DASHBOARD_URL,
+                        ``,
+                        `If something pushed you to pause, we'd love to hear about it — reply here, no pressure.`,
+                        ``,
+                        `— Team DevTools Pro`,
+                    ].join('\n');
+                },
+            },
+            welcome: {
+                cls: 'tmpl-welcome',
+                label: 'Welcome / setup',
+                desc: (u) => (u.planStatus === 'processing'
+                    ? 'Payment in queue — confirm UTR & schedule Meet.'
+                    : 'Friendly onboarding ping for a fresh subscriber.'),
+                icon: '<svg fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>',
+                build: (u) => {
+                    const plan = u.currentPlan || 'your plan';
+                    return [
+                        `Hi ${u.name || 'there'},`,
+                        ``,
+                        `Welcome to DevTools Pro! 👋`,
+                        ``,
+                        `Your *${plan}* subscription is being set up. ${u.utrId ? `Once we verify your UTR (${u.utrId})` : 'Once payment is confirmed'}, we'll share the Google Meet link for your 1:1 onboarding call.`,
+                        ``,
+                        `What's a good time today or tomorrow for a quick 15-minute setup call? We'll get your IDE up and running.`,
+                        ``,
+                        `— Team DevTools Pro`,
+                    ].join('\n');
+                },
+            },
+            general: {
+                cls: 'tmpl-general',
+                label: 'Check-in / blank',
+                desc: () => 'Open WhatsApp with just a friendly hello.',
+                icon: '<svg fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>',
+                build: (u) => {
+                    const plan = u.currentPlan || 'your subscription';
+                    return [
+                        `Hi ${u.name || 'there'},`,
+                        ``,
+                        `Checking in from DevTools Pro — how's *${plan}* working out for you?`,
+                        ``,
+                        `If there's anything we can help with (model picks, credits, Meet times, anything else), just reply here.`,
+                        ``,
+                        `— Team DevTools Pro`,
+                    ].join('\n');
+                },
+            },
+        };
+
+        // Build a wa.me URL with the encoded message body. Strips
+        // anything that isn't a digit from the phone — handles +91-XXX,
+        // " 91 XXX", etc. — so the click works regardless of how the
+        // admin typed the phone in the edit modal.
+        function buildWaUrl(phone, message) {
+            const text = encodeURIComponent(message);
+            const cleaned = phone ? String(phone).replace(/\D+/g, '') : '';
+            if (cleaned.length >= 8) {
+                return `https://api.whatsapp.com/send?phone=${cleaned}&text=${text}`;
+            }
+            // No usable phone — WhatsApp will open the contact picker
+            // and let the admin paste the message into the right chat.
+            return `https://api.whatsapp.com/send?text=${text}`;
+        }
+
+        // Show the template popover anchored next to the clicked button.
+        // Returns silently if the button is somehow detached.
+        function openWaPopover(btn, user) {
+            const pop = document.getElementById('wa-popover');
+            const nameEl = document.getElementById('wa-pop-name');
+            const metaEl = document.getElementById('wa-pop-meta');
+            const listEl = document.getElementById('wa-pop-list');
+            const footEl = document.getElementById('wa-pop-foot');
+            if (!pop || !btn || !user) return;
+
+            nameEl.textContent = user.name || user.email || 'User';
+
+            // Header meta — surface the urgency the icon was hinting at.
+            const d = daysUntilRenewal(user.planEndDate);
+            let metaHtml = user.currentPlan ? `${escapeHTML(user.currentPlan)} · ` : '';
+            if (d === null) {
+                metaHtml += 'No renewal date on file';
+            } else if (d < 0) {
+                metaHtml += `<span class="overdue">Expired ${-d} day${-d === 1 ? '' : 's'} ago</span>`;
+            } else if (d === 0) {
+                metaHtml += `<span class="urgent">Renews today</span>`;
+            } else if (d <= RENEWAL_WARN_DAYS) {
+                metaHtml += `<span class="urgent">Renews in ${d} day${d === 1 ? '' : 's'}</span>`;
+            } else {
+                metaHtml += `Renews in ${d} days`;
+            }
+            metaEl.innerHTML = metaHtml;
+
+            // Build the template list dynamically. Suggested template
+            // (the most relevant one for this user's state) goes first
+            // — it doesn't get a separate UI affordance, just position.
+            const order = (() => {
+                if (d !== null && d < 0)                          return ['expired', 'renewal', 'general', 'welcome'];
+                if (d !== null && d <= RENEWAL_WARN_DAYS)         return ['renewal', 'expired', 'welcome', 'general'];
+                if (user.planStatus === 'processing')             return ['welcome', 'renewal', 'general', 'expired'];
+                return ['renewal', 'welcome', 'general', 'expired'];
+            })();
+
+            listEl.innerHTML = order.map(key => {
+                const t = WA_TEMPLATES[key];
+                if (!t) return '';
+                return `<button class="wa-tmpl-btn ${t.cls}" type="button" data-tmpl="${key}">
+                            <span class="tmpl-icon">${t.icon}</span>
+                            <span class="tmpl-text">
+                                <span class="tmpl-title">${escapeHTML(t.label)}</span>
+                                <span class="tmpl-desc">${escapeHTML(t.desc(user))}</span>
+                            </span>
+                        </button>`;
+            }).join('');
+
+            // Wire each template button to open WhatsApp.
+            listEl.querySelectorAll('button[data-tmpl]').forEach(b => {
+                b.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const key = b.dataset.tmpl;
+                    const tpl = WA_TEMPLATES[key];
+                    if (!tpl) return;
+                    const message = tpl.build(user);
+                    const url = buildWaUrl(user.phone, message);
+                    window.open(url, '_blank', 'noopener');
+                    closeWaPopover();
+                });
+            });
+
+            // Footer note: warn if there's no phone so the admin knows
+            // they'll get the WhatsApp contact picker instead of a
+            // direct chat with the user.
+            const hasPhone = user.phone && String(user.phone).replace(/\D+/g, '').length >= 8;
+            footEl.classList.toggle('warn', !hasPhone);
+            footEl.textContent = hasPhone
+                ? `Sends to ${user.phone}.`
+                : 'No phone on file — WhatsApp will open the contact picker so you can pick the right chat.';
+
+            // Position the popover next to the button. Clamp to viewport
+            // so it never bleeds off-screen on the right edge of a wide
+            // table or off the bottom of a short window.
+            const r = btn.getBoundingClientRect();
+            const pw = 320; // matches CSS width
+            const margin = 12;
+            let left = r.right + 8;
+            if (left + pw > window.innerWidth - margin) {
+                left = Math.max(margin, r.left - pw - 8);
+            }
+            let top = r.top;
+            // Reveal first so we can measure height
+            pop.style.left = left + 'px';
+            pop.style.top  = top + 'px';
+            pop.classList.add('show');
+            pop.setAttribute('aria-hidden', 'false');
+            // Now adjust if it would overflow the bottom edge.
+            const ph = pop.getBoundingClientRect().height;
+            if (top + ph > window.innerHeight - margin) {
+                top = Math.max(margin, window.innerHeight - ph - margin);
+                pop.style.top = top + 'px';
+            }
+        }
+
+        function closeWaPopover() {
+            const pop = document.getElementById('wa-popover');
+            if (!pop) return;
+            pop.classList.remove('show');
+            pop.setAttribute('aria-hidden', 'true');
+        }
+
+        // Delegated click handlers for the WhatsApp icons. Using
+        // delegation on document means we don't need to re-bind after
+        // every renderUserRows() call.
+        document.addEventListener('click', (e) => {
+            const btn = e.target.closest('.wa-btn[data-uid]');
+            if (btn) {
+                e.stopPropagation();   // don't open the edit modal
+                const uid = btn.dataset.uid;
+                const user = allUsers.find(u => u.id === uid);
+                if (user) openWaPopover(btn, user);
+                return;
+            }
+            // Click outside the popover closes it (don't close if the
+            // click was on a template button — those have their own
+            // stopPropagation).
+            const pop = document.getElementById('wa-popover');
+            if (pop && pop.classList.contains('show') && !pop.contains(e.target)) {
+                closeWaPopover();
+            }
+        });
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                const pop = document.getElementById('wa-popover');
+                if (pop && pop.classList.contains('show')) closeWaPopover();
+            }
+        });
+        // Reposition on scroll / resize so the popover follows the
+        // anchor button if the user scrolls before picking a template.
+        window.addEventListener('scroll', closeWaPopover, true);
+        window.addEventListener('resize', closeWaPopover);
 
         // ─── Edit modal ───
         const modal = document.getElementById('edit-modal');
