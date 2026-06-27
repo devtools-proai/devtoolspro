@@ -2059,7 +2059,7 @@
                                     </span>
                                     <span class="dash-history-stat-label">Total Saved</span>
                                     <span class="dash-history-stat-value green" id="hist-total-saved">₹0</span>
-                                    <span class="dash-history-stat-foot">Saved vs Kiro market price</span>
+                                    <span class="dash-history-stat-foot">vs Kiro market price + 18% GST</span>
                                 </div>
                                 <div class="dash-history-stat">
                                     <span class="dash-history-stat-icon amber" aria-hidden="true">
@@ -3777,17 +3777,30 @@
             return;
         }
 
-        // Totals: sum of actual amounts (server side, via payments join)
-        // with the plan's full monthly price as a fallback when no payment
-        // row matched. Savings == spent because every plan is 50% off the
-        // Kiro market price — what they paid equals what they saved.
+        // Totals: sum of actual amounts (server-side via the payments
+        // join) with the plan's full monthly price as a fallback when no
+        // payment row matched.
         const totalSpent = history.reduce((sum, h) => {
             const amount = Number(h.amount);
             const fallback = PLAN_AMOUNT_INR[h.plan] || 0;
             return sum + (Number.isFinite(amount) && amount > 0 ? amount : fallback);
         }, 0);
         setText('hist-total-spent', fmtINR(totalSpent));
-        setText('hist-total-saved', fmtINR(totalSpent));
+
+        // Total saved factors in the 18% GST Kiro charges on top of its
+        // listed price (kiro.dev applies India GST to every paid plan).
+        //
+        //   Equivalent Kiro market cost = totalSpent × 2 (we're 50% off)
+        //   Kiro charges 18% GST on top  = × 1.18
+        //   So saved = (totalSpent × 2 × 1.18) − totalSpent
+        //            = totalSpent × 1.36
+        //
+        // Example: a ₹946 Pro payment maps to a Kiro bill of ₹1,892 +
+        // 18% = ₹2,232.56 — the customer saved ₹1,286.56, which is
+        // 946 × 1.36. The multiplier scales linearly across every plan.
+        const GST_INCLUSIVE_SAVINGS_MULTIPLIER = 1.36;
+        const totalSaved = Math.round(totalSpent * GST_INCLUSIVE_SAVINGS_MULTIPLIER);
+        setText('hist-total-saved', fmtINR(totalSaved));
 
         // One row per transaction, newest first.
         tbody.innerHTML = history.map(h => {
