@@ -10,6 +10,7 @@
 -- Create the payments table for real-time verification
 CREATE TABLE IF NOT EXISTS payments (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES users(id) ON DELETE SET NULL,
   amount NUMERIC NOT NULL,
   plan TEXT NOT NULL,
   upi_id TEXT NOT NULL DEFAULT 'devtoolpro@ybl',
@@ -23,10 +24,32 @@ CREATE TABLE IF NOT EXISTS payments (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Indices: status (polling), UTR (dedup), expiry (cleanup).
+-- In-place migration for existing prod tables. user_id was added in v1.2
+-- to bind every payment to the user who created it — needed for the
+-- duplicate-session guard on /api/payment/create and the ownership
+-- check on /api/payment/submit-utr. Legacy rows stay NULL (admin can
+-- backfill from the linked submission rows if needed).
+ALTER TABLE payments ADD COLUMN IF NOT EXISTS user_id UUID;
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.table_constraints
+    WHERE constraint_name = 'payments_user_id_fkey' AND table_name = 'payments'
+  ) THEN
+    ALTER TABLE payments
+      ADD CONSTRAINT payments_user_id_fkey
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL;
+  END IF;
+END $$;
+
+-- Indices: status (polling), UTR (dedup), expiry (cleanup),
+-- user_id (duplicate-session check on /api/payment/create).
 CREATE INDEX IF NOT EXISTS idx_payments_status  ON payments (status);
 CREATE INDEX IF NOT EXISTS idx_payments_utr     ON payments (LOWER(utr_id)) WHERE utr_id IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_payments_expires ON payments (expires_at) WHERE status = 'pending';
+CREATE INDEX IF NOT EXISTS idx_payments_user_open
+  ON payments (user_id, status)
+  WHERE user_id IS NOT NULL AND status IN ('pending', 'awaiting_verification');
 
 -- Enable Row Level Security
 ALTER TABLE payments ENABLE ROW LEVEL SECURITY;

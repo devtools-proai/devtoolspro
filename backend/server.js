@@ -23,7 +23,8 @@ const { v4: uuidv4 } = require('uuid');
 const { initDB, addSubmission, getAllSubmissions, getSubmissionByUTR, getStats, getClient } = require('./db');
 const { generateSetupMessage, generateQuickReply } = require('./meet-service');
 const {
-  createPaymentRecord, submitUTR, getPaymentStatus, verifyPayment,
+  createPaymentRecord, findOpenPaymentForUser, getPaymentOwner,
+  submitUTR, getPaymentStatus, verifyPayment,
   getPendingPayments, getUTRConfidence,
 } = require('./payment-verify');
 const {
@@ -124,6 +125,11 @@ const ALLOWED_PLAN_STATUSES = new Set(['none', 'processing', 'active', 'cancelle
 // Ordered tier ladder — used by the deferred-downgrade endpoint to
 // reject "downgrades" that are actually upgrades or no-ops.
 const PLAN_TIERS = ['Pro', 'Pro+', 'Pro Max', 'Power'];
+// INR price ceiling per plan — the maximum legitimate /api/payment/create
+// amount. Prorated, diff, and full-month amounts all fall at or below
+// this number, so anything above is rejected as malformed. Mirrors
+// backend/plan-hierarchy.js so a single source of truth never drifts.
+const PLAN_INR_LIMITS = { 'Pro': 946, 'Pro+': 1892, 'Pro Max': 4731, 'Power': 9461 };
 
 // Convert a raw Supabase users row into the camelCase DTO every
 // auth response returns. Keeps the shape consistent across
@@ -933,7 +939,13 @@ app.get('/api/stats', requireAdminAuth, async (req, res) => {
 // ═══════════════════════════════════════════
 
 // ─── POST /api/payment/create ───
-app.post('/api/payment/create', async (req, res) => {
+// Authenticated. Stamps the payment row with the user's id and blocks
+// duplicate sessions: if the caller already has an awaiting_verification
+// row we reject (admin still needs to confirm the previous one) and if
+// they have a not-yet-expired pending row we return THAT instead of
+// inserting a second, so an accidental double-click can never produce
+// two payment ids for the same flow.
+app.post('/api/payment/create', requireAuth, async (req, res) => {
   try {
     const { amount, plan } = req.body || {};
     if (!amount || !plan) {
@@ -945,10 +957,52 @@ app.post('/api/payment/create', async (req, res) => {
       return res.status(400).json({ status: 'error', message: 'Invalid plan' });
     }
     const numericAmount = Number(amount);
-    if (!Number.isFinite(numericAmount) || numericAmount <= 0 || numericAmount > 100000) {
-      return res.status(400).json({ status: 'error', message: 'Invalid amount' });
+    const planCeiling = PLAN_INR_LIMITS[planClean];
+    if (!Number.isFinite(numericAmount) || numericAmount < 1 || numericAmount > planCeiling) {
+      // Floor at ₹1 so dust-amount fraud is blocked; ceiling is the
+      // plan's listed monthly price (prorated and upgrade-diff amounts
+      // are always below the ceiling, so this still passes every
+      // legitimate flow). Anyone trying to "pay ₹1 for Power" gets a
+      // 400 here even if they bypass the dashboard UI entirely.
+      return res.status(400).json({
+        status: 'error',
+        message: `Invalid amount for ${planClean}. Must be between ₹1 and ₹${planCeiling.toLocaleString('en-IN')}.`,
+      });
     }
-    const result = await createPaymentRecord({ amount: numericAmount, plan: planClean, upiId: 'devtoolpro@ybl' });
+
+    const userId = req.user.userId;
+
+    // Duplicate-session guard — checks the user's payments rows
+    // directly so a second click on Continue can't race past the UI
+    // disabled state introduced for the Processing pill.
+    const open = await findOpenPaymentForUser(userId);
+    if (open && open.row.status === 'awaiting_verification') {
+      return res.status(409).json({
+        status: 'error',
+        code: 'AWAITING_VERIFICATION',
+        message: "You already have a payment awaiting our team's verification. Please wait for it to be confirmed before submitting another.",
+        existingPaymentId: open.row.id,
+      });
+    }
+    if (open && open.row.status === 'pending' && !open.isStale) {
+      // Resume the same session instead of creating a duplicate row —
+      // gives the user idempotent behaviour on double-clicks / refreshes.
+      return res.status(200).json({
+        status: 'success',
+        paymentId: open.row.id,
+        upiId: 'devtoolpro@ybl',
+        amount: Number(open.row.amount),
+        plan: open.row.plan,
+        resumed: true,
+      });
+    }
+
+    const result = await createPaymentRecord({
+      amount: numericAmount,
+      plan: planClean,
+      upiId: 'devtoolpro@ybl',
+      userId,
+    });
     if (!result.success) {
       return res.status(500).json({ status: 'error', message: result.message });
     }
@@ -959,7 +1013,9 @@ app.post('/api/payment/create', async (req, res) => {
       amount: numericAmount,
       plan: planClean,
     });
+    console.log(`payment: created id=${result.paymentId} uid=${userId} plan=${planClean} amt=${numericAmount}`);
   } catch (error) {
+    console.error('payment/create exception:', error.message);
     res.status(500).json({ status: 'error', message: 'Internal error' });
   }
 });
@@ -970,11 +1026,28 @@ app.post('/api/payment/create', async (req, res) => {
 // test prefixes now waits for human review.
 const AUTO_VERIFY_THRESHOLD = 95;
 
-app.post('/api/payment/submit-utr', async (req, res) => {
+// ─── POST /api/payment/submit-utr ───
+// Authenticated. Verifies the caller owns the payment row before
+// letting them attach a UTR — prevents one user from binding their
+// UTR to a different user's pending payment (which would let an
+// attacker piggy-back on someone else's verification).
+app.post('/api/payment/submit-utr', requireAuth, async (req, res) => {
   try {
     const { paymentId, utrId } = req.body || {};
     if (!paymentId || !utrId) {
       return res.status(400).json({ status: 'error', message: 'Payment ID and UTR are required' });
+    }
+
+    // Ownership: legacy rows (created before user_id was added) have
+    // user_id = NULL — we allow those through for backwards compat,
+    // since admins can clean up the binding manually. Newly created
+    // rows always carry user_id and must match the caller.
+    const owner = await getPaymentOwner(paymentId);
+    if (!owner) {
+      return res.status(404).json({ status: 'error', message: 'Payment not found' });
+    }
+    if (owner.userId && owner.userId !== req.user.userId) {
+      return res.status(403).json({ status: 'error', message: 'Payment is not yours' });
     }
 
     const result = await submitUTR(paymentId, utrId);
@@ -1000,7 +1073,7 @@ app.post('/api/payment/submit-utr', async (req, res) => {
       confidence,
     });
 
-    console.log(`payment: utr submitted id=${paymentId} confidence=${confidence}`);
+    console.log(`payment: utr submitted id=${paymentId} uid=${req.user.userId} confidence=${confidence}`);
   } catch (error) {
     res.status(500).json({ status: 'error', message: 'Internal error' });
   }

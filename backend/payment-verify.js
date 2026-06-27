@@ -42,11 +42,16 @@ function validateUTR(utr) {
 
 /**
  * Create a payment record when user initiates payment.
+ *
+ * userId is required (the route enforces auth before calling here).
+ * Stored on the payment row so the duplicate-session guard and the
+ * /api/payment/submit-utr ownership check can scope queries by user.
  */
-async function createPaymentRecord({ amount, plan, upiId }) {
+async function createPaymentRecord({ amount, plan, upiId, userId }) {
   const client = getClient();
 
   const record = {
+    user_id: userId || null,
     amount,
     plan,
     upi_id: upiId || 'devtoolpro@ybl',
@@ -67,6 +72,37 @@ async function createPaymentRecord({ amount, plan, upiId }) {
   }
 
   return { success: true, paymentId: inserted.id, record: inserted };
+}
+
+/**
+ * Look up the user's most recent non-terminal payment row, if any.
+ * Used by /api/payment/create to detect a duplicate session before
+ * inserting a new one. Returns:
+ *   - null              — no open session, OK to create a new payment
+ *   - { row, isStale }  — open session exists; isStale=true means the
+ *                         pending row's expires_at has passed and the
+ *                         caller should treat it as effectively gone
+ */
+async function findOpenPaymentForUser(userId) {
+  if (!userId) return null;
+  const client = getClient();
+  const { data, error } = await client
+    .from('payments')
+    .select('id, status, plan, amount, expires_at, created_at')
+    .eq('user_id', userId)
+    .in('status', ['pending', 'awaiting_verification'])
+    .order('created_at', { ascending: false })
+    .limit(1);
+  if (error) {
+    console.warn('findOpenPaymentForUser warning:', error.message || error);
+    return null;
+  }
+  const row = (data || [])[0];
+  if (!row) return null;
+  if (row.status === 'awaiting_verification') return { row, isStale: false };
+  // pending → check expiry
+  const isStale = new Date(row.expires_at).getTime() <= Date.now();
+  return { row, isStale };
 }
 
 /**
@@ -189,6 +225,26 @@ async function getPendingPayments() {
 }
 
 /**
+ * Return the user_id stored on a payment row, or null if the row
+ * doesn't exist. Used by /api/payment/submit-utr to verify the
+ * caller owns the paymentId before letting them attach a UTR.
+ *
+ * Legacy rows created before user_id was added will return null;
+ * the calling route treats that as "pre-binding era, allow it" for
+ * backwards compat. Newly created rows always have user_id set.
+ */
+async function getPaymentOwner(paymentId) {
+  const client = getClient();
+  const { data, error } = await client
+    .from('payments')
+    .select('user_id, status')
+    .eq('id', paymentId)
+    .single();
+  if (error || !data) return null;
+  return { userId: data.user_id || null, status: data.status };
+}
+
+/**
  * UTR confidence score (0-100). We auto-verify high-confidence values to
  * reduce manual workload, but the threshold is intentionally conservative.
  *
@@ -219,6 +275,8 @@ function getUTRConfidence(utr) {
 module.exports = {
   validateUTR,
   createPaymentRecord,
+  findOpenPaymentForUser,
+  getPaymentOwner,
   submitUTR,
   getPaymentStatus,
   verifyPayment,

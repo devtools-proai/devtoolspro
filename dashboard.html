@@ -2459,7 +2459,10 @@
         try {
             const r = await fetch(`${API_BASE}/api/payment/create`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${getToken()}`,
+                },
                 body: JSON.stringify({ amount: proratedToday, plan: selectedPlan })
             });
             const j = await r.json();
@@ -2556,7 +2559,10 @@
                     try {
                         await fetch(`${API_BASE}/api/payment/submit-utr`, {
                             method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Authorization': `Bearer ${getToken()}`,
+                            },
                             body: JSON.stringify({ paymentId: currentPaymentId, utrId: utr })
                         });
                     } catch (e) { console.warn('payment/submit-utr failed', e); }
@@ -3190,11 +3196,27 @@
         try {
             const r = await fetch(`${API_BASE}/api/payment/create`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${getToken()}`,
+                },
                 body: JSON.stringify({ amount: charge.inr, plan })
             });
             const j = await r.json();
-            if (j.status === 'success' && j.paymentId) planModalState.paymentId = j.paymentId;
+            if (j.status === 'success' && j.paymentId) {
+                planModalState.paymentId = j.paymentId;
+            } else if (j.code === 'AWAITING_VERIFICATION') {
+                // Server enforced the duplicate-session guard. Pop the
+                // user back to the processing-state messaging on the
+                // dashboard — the modal can't proceed.
+                closePlanModal();
+                const u = getUser();
+                if (u) { u.planStatus = 'processing'; setUser(u); renderDashboard(u); }
+                alert(j.message || "You already have a payment awaiting verification. Please wait for our team to confirm it before submitting another.");
+                return;
+            } else {
+                console.warn('modal payment/create failed:', j.message);
+            }
         } catch (e) {
             console.warn('modal payment/create failed', e);
         }
@@ -3500,7 +3522,11 @@
             if (planModalState.paymentId) {
                 try {
                     await fetch(`${API_BASE}/api/payment/submit-utr`, {
-                        method: 'POST', headers: { 'Content-Type': 'application/json' },
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${getToken()}`,
+                        },
                         body: JSON.stringify({ paymentId: planModalState.paymentId, utrId: utr }),
                     });
                 } catch (e) { /* admin reconciliation handles this */ }
