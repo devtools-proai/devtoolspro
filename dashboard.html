@@ -2678,13 +2678,21 @@
         const fillEl = document.getElementById('dash-credits-fill');
         if (fillEl) requestAnimationFrame(() => { fillEl.style.width = '0%'; });
 
-        // Membership card — name + stable handle (deterministic from email + user.id)
-        const handle = deriveHandle(user);
+        // Membership card — name + handle. The backend lazy-backfills
+        // users.username with the same string deriveHandle() would
+        // produce, so on a fresh /auth/me we'll always have a value
+        // here. deriveHandle remains as the in-memory fallback for the
+        // brief gap before the backfill completes (or if the API is
+        // unreachable and we fall back to the cached user blob).
+        const handle = user.username
+            ? '@' + String(user.username).toLowerCase()
+            : deriveHandle(user);
         setText('dash-card-name', user.name || 'DevTools Member');
         setText('dash-card-handle', handle);
         setText('dash-card-since', startDate);
         setText('dash-card-tier-front', (PLAN_TIER_LABEL[user.currentPlan] || 'Enterprise Access').toUpperCase());
-        // Persist the generated handle so legacy code paths can read it back later
+        // Persist the displayed handle so legacy code paths can read it
+        // back later (e.g. AppShell title bar, future share-card export).
         try { user.handle = handle; localStorage.setItem('dt_user', JSON.stringify(user)); } catch {}
 
         // ─── Prorated note: only visible when the plan started mid-month ───

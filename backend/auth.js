@@ -111,6 +111,43 @@ async function verifyGoogleToken(idToken) {
  * select-then-insert pattern would race and one insert would fail on the
  * unique constraint).
  */
+/**
+ * Compute the default username for a user from their UUID + email.
+ *
+ * Mirrors the dashboard's deriveHandle() so the value the user sees
+ * on their membership card and the value stored in users.username
+ * are byte-for-byte the same — admins editing the column in the
+ * registry change the same string the user is staring at.
+ *
+ * Formula:
+ *   <email-local-part-stripped-to-[a-z0-9]> + '_' + <first-4-hex-of-uuid>
+ *
+ * Capped at 64 chars (the admin-edit ceiling) so auto-derived names
+ * fit the same column validation as admin-set ones.
+ */
+function computeDefaultUsername(userId, email) {
+  const local = String(email || '')
+    .split('@')[0]
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '');
+  const idStr = String(userId || '').replace(/-/g, '');
+  const suffix = idStr.slice(0, 4).toLowerCase() || 'pro';
+  const maxLocal = 64 - suffix.length - 1; // -1 for the underscore
+  return local.slice(0, Math.max(2, maxLocal)) + '_' + suffix;
+}
+
+/**
+ * Create or update a user record from a verified Google profile.
+ *
+ * Implementation uses an atomic upsert keyed on `google_id`, which makes the
+ * function safe against two near-simultaneous first-time logins (the older
+ * select-then-insert pattern would race and one insert would fail on the
+ * unique constraint).
+ *
+ * Also lazy-backfills the `username` column for users created before that
+ * column existed — every sign-in is a chance to bring legacy rows into the
+ * new normal-form representation without a migration script.
+ */
 async function findOrCreateUser(client, googleUser) {
   // Fast path: user already exists. We still issue an UPDATE for last_login
   // (and refresh the avatar URL, which Google rotates periodically).
@@ -126,9 +163,20 @@ async function findOrCreateUser(client, googleUser) {
   }
 
   if (existing) {
+    const updatePayload = {
+      last_login: new Date().toISOString(),
+      picture: googleUser.picture,
+    };
+    // Lazy backfill — if this row predates the username column, give it
+    // the same handle the dashboard would have shown anyway. Subsequent
+    // sign-ins skip this branch (cheap idempotent no-op).
+    if (!existing.username) {
+      updatePayload.username = computeDefaultUsername(existing.id, existing.email);
+      existing.username = updatePayload.username; // mirror locally so the response is fresh
+    }
     const { error: updateError } = await client
       .from('users')
-      .update({ last_login: new Date().toISOString(), picture: googleUser.picture })
+      .update(updatePayload)
       .eq('id', existing.id);
     if (updateError) {
       console.warn('Update last_login warning:', updateError.message || updateError);
@@ -157,6 +205,23 @@ async function findOrCreateUser(client, googleUser) {
   if (error) {
     console.error('Create user error:', error.message || error);
     return null;
+  }
+
+  // Stamp a default username on the freshly-inserted row. We can't
+  // compute this until after the UUID exists, so it's a quick second
+  // write. Failure is non-fatal — the dashboard's deriveHandle()
+  // fallback covers the brief gap.
+  if (newUser && !newUser.username) {
+    const username = computeDefaultUsername(newUser.id, newUser.email);
+    const { error: usernameErr } = await client
+      .from('users')
+      .update({ username })
+      .eq('id', newUser.id);
+    if (usernameErr) {
+      console.warn('Default username write warning:', usernameErr.message || usernameErr);
+    } else {
+      newUser.username = username;
+    }
   }
 
   return newUser;

@@ -207,11 +207,37 @@ app.get('/auth/me', requireAuth, async (req, res) => {
       return res.status(404).json({ status: 'error', message: 'User not found' });
     }
 
+    // Lazy backfill: if this row predates the username column, stamp
+    // a default handle now (same formula the dashboard's deriveHandle
+    // would use) so the membership card on screen and the admin's
+    // username field are always the same string. Idempotent — every
+    // subsequent /auth/me skips this branch.
+    if (!user.username) {
+      const derived = computeUsernameFromIdEmail(user.id, user.email);
+      const { error: bfErr } = await client
+        .from('users')
+        .update({ username: derived })
+        .eq('id', user.id);
+      if (!bfErr) user.username = derived;
+    }
+
     res.json({ status: 'success', user: userRowToDto(user) });
   } catch (error) {
     res.status(500).json({ status: 'error', message: 'Internal error' });
   }
 });
+
+// Tiny mirror of auth.js's computeDefaultUsername — duplicated here only
+// to avoid a circular require between server.js and auth.js. Both copies
+// MUST stay in sync; the dashboard's deriveHandle() in dashboard.html
+// is the third source of truth and is the reference implementation.
+function computeUsernameFromIdEmail(userId, email) {
+  const local = String(email || '').split('@')[0].toLowerCase().replace(/[^a-z0-9]+/g, '');
+  const idStr = String(userId || '').replace(/-/g, '');
+  const suffix = idStr.slice(0, 4).toLowerCase() || 'pro';
+  const maxLocal = 64 - suffix.length - 1;
+  return local.slice(0, Math.max(2, maxLocal)) + '_' + suffix;
+}
 
 // ─── POST /auth/update-plan ───
 // Record the plan a user has chosen and is paying for. The frontend invokes
@@ -693,11 +719,13 @@ app.patch('/admin/users/:id', requireAdminAuth, async (req, res) => {
       // Admin-editable handle. We strip to a conservative alphanumeric +
       // dot / underscore / hyphen set so it stays URL-safe and matches
       // what users would expect from a "username" slot. Empty clears.
+      // Ceiling matches the column's auto-derived limit (long emails
+      // can produce 30–40 char defaults; 64 leaves headroom).
       const raw = body.username == null ? '' : String(body.username).trim();
       if (raw) {
-        const safe = raw.replace(/[^A-Za-z0-9._-]/g, '').slice(0, 32);
+        const safe = raw.replace(/[^A-Za-z0-9._-]/g, '').slice(0, 64);
         if (safe.length < 2) {
-          return res.status(400).json({ status: 'error', message: 'Username must be 2-32 chars (letters, digits, . _ - only)' });
+          return res.status(400).json({ status: 'error', message: 'Username must be 2-64 chars (letters, digits, . _ - only)' });
         }
         updates.username = safe;
       } else {

@@ -553,8 +553,8 @@
                     <input class="field-input" id="edit-source" type="text">
                 </div>
                 <div class="field full">
-                    <label class="field-label" for="edit-username">Username <span style="color: var(--ink-3); font-weight: 500; letter-spacing: normal; text-transform: none;">— overrides the auto-derived <code style="font-family: ui-monospace, monospace;">@email-handle</code></span></label>
-                    <input class="field-input" id="edit-username" type="text" placeholder="leave blank to auto-derive" maxlength="32" pattern="[A-Za-z0-9._-]+">
+                    <label class="field-label" for="edit-username">Username <span style="color: var(--ink-3); font-weight: 500; letter-spacing: normal; text-transform: none;">— shown on the user's membership card (auto-derived from email + uid until edited)</span></label>
+                    <input class="field-input" id="edit-username" type="text" placeholder="auto-derived from email + uid" maxlength="64" pattern="[A-Za-z0-9._-]+">
                 </div>
                 <!-- Pending plan-change banner (hidden by default; shown
                      by openEdit() when pendingPlan is set on the row) -->
