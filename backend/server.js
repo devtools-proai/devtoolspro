@@ -121,6 +121,35 @@ app.get('/', (req, res) => {
 // pricing display and plan-hierarchy.js.
 const ALLOWED_PLANS = new Set(['Pro', 'Pro+', 'Pro Max', 'Power']);
 const ALLOWED_PLAN_STATUSES = new Set(['none', 'processing', 'active', 'cancelled', 'expired']);
+// Ordered tier ladder — used by the deferred-downgrade endpoint to
+// reject "downgrades" that are actually upgrades or no-ops.
+const PLAN_TIERS = ['Pro', 'Pro+', 'Pro Max', 'Power'];
+
+// Convert a raw Supabase users row into the camelCase DTO every
+// auth response returns. Keeps the shape consistent across
+// /auth/google, /auth/me, /auth/update-plan, /auth/cancel-plan, and
+// the new /auth/schedule-downgrade endpoint.
+function userRowToDto(u) {
+  if (!u) return null;
+  return {
+    id: u.id,
+    email: u.email,
+    name: u.name,
+    picture: u.picture,
+    currentPlan: u.current_plan,
+    planStatus: u.plan_status,
+    planStartDate: u.plan_start_date,
+    planEndDate: u.plan_end_date,
+    phone: u.phone,
+    registrationComplete: u.registration_complete,
+    utrId: u.utr_id,
+    meetLink: u.meet_link,
+    pendingPlan: u.pending_plan,
+    pendingPlanEffective: u.pending_plan_effective,
+    createdAt: u.created_at,
+    updatedAt: u.updated_at,
+  };
+}
 
 // ─── POST /auth/google ───
 app.post('/auth/google', async (req, res) => {
@@ -146,15 +175,7 @@ app.post('/auth/google', async (req, res) => {
     res.json({
       status: 'success',
       token: sessionToken,
-      user: {
-        id: user.id,
-        email: user.email,
-        name: user.name,
-        picture: user.picture,
-        currentPlan: user.current_plan,
-        planStatus: user.plan_status,
-        planEndDate: user.plan_end_date,
-      },
+      user: userRowToDto(user),
     });
 
     // Log identifier, not PII payload.
@@ -179,24 +200,7 @@ app.get('/auth/me', requireAuth, async (req, res) => {
       return res.status(404).json({ status: 'error', message: 'User not found' });
     }
 
-    res.json({
-      status: 'success',
-      user: {
-        id: user.id,
-        email: user.email,
-        name: user.name,
-        picture: user.picture,
-        currentPlan: user.current_plan,
-        planStatus: user.plan_status,
-        planStartDate: user.plan_start_date,
-        planEndDate: user.plan_end_date,
-        phone: user.phone,
-        registrationComplete: user.registration_complete,
-        utrId: user.utr_id,
-        meetLink: user.meet_link,
-        createdAt: user.created_at,
-      },
-    });
+    res.json({ status: 'success', user: userRowToDto(user) });
   } catch (error) {
     res.status(500).json({ status: 'error', message: 'Internal error' });
   }
@@ -294,23 +298,93 @@ app.post('/auth/update-plan', requireAuth, async (req, res) => {
     res.json({
       status: 'success',
       message: 'Plan recorded',
-      user: {
-        id: data.id,
-        email: data.email,
-        name: data.name,
-        picture: data.picture,
-        currentPlan: data.current_plan,
-        planStatus: data.plan_status,
-        planStartDate: data.plan_start_date,
-        planEndDate: data.plan_end_date,
-        phone: data.phone,
-        registrationComplete: data.registration_complete,
-        utrId: data.utr_id,
-        meetLink: data.meet_link,
-      },
+      user: userRowToDto(data),
     });
   } catch (error) {
     console.error('update-plan exception:', error.message);
+    res.status(500).json({ status: 'error', message: 'Internal error' });
+  }
+});
+
+// ─── POST /auth/schedule-downgrade ───
+// Records a deferred plan change. The user keeps their current (higher)
+// plan benefits until pending_plan_effective passes; on or after that
+// date, an admin (or a future cron) flips current_plan to pending_plan
+// via POST /admin/users/:id/apply-pending.
+//
+// Security model: same as /auth/update-plan — the body is treated as
+// hostile. We validate the target plan against ALLOWED_PLANS and refuse
+// anything that isn't strictly lower than the user's current tier. That
+// makes it impossible to "schedule an upgrade for free" by lying about
+// the direction.
+app.post('/auth/schedule-downgrade', requireAuth, async (req, res) => {
+  try {
+    const { plan, utrId } = req.body || {};
+
+    if (!plan || !ALLOWED_PLANS.has(plan)) {
+      return res.status(400).json({ status: 'error', message: 'Invalid plan' });
+    }
+    if (!utrId || typeof utrId !== 'string' || utrId.trim().length < 6) {
+      return res.status(400).json({ status: 'error', message: 'Invalid UTR' });
+    }
+
+    const client = getClient();
+    const { data: userRow, error: userErr } = await client
+      .from('users')
+      .select('id, current_plan, plan_status')
+      .eq('id', req.user.userId)
+      .single();
+    if (userErr || !userRow) {
+      return res.status(404).json({ status: 'error', message: 'User not found' });
+    }
+    if (!userRow.current_plan) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'No active plan to downgrade from. Use Change Plan instead.',
+      });
+    }
+
+    const currentIdx = PLAN_TIERS.indexOf(userRow.current_plan);
+    const newIdx = PLAN_TIERS.indexOf(plan);
+    if (currentIdx < 0 || newIdx < 0) {
+      return res.status(400).json({ status: 'error', message: 'Unknown plan' });
+    }
+    if (newIdx >= currentIdx) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Scheduled downgrade must be to a strictly lower tier than your current plan.',
+      });
+    }
+
+    // The change takes effect on the 1st of next month (UTC). That's
+    // when the next billing cycle starts and the user's current plan
+    // would have renewed anyway — so the downgrade simply replaces the
+    // renewal without any mid-cycle service change.
+    const now = new Date();
+    const effective = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1, 0, 0, 0));
+
+    const { data, error } = await client
+      .from('users')
+      .update({
+        pending_plan: plan,
+        pending_plan_effective: effective.toISOString(),
+        // current_plan / plan_status / plan_end_date intentionally NOT
+        // touched — the user keeps their higher tier benefits until
+        // the effective date passes.
+      })
+      .eq('id', req.user.userId)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('schedule-downgrade db error:', error.message);
+      return res.status(500).json({ status: 'error', message: 'Failed to schedule downgrade' });
+    }
+
+    res.json({ status: 'success', message: 'Downgrade scheduled', user: userRowToDto(data) });
+    console.log(`auth: scheduled downgrade uid=${data.id} -> ${plan} eff=${effective.toISOString()}`);
+  } catch (error) {
+    console.error('schedule-downgrade exception:', error.message);
     res.status(500).json({ status: 'error', message: 'Internal error' });
   }
 });
@@ -348,16 +422,10 @@ app.post('/auth/register', requireAuth, async (req, res) => {
 
     res.json({
       status: 'success',
-      user: {
-        id: data?.id || req.user.userId,
-        email: data?.email || req.user.email,
-        name: data?.name || fullName,
-        picture: data?.picture,
-        currentPlan: data?.current_plan,
-        planStatus: data?.plan_status || 'none',
-        planStartDate: data?.plan_start_date,
-        planEndDate: data?.plan_end_date,
-        meetLink: data?.meet_link,
+      user: data ? userRowToDto(data) : {
+        id: req.user.userId,
+        email: req.user.email,
+        name: fullName,
         registrationComplete: true,
       },
     });
@@ -383,7 +451,11 @@ app.post('/auth/cancel-plan', requireAuth, async (req, res) => {
       return res.status(500).json({ status: 'error', message: 'Failed to cancel' });
     }
 
-    res.json({ status: 'success', message: 'Plan cancelled — active until end of billing cycle', user: data });
+    res.json({
+      status: 'success',
+      message: 'Plan cancelled — active until end of billing cycle',
+      user: userRowToDto(data),
+    });
   } catch (error) {
     res.status(500).json({ status: 'error', message: 'Internal error' });
   }
@@ -603,6 +675,69 @@ app.patch('/admin/users/:id', requireAdminAuth, async (req, res) => {
     console.log(`admin: patched uid=${data.id} fields=${Object.keys(updates).join(',')}`);
   } catch (e) {
     console.error('admin patch exception:', e.message);
+    res.status(500).json({ status: 'error', message: 'Internal error' });
+  }
+});
+
+// ─── POST /admin/users/:id/apply-pending ───
+// Flips current_plan -> pending_plan and recomputes the billing dates.
+// Called by an admin when the user's scheduled downgrade is due (or
+// when they want to apply it early). The pending_* columns are
+// cleared in the same write so the dashboard stops showing the banner.
+app.post('/admin/users/:id/apply-pending', requireAdminAuth, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const client = getClient();
+
+    const { data: userRow, error: userErr } = await client
+      .from('users')
+      .select('id, pending_plan, pending_plan_effective')
+      .eq('id', id)
+      .single();
+    if (userErr || !userRow) {
+      return res.status(404).json({ status: 'error', message: 'User not found' });
+    }
+    if (!userRow.pending_plan) {
+      return res.status(400).json({ status: 'error', message: 'No pending plan to apply' });
+    }
+    if (!ALLOWED_PLANS.has(userRow.pending_plan)) {
+      return res.status(400).json({ status: 'error', message: 'Pending plan is invalid' });
+    }
+
+    // The new billing cycle anchors at pending_plan_effective if it's
+    // set, else "now". plan_end_date is the 1st of the next month after
+    // that — same convention as /auth/update-plan.
+    const effective = userRow.pending_plan_effective
+      ? new Date(userRow.pending_plan_effective)
+      : new Date();
+    const planEndDate = new Date(Date.UTC(
+      effective.getUTCFullYear(),
+      effective.getUTCMonth() + 1,
+      1, 0, 0, 0
+    ));
+
+    const { data, error } = await client
+      .from('users')
+      .update({
+        current_plan: userRow.pending_plan,
+        plan_status: 'active',
+        plan_start_date: effective.toISOString(),
+        plan_end_date: planEndDate.toISOString(),
+        pending_plan: null,
+        pending_plan_effective: null,
+      })
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error || !data) {
+      console.error('apply-pending error:', error);
+      return res.status(500).json({ status: 'error', message: 'Failed to apply pending plan' });
+    }
+    res.json({ status: 'success', user: rowToAdminUser(data) });
+    console.log(`admin: applied pending uid=${data.id} plan=${data.current_plan}`);
+  } catch (e) {
+    console.error('apply-pending exception:', e.message);
     res.status(500).json({ status: 'error', message: 'Internal error' });
   }
 });

@@ -217,6 +217,35 @@
         .pill.red    { background: rgba(248,113,113,0.14); color: var(--red); border: 1px solid rgba(248,113,113,0.25); }
         .pill.violet { background: rgba(168,85,247,0.14); color: var(--violet-soft); border: 1px solid rgba(168,85,247,0.25); }
         .pill.muted  { background: rgba(255,255,255,0.04); color: var(--ink-2); border: 1px solid rgba(255,255,255,0.06); }
+        .pill.amber-soft { background: rgba(245,158,11,0.12); color: var(--amber); border: 1px solid rgba(245,158,11,0.28); }
+        /* Pending-change indicator that hangs under the Plan pill in a row.
+           Visually distinct from the primary status pill so it reads as
+           "this user has a scheduled change" rather than "this user IS
+           amber-status". */
+        .plan-pending-line {
+            display: inline-flex; align-items: center; gap: 5px;
+            margin-top: 5px;
+            font-size: 10.5px; font-weight: 600; color: var(--amber);
+            white-space: nowrap;
+        }
+        .plan-pending-line svg { width: 11px; height: 11px; flex-shrink: 0; }
+
+        /* Sortable column headers — show a caret on the active column,
+           rotated 180° in descending mode. Hidden carets reserve space so
+           the header text doesn't shift when the active column changes. */
+        th.sortable {
+            cursor: pointer; user-select: none;
+            transition: color .15s ease;
+        }
+        th.sortable:hover { color: var(--ink-0); }
+        th.sortable .sort-caret {
+            display: inline-block; margin-left: 4px;
+            opacity: 0; transition: opacity .2s, transform .2s;
+            font-size: 9px; vertical-align: 1px;
+        }
+        th.sortable.active { color: var(--violet-soft); }
+        th.sortable.active .sort-caret { opacity: 1; }
+        th.sortable.active.desc .sort-caret { transform: rotate(180deg); }
         .mono { font-family: ui-monospace, monospace; font-size: 11.5px; color: var(--ink-2); }
         .empty { padding: 3rem 1rem; text-align: center; color: var(--ink-2); font-size: 13px; }
 
@@ -238,6 +267,24 @@
         .modal-msg { font-size: 12.5px; color: var(--ink-2); }
         .modal-msg.ok  { color: var(--green); }
         .modal-msg.err { color: var(--red); }
+
+        /* Pending plan-change row inside the edit modal. Visually
+           consistent with the dashboard's pending banner so the admin
+           sees the same status the user is seeing. */
+        .modal-pending-row {
+            display: flex; align-items: center; gap: 12px;
+            padding: 0.85rem 1rem; border-radius: 12px;
+            background: rgba(245,158,11,0.07);
+            border: 1px solid rgba(245,158,11,0.22);
+        }
+        .modal-pending-row svg { width: 18px; height: 18px; flex-shrink: 0; color: var(--amber); }
+        .modal-pending-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+        .modal-pending-title {
+            font-size: 10.5px; font-weight: 700; letter-spacing: 0.18em;
+            text-transform: uppercase; color: var(--amber);
+        }
+        .modal-pending-detail { font-size: 13px; color: var(--ink-1); line-height: 1.5; }
+        .modal-pending-detail strong { color: var(--ink-0); font-weight: 700; }
 
         @media (max-width: 1080px) { .stats { grid-template-columns: repeat(2, 1fr); } .modal-body { grid-template-columns: 1fr; } }
         @media (max-width: 660px)  { .stats { grid-template-columns: 1fr; } .admin-main { padding: 1rem; } .admin-topbar { padding: 0.85rem 1rem; } table thead { display: none; } table tbody td { display: block; padding: 0.4rem 1rem; border-bottom: 0; } table tbody tr { display: block; padding: 0.85rem 0; border-bottom: 1px solid var(--line); } }
@@ -337,19 +384,20 @@
                     <table>
                         <thead>
                             <tr>
-                                <th>User</th>
-                                <th>Plan</th>
-                                <th>Status</th>
-                                <th>Started</th>
-                                <th>Renews</th>
-                                <th>Username</th>
+                                <th class="sortable" data-sort-key="name">User <span class="sort-caret">▲</span></th>
+                                <th class="sortable" data-sort-key="currentPlan">Plan <span class="sort-caret">▲</span></th>
+                                <th class="sortable" data-sort-key="planStatus">Status <span class="sort-caret">▲</span></th>
+                                <th class="sortable" data-sort-key="planStartDate">Started <span class="sort-caret">▲</span></th>
+                                <th class="sortable" data-sort-key="planEndDate">Renews <span class="sort-caret">▲</span></th>
+                                <th class="sortable" data-sort-key="email">Username <span class="sort-caret">▲</span></th>
                                 <th>UTR</th>
-                                <th>Updated</th>
-                                <th>Joined</th>
+                                <th class="sortable" data-sort-key="updatedAt">Updated <span class="sort-caret">▲</span></th>
+                                <th class="sortable" data-sort-key="lastLogin">Last seen <span class="sort-caret">▲</span></th>
+                                <th class="sortable active desc" data-sort-key="createdAt">Joined <span class="sort-caret">▲</span></th>
                             </tr>
                         </thead>
                         <tbody id="users-rows">
-                            <tr><td colspan="9" class="empty">Loading…</td></tr>
+                            <tr><td colspan="10" class="empty">Loading…</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -416,6 +464,23 @@
                 <div class="field">
                     <label class="field-label" for="edit-source">Source</label>
                     <input class="field-input" id="edit-source" type="text">
+                </div>
+                <!-- Pending plan-change banner (hidden by default; shown
+                     by openEdit() when pendingPlan is set on the row) -->
+                <div class="field full" id="edit-pending-block" style="display:none;">
+                    <div class="modal-pending-row" id="edit-pending-row">
+                        <svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 2m6-2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                        <div class="modal-pending-text">
+                            <span class="modal-pending-title">Scheduled change</span>
+                            <span class="modal-pending-detail">
+                                Switching to <strong id="edit-pending-plan">…</strong>
+                                on <strong id="edit-pending-date">…</strong>.
+                            </span>
+                        </div>
+                        <button type="button" class="btn-primary" id="apply-pending-btn" style="width:auto;padding:8px 14px;font-size:12px;">
+                            <span id="apply-pending-label">Apply now</span>
+                        </button>
+                    </div>
                 </div>
             </form>
 
@@ -591,7 +656,7 @@
             const plan   = document.getElementById('filter-plan').value;
             const tbody = document.getElementById('users-rows');
             const meta = document.getElementById('count-meta');
-            tbody.innerHTML = '<tr><td colspan="9" class="empty">Loading…</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="10" class="empty">Loading…</td></tr>';
             try {
                 const params = new URLSearchParams();
                 if (search) params.set('search', search);
@@ -600,11 +665,67 @@
                 const { users, count } = await api('/admin/users' + (params.toString() ? '?' + params.toString() : ''));
                 allUsers = users;
                 meta.textContent = `${count} user${count === 1 ? '' : 's'}`;
-                if (!users.length) {
-                    tbody.innerHTML = '<tr><td colspan="9" class="empty">No users match the current filters.</td></tr>';
-                    return;
-                }
-                tbody.innerHTML = users.map(u => `
+                renderUserRows();
+            } catch (e) {
+                tbody.innerHTML = `<tr><td colspan="10" class="empty">${escapeHTML(e.message || 'Failed to load')}</td></tr>`;
+            }
+        }
+
+        // ─── Client-side sort state ───
+        // Default: newest joined first. Sort is purely client-side over the
+        // already-fetched allUsers array — the API stays simple and we get
+        // instant feedback without a round-trip on every column toggle.
+        let sortKey = 'createdAt';
+        let sortDir = 'desc';
+
+        function compareForSort(a, b, key) {
+            const av = a[key];
+            const bv = b[key];
+            // null / undefined always sort to the bottom regardless of direction.
+            const aNull = av === null || av === undefined || av === '';
+            const bNull = bv === null || bv === undefined || bv === '';
+            if (aNull && bNull) return 0;
+            if (aNull) return 1;
+            if (bNull) return -1;
+            // ISO 8601 timestamp strings sort lexicographically as dates.
+            // Everything else is compared as lowercase strings.
+            const aN = typeof av === 'string' ? av.toLowerCase() : av;
+            const bN = typeof bv === 'string' ? bv.toLowerCase() : bv;
+            if (aN < bN) return -1;
+            if (aN > bN) return 1;
+            return 0;
+        }
+
+        function renderUserRows() {
+            const tbody = document.getElementById('users-rows');
+            if (!tbody) return;
+
+            if (!allUsers.length) {
+                tbody.innerHTML = '<tr><td colspan="10" class="empty">No users match the current filters.</td></tr>';
+                return;
+            }
+
+            // Sort in-place. The user list is small (≤1000 per response
+            // cap) so this is cheap; no virtualisation needed.
+            const sign = sortDir === 'asc' ? 1 : -1;
+            allUsers.sort((a, b) => sign * compareForSort(a, b, sortKey));
+
+            // Sync the caret indicators with the active sort column.
+            document.querySelectorAll('th.sortable').forEach(th => {
+                const isActive = th.dataset.sortKey === sortKey;
+                th.classList.toggle('active', isActive);
+                th.classList.toggle('desc', isActive && sortDir === 'desc');
+            });
+
+            tbody.innerHTML = allUsers.map(u => {
+                // Pending-change badge for the Plan column — only shown
+                // when the user has a scheduled downgrade.
+                const pendingLine = u.pendingPlan ? `
+                    <span class="plan-pending-line" title="Effective ${escapeHTML(fmtDate(u.pendingPlanEffective))}">
+                        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+                        ${escapeHTML(u.pendingPlan)} on ${escapeHTML(fmtDate(u.pendingPlanEffective))}
+                    </span>` : '';
+                return `
                     <tr data-id="${escapeHTML(u.id)}">
                         <td>
                             <div class="user-cell">
@@ -615,23 +736,42 @@
                                 </div>
                             </div>
                         </td>
-                        <td>${planPill(u.currentPlan)}</td>
+                        <td>
+                            ${planPill(u.currentPlan)}
+                            ${pendingLine}
+                        </td>
                         <td>${statusPill(u.planStatus)}</td>
                         <td>${escapeHTML(fmtDate(u.planStartDate))}</td>
                         <td>${escapeHTML(fmtDate(u.planEndDate))}</td>
                         <td><span class="user-handle" title="${escapeHTML(u.email || '')}">${escapeHTML(usernameFromEmail(u.email))}</span></td>
                         <td><span class="mono" title="${escapeHTML(u.utrId || '')}">${escapeHTML(u.utrId || '—')}</span></td>
                         <td>${escapeHTML(fmtDate(u.updatedAt))}</td>
+                        <td>${escapeHTML(fmtDate(u.lastLogin))}</td>
                         <td>${escapeHTML(fmtDate(u.createdAt))}</td>
                     </tr>
-                `).join('');
-                tbody.querySelectorAll('tr[data-id]').forEach(tr => {
-                    tr.addEventListener('click', () => openEdit(tr.dataset.id));
-                });
-            } catch (e) {
-                tbody.innerHTML = `<tr><td colspan="9" class="empty">${escapeHTML(e.message || 'Failed to load')}</td></tr>`;
-            }
+                `;
+            }).join('');
+            tbody.querySelectorAll('tr[data-id]').forEach(tr => {
+                tr.addEventListener('click', () => openEdit(tr.dataset.id));
+            });
         }
+
+        // Wire sortable headers. Clicking the same column toggles
+        // direction; clicking a different column resets to descending
+        // (most users want newest-first when they pivot).
+        document.querySelectorAll('th.sortable').forEach(th => {
+            th.addEventListener('click', () => {
+                const k = th.dataset.sortKey;
+                if (!k) return;
+                if (sortKey === k) {
+                    sortDir = sortDir === 'asc' ? 'desc' : 'asc';
+                } else {
+                    sortKey = k;
+                    sortDir = 'desc';
+                }
+                renderUserRows();
+            });
+        });
 
         // ─── Filters / search / refresh ───
         let searchTimer;
@@ -663,6 +803,18 @@
             document.getElementById('edit-phone').value = u.phone || '';
             document.getElementById('edit-source').value = u.source || '';
             document.getElementById('modal-msg').textContent = '';
+            // Pending-change block: visible only when the user has a
+            // scheduled downgrade. Admin can click "Apply now" to flip
+            // current_plan -> pending_plan immediately (instead of
+            // waiting for the effective date).
+            const pendingBlock = document.getElementById('edit-pending-block');
+            if (u.pendingPlan && u.pendingPlanEffective) {
+                document.getElementById('edit-pending-plan').textContent = u.pendingPlan;
+                document.getElementById('edit-pending-date').textContent = fmtDate(u.pendingPlanEffective);
+                pendingBlock.style.display = '';
+            } else {
+                pendingBlock.style.display = 'none';
+            }
             modal.classList.add('show');
         }
         function closeEdit() { modal.classList.remove('show'); editingUser = null; }
@@ -671,6 +823,45 @@
         document.getElementById('modal-cancel').addEventListener('click', closeEdit);
         modal.addEventListener('click', (e) => { if (e.target === modal) closeEdit(); });
         document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && modal.classList.contains('show')) closeEdit(); });
+
+        // Apply a scheduled downgrade immediately. Useful when the
+        // effective date has already passed or the admin wants to short-
+        // circuit the wait. Server flips current_plan -> pending_plan,
+        // recomputes plan_start/end dates, clears pending_* columns.
+        document.getElementById('apply-pending-btn').addEventListener('click', async () => {
+            if (!editingUser || !editingUser.pendingPlan) return;
+            if (!confirm(`Apply pending change to ${editingUser.pendingPlan} now? This flips ${editingUser.name}'s current plan immediately.`)) return;
+
+            const btn = document.getElementById('apply-pending-btn');
+            const lbl = document.getElementById('apply-pending-label');
+            const msg = document.getElementById('modal-msg');
+            msg.className = 'modal-msg'; msg.textContent = '';
+            btn.disabled = true; lbl.innerHTML = '<span class="spinner"></span> Applying…';
+
+            try {
+                const { user } = await api(`/admin/users/${encodeURIComponent(editingUser.id)}/apply-pending`, { method: 'POST' });
+                msg.textContent = 'Pending change applied.'; msg.className = 'modal-msg ok';
+                // Mirror server state locally so the row redraws correctly.
+                const idx = allUsers.findIndex(x => x.id === user.id);
+                if (idx >= 0) allUsers[idx] = user;
+                editingUser = user;
+                // Hide the pending block since it's no longer pending,
+                // refresh the form values so date inputs reflect the new
+                // billing cycle, and re-render the row underneath.
+                const pendingBlock = document.getElementById('edit-pending-block');
+                if (pendingBlock) pendingBlock.style.display = 'none';
+                document.getElementById('edit-plan').value = user.currentPlan || '';
+                document.getElementById('edit-status').value = user.planStatus || 'none';
+                document.getElementById('edit-start').value = user.planStartDate ? new Date(user.planStartDate).toISOString().slice(0,10) : '';
+                document.getElementById('edit-end').value   = user.planEndDate   ? new Date(user.planEndDate).toISOString().slice(0,10)   : '';
+                renderUserRows();
+                loadStats();
+            } catch (e) {
+                msg.textContent = e.message || 'Failed to apply'; msg.className = 'modal-msg err';
+            } finally {
+                btn.disabled = false; lbl.textContent = 'Apply now';
+            }
+        });
 
         document.getElementById('modal-save').addEventListener('click', async () => {
             if (!editingUser) return;
@@ -701,7 +892,13 @@
                 const idx = allUsers.findIndex(x => x.id === user.id);
                 if (idx >= 0) allUsers[idx] = user;
                 editingUser = user;
-                setTimeout(() => { closeEdit(); loadUsers(); loadStats(); }, 500);
+                // Re-render the existing rows in-place so the admin
+                // doesn't lose their scroll position / sort state to a
+                // full refetch — the in-memory allUsers already has the
+                // fresh row from the PATCH response above.
+                renderUserRows();
+                loadStats();
+                setTimeout(closeEdit, 500);
             } catch (e) {
                 msg.textContent = e.message || 'Save failed'; msg.className = 'modal-msg err';
             } finally {
