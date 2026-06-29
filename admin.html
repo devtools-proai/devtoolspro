@@ -230,6 +230,7 @@
         .wa-tmpl-btn.tmpl-renewal  .tmpl-icon { background: rgba(245,158,11,0.14); color: var(--amber); border: 1px solid rgba(245,158,11,0.3); }
         .wa-tmpl-btn.tmpl-expired  .tmpl-icon { background: rgba(248,113,113,0.14); color: var(--red);    border: 1px solid rgba(248,113,113,0.3); }
         .wa-tmpl-btn.tmpl-welcome  .tmpl-icon { background: rgba(34,197,94,0.14);   color: var(--green);  border: 1px solid rgba(34,197,94,0.3); }
+        .wa-tmpl-btn.tmpl-newuser  .tmpl-icon { background: rgba(56,189,248,0.14);  color: #38bdf8;        border: 1px solid rgba(56,189,248,0.3); }
         .wa-tmpl-btn.tmpl-general  .tmpl-icon { background: rgba(168,85,247,0.14);  color: var(--violet-soft); border: 1px solid rgba(168,85,247,0.3); }
         .wa-tmpl-btn .tmpl-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
         .wa-tmpl-btn .tmpl-title { font-size: 13px; font-weight: 600; color: var(--ink-0); }
@@ -1227,6 +1228,31 @@
                     ].join('\n');
                 },
             },
+            newuser: {
+                cls: 'tmpl-newuser',
+                label: 'New signup — nudge to plan',
+                desc: (u) => (u.currentPlan
+                    ? 'Registered & already on a plan.'
+                    : 'Just registered — no plan picked yet.'),
+                icon: '<svg fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"/></svg>',
+                build: (u) => {
+                    const heard = u.source ? ` (we saw you found us via ${u.source})` : '';
+                    return [
+                        `Hi ${u.name || 'there'},`,
+                        ``,
+                        `Thanks for signing up with DevTools Pro${heard}!`,
+                        ``,
+                        `You've created your account — the last step is picking a plan to unlock Kiro at *50% off* with Claude Opus, Sonnet, and all premium models.`,
+                        ``,
+                        `Plans start at just *₹946/month* (Pro). Sign in and tap *Select Plan* on your dashboard:`,
+                        DASHBOARD_URL,
+                        ``,
+                        `Payment is a quick UPI scan, and we'll hop on a 1:1 Google Meet to get your IDE set up. Reply here if you'd like a hand choosing the right plan — happy to help!`,
+                        ``,
+                        `— Team DevTools Pro`,
+                    ].join('\n');
+                },
+            },
             general: {
                 cls: 'tmpl-general',
                 label: 'Check-in / blank',
@@ -1303,11 +1329,19 @@
             // Build the template list dynamically. Suggested template
             // (the most relevant one for this user's state) goes first
             // — it doesn't get a separate UI affordance, just position.
+            //
+            // "New signup" leads when the user has completed registration
+            // but hasn't picked a plan yet (planStatus none/empty and no
+            // currentPlan) — exactly the "just filled the form" case the
+            // admin wants to nudge toward payment.
+            const isFreshSignup = !user.currentPlan
+                && (!user.planStatus || user.planStatus === 'none');
             const order = (() => {
-                if (d !== null && d < 0)                          return ['expired', 'renewal', 'general', 'welcome'];
-                if (d !== null && d <= RENEWAL_WARN_DAYS)         return ['renewal', 'expired', 'welcome', 'general'];
-                if (user.planStatus === 'processing')             return ['welcome', 'renewal', 'general', 'expired'];
-                return ['renewal', 'welcome', 'general', 'expired'];
+                if (isFreshSignup)                                return ['newuser', 'welcome', 'general', 'renewal', 'expired'];
+                if (d !== null && d < 0)                          return ['expired', 'renewal', 'general', 'welcome', 'newuser'];
+                if (d !== null && d <= RENEWAL_WARN_DAYS)         return ['renewal', 'expired', 'welcome', 'general', 'newuser'];
+                if (user.planStatus === 'processing')             return ['welcome', 'renewal', 'general', 'expired', 'newuser'];
+                return ['renewal', 'welcome', 'general', 'expired', 'newuser'];
             })();
 
             listEl.innerHTML = order.map(key => {
