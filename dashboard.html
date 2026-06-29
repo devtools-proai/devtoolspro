@@ -397,6 +397,10 @@
         select.reg-input option { background: #14102a; color: #f5f3ff; }
         .reg-helper { font-size: 12px; color: rgb(120,115,145); margin: 0.55rem 0 0; line-height: 1.5; }
         .reg-error { font-size: 13px; color: #f87171; margin: 0; }
+        /* Required-field star — replaces the verbose "(required)" text.
+           aria-hidden in markup; the real signal for AT is the input's
+           required attribute. */
+        .reg-req-star { color: #f87171; font-weight: 700; margin-left: 3px; }
 
         /* ─── "Stay connected on WhatsApp" note ───
            Shared callout used at every point where the flow hands off
@@ -1397,20 +1401,22 @@
                                         <input type="text" id="reg-last" required placeholder="Kumar" class="reg-input">
                                     </div>
                                 </div>
-                                <div>
-                                    <label class="reg-field-label" for="reg-email">Email <span class="reg-field-suffix">(read-only)</span></label>
-                                    <div class="reg-input-locked">
-                                        <input type="email" id="reg-email" readonly class="reg-input">
-                                        <svg class="reg-lock-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+                                <div class="reg-row-2">
+                                    <div>
+                                        <label class="reg-field-label" for="reg-email">Email <span class="reg-field-suffix">(read-only)</span></label>
+                                        <div class="reg-input-locked">
+                                            <input type="email" id="reg-email" readonly class="reg-input">
+                                            <svg class="reg-lock-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label class="reg-field-label" for="reg-phone">WhatsApp number <span class="reg-req-star" aria-hidden="true">*</span></label>
+                                        <input type="tel" id="reg-phone" required inputmode="tel" autocomplete="tel" placeholder="+91 9019879108" maxlength="20" class="reg-input">
                                     </div>
                                 </div>
+                                <p class="reg-helper" style="margin-top: 0;">Include your WhatsApp country code (e.g. +91 for India). We'll only message you about your subscription — never marketing.</p>
                                 <div>
-                                    <label class="reg-field-label" for="reg-phone">WhatsApp number <span class="reg-field-suffix" style="color:#f87171;">(required)</span></label>
-                                    <input type="tel" id="reg-phone" required inputmode="tel" autocomplete="tel" placeholder="+91 9019879108" maxlength="20" class="reg-input">
-                                    <p class="reg-helper">Include the country code (e.g. +91 for India). We'll only message you about your subscription — never marketing.</p>
-                                </div>
-                                <div>
-                                    <label class="reg-field-label" for="reg-source">How did you hear about us? <span class="reg-field-suffix" style="color:#f87171;">(required)</span></label>
+                                    <label class="reg-field-label" for="reg-source">How did you hear about us? <span class="reg-req-star" aria-hidden="true">*</span></label>
                                     <select id="reg-source" required class="reg-input">
                                         <option value="" disabled selected>Select an option</option>
                                         <option value="Instagram">Instagram</option>
