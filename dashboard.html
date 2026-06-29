@@ -367,7 +367,7 @@
            2026 SaaS — Profile Registration (#view-register)
            ═══════════════════════════════════════════════════════════════ */
         .reg-stage { max-width: 1320px; margin: 0 auto; padding: 0.5rem 0; }
-        .reg-grid { display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr); gap: 3rem; align-items: start; }
+        .reg-grid { display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr); gap: 3rem; align-items: center; }
 
         .reg-form-pane { padding: 0.5rem 0; }
         .reg-eyebrow { display: inline-block; font-size: 11px; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase; color: rgb(155,150,180); margin-bottom: 1.25rem; }
@@ -448,13 +448,18 @@
         .reg-timeline-item:not(.active) .reg-timeline-h { color: rgb(180,175,200); }
         .reg-timeline-p { font-size: 12.5px; color: rgb(140,135,165); line-height: 1.55; margin: 0; }
 
-        /* Decorative preview card */
-        .reg-preview { position: relative; padding: 1.25rem; border-radius: 16px; background: rgba(20,16,42,0.4); border: 1px solid rgba(255,255,255,0.05); display: flex; flex-direction: column; gap: 0.85rem; margin: 0 0 1.5rem; }
-        .reg-preview-row { display: flex; align-items: center; gap: 0.85rem; }
-        .reg-preview-avatar { width: 40px; height: 40px; border-radius: 10px; background: rgba(168,85,247,0.15); border: 1px solid rgba(168,85,247,0.2); display: inline-flex; align-items: center; justify-content: center; color: rgba(196,181,253,0.55); flex-shrink: 0; }
-        .reg-preview-avatar.circle { border-radius: 50%; }
-        .reg-preview-line { height: 9px; border-radius: 5px; background: rgba(255,255,255,0.06); flex: 1; }
-        .reg-preview-line.short { max-width: 60%; }
+        /* Trust panel (replaces the old decorative skeleton) */
+        .reg-trust { position: relative; margin: 0 0 1.5rem; }
+        .reg-trust-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.6rem; margin-bottom: 1rem; }
+        .reg-trust-stat { padding: 0.9rem 0.5rem; border-radius: 14px; background: rgba(20,16,42,0.5); border: 1px solid rgba(255,255,255,0.06); text-align: center; transition: border-color .2s, transform .2s; }
+        .reg-trust-stat:hover { border-color: rgba(168,85,247,0.3); transform: translateY(-2px); }
+        .reg-trust-stat .v { display: block; font-size: 20px; font-weight: 800; letter-spacing: -0.02em; background: linear-gradient(120deg,#f5f3ff,#c4b5fd); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+        .reg-trust-stat .k { display: block; font-size: 10px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: rgb(140,135,165); margin-top: 4px; line-height: 1.3; }
+        /* Assurance row — single highlighted promise with a check */
+        .reg-trust-promise { display: flex; align-items: center; gap: 0.7rem; padding: 0.85rem 1rem; border-radius: 14px; background: linear-gradient(120deg, rgba(168,85,247,0.12), rgba(236,72,153,0.07)); border: 1px solid rgba(168,85,247,0.22); }
+        .reg-trust-promise svg { width: 20px; height: 20px; color: #c4b5fd; flex-shrink: 0; }
+        .reg-trust-promise span { font-size: 12.5px; line-height: 1.5; color: rgb(200,195,220); }
+        .reg-trust-promise strong { color: #f5f3ff; font-weight: 700; }
 
         /* Footer encryption badge */
         .reg-encryption { display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 10.5px; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase; color: rgb(120,115,145); padding-top: 0.25rem; }
@@ -1411,7 +1416,7 @@
                                     </div>
                                     <div>
                                         <label class="reg-field-label" for="reg-phone">WhatsApp number <span class="reg-req-star" aria-hidden="true">*</span></label>
-                                        <input type="tel" id="reg-phone" required inputmode="tel" autocomplete="tel" placeholder="+91 9019879108" maxlength="20" class="reg-input">
+                                        <input type="tel" id="reg-phone" required inputmode="tel" autocomplete="tel" placeholder="+91 XXXXX XXXXX" maxlength="20" class="reg-input">
                                     </div>
                                 </div>
                                 <p class="reg-helper" style="margin-top: 0;">Include your WhatsApp country code (e.g. +91 for India). We'll only message you about your subscription — never marketing.</p>
@@ -1473,18 +1478,24 @@
                                 </li>
                             </ol>
 
-                            <div class="reg-preview">
-                                <div class="reg-preview-row">
-                                    <span class="reg-preview-line short"></span>
-                                    <span class="reg-preview-avatar circle">
-                                        <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.7"><path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
-                                    </span>
+                            <div class="reg-trust">
+                                <div class="reg-trust-stats">
+                                    <div class="reg-trust-stat">
+                                        <span class="v">50%</span>
+                                        <span class="k">Off market price</span>
+                                    </div>
+                                    <div class="reg-trust-stat">
+                                        <span class="v">~15<small style="font-size:11px;font-weight:700;">min</small></span>
+                                        <span class="k">To go live</span>
+                                    </div>
+                                    <div class="reg-trust-stat">
+                                        <span class="v">1:1</span>
+                                        <span class="k">Meet setup</span>
+                                    </div>
                                 </div>
-                                <div class="reg-preview-row">
-                                    <span class="reg-preview-avatar">
-                                        <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.7"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.6 4.5A9 9 0 1112 21a9 9 0 008.6-6.5z"/></svg>
-                                    </span>
-                                    <span class="reg-preview-line"></span>
+                                <div class="reg-trust-promise">
+                                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.6 4.5A9 9 0 1112 21a9 9 0 008.6-6.5z"/></svg>
+                                    <span><strong>Genuine Kiro subscription</strong> on your own account — verified live on a Google Meet call.</span>
                                 </div>
                             </div>
 
