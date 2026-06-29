@@ -32,6 +32,7 @@ const {
   GOOGLE_CLIENT_ID, adminCredsConfigured, verifyAdminCreds,
   generateAdminToken, requireAdminAuth,
 } = require('./auth');
+const slack = require('./slack-notify');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -172,7 +173,7 @@ app.post('/auth/google', async (req, res) => {
     }
 
     const client = getClient();
-    const user = await findOrCreateUser(client, result.user);
+    const { user, isNew } = await findOrCreateUser(client, result.user);
     if (!user) {
       return res.status(500).json({ status: 'error', message: 'Failed to create user' });
     }
@@ -196,6 +197,12 @@ app.post('/auth/google', async (req, res) => {
 
     // Log identifier, not PII payload.
     console.log(`auth: login uid=${user.id}`);
+
+    // Fire a Slack alert only for first-time signups — returning logins
+    // would flood the channel and aren't actionable.
+    if (isNew) {
+      slack.notifyNewUser(userRowToDto(user));
+    }
   } catch (error) {
     console.error('Auth error:', error.message);
     res.status(500).json({ status: 'error', message: 'Authentication failed' });
@@ -282,10 +289,12 @@ app.post('/auth/update-plan', requireAuth, async (req, res) => {
     const client = getClient();
 
     // Get the canonical email on the users row — we never trust the JWT
-    // payload's email as the lookup key for the submission.
+    // payload's email as the lookup key for the submission. We also
+    // capture the previous plan up front so we can label the Slack alert
+    // as new / renew / upgrade / downgrade once the write succeeds.
     const { data: userRow, error: userErr } = await client
       .from('users')
-      .select('id, email')
+      .select('id, email, current_plan')
       .eq('id', req.user.userId)
       .single();
 
@@ -351,6 +360,16 @@ app.post('/auth/update-plan', requireAuth, async (req, res) => {
       status: 'success',
       message: 'Plan recorded',
       user: userRowToDto(data),
+    });
+
+    // Slack: route by transition direction. The slack module figures
+    // out new/renew/upgrade/downgrade from the previous-vs-new plan
+    // comparison and dispatches to the right channel automatically.
+    slack.notifyPlanActivated({
+      user: userRowToDto(data),
+      previousPlan: userRow.current_plan || null,
+      newPlan: plan,
+      payment: { utrId: cleanedUtr, plan, amount: matchingSub ? null : null },
     });
   } catch (error) {
     console.error('update-plan exception:', error.message);
@@ -435,6 +454,13 @@ app.post('/auth/schedule-downgrade', requireAuth, async (req, res) => {
 
     res.json({ status: 'success', message: 'Downgrade scheduled', user: userRowToDto(data) });
     console.log(`auth: scheduled downgrade uid=${data.id} -> ${plan} eff=${effective.toISOString()}`);
+
+    // Slack: pending plan + effective date go to #change_plan.
+    slack.notifyDowngradeScheduled({
+      user: userRowToDto(data),
+      pendingPlan: plan,
+      effectiveAt: effective.toISOString(),
+    });
   } catch (error) {
     console.error('schedule-downgrade exception:', error.message);
     res.status(500).json({ status: 'error', message: 'Internal error' });
@@ -501,6 +527,10 @@ app.post('/auth/register', requireAuth, async (req, res) => {
       },
     });
     console.log(`auth: registration uid=${req.user.userId} phone=${phoneNormalised ? 'set' : 'none'}`);
+
+    // Slack: registration completed (phone + source supplied). Always
+    // includes the DTO so the alert has the latest avatar/source row.
+    if (data) slack.notifyRegistrationComplete(userRowToDto(data));
   } catch (error) {
     console.error('Register exception:', error.message);
     res.status(500).json({ status: 'error', message: 'Internal error' });
@@ -527,6 +557,9 @@ app.post('/auth/cancel-plan', requireAuth, async (req, res) => {
       message: 'Plan cancelled — active until end of billing cycle',
       user: userRowToDto(data),
     });
+
+    // Slack: cancellation event + the precise active-until timestamp.
+    slack.notifyPlanCancelled({ user: userRowToDto(data), byAdmin: false });
   } catch (error) {
     res.status(500).json({ status: 'error', message: 'Internal error' });
   }
@@ -792,6 +825,19 @@ app.patch('/admin/users/:id', requireAdminAuth, async (req, res) => {
     }
     res.json({ status: 'success', user: rowToAdminUser(data) });
     console.log(`admin: patched uid=${data.id} fields=${Object.keys(updates).join(',')}`);
+
+    // Slack: if the admin flipped status to cancelled, route as a
+    // cancellation event (the dedicated channel cares about who and
+    // when). Everything else lands in the audit channel with the
+    // changed fields surfaced.
+    if (updates.plan_status === 'cancelled') {
+      slack.notifyPlanCancelled({ user: rowToAdminUser(data), byAdmin: true });
+    } else {
+      slack.notifyAdminPatched({
+        user: rowToAdminUser(data),
+        changedFields: Object.keys(updates),
+      });
+    }
   } catch (e) {
     console.error('admin patch exception:', e.message);
     res.status(500).json({ status: 'error', message: 'Internal error' });
@@ -824,6 +870,7 @@ app.delete('/admin/users/:id', requireAdminAuth, async (req, res) => {
     }
     res.json({ status: 'success', user: rowToAdminUser(data) });
     console.log(`admin: soft-deleted uid=${data.id}`);
+    slack.notifyUserSuspended({ user: rowToAdminUser(data) });
   } catch (e) {
     console.error('admin delete exception:', e.message);
     res.status(500).json({ status: 'error', message: 'Internal error' });
@@ -851,6 +898,7 @@ app.post('/admin/users/:id/restore', requireAdminAuth, async (req, res) => {
     }
     res.json({ status: 'success', user: rowToAdminUser(data) });
     console.log(`admin: restored uid=${data.id}`);
+    slack.notifyUserRestored({ user: rowToAdminUser(data) });
   } catch (e) {
     console.error('admin restore exception:', e.message);
     res.status(500).json({ status: 'error', message: 'Internal error' });
@@ -914,6 +962,7 @@ app.post('/admin/users/:id/apply-pending', requireAdminAuth, async (req, res) =>
     }
     res.json({ status: 'success', user: rowToAdminUser(data) });
     console.log(`admin: applied pending uid=${data.id} plan=${data.current_plan}`);
+    slack.notifyPendingApplied({ user: rowToAdminUser(data) });
   } catch (e) {
     console.error('apply-pending exception:', e.message);
     res.status(500).json({ status: 'error', message: 'Internal error' });
@@ -1270,14 +1319,23 @@ app.post('/api/payment/submit-utr', requireAuth, async (req, res) => {
 
     const result = await submitUTR(paymentId, utrId);
     if (!result.success) {
+      // Slack: surface duplicate-UTR rejections as a possible fraud signal.
+      if (/already been used/i.test(result.message || '')) {
+        slack.notifyDuplicateUtr({
+          utrId: utrId.trim(),
+          attemptedBy: `uid: ${req.user.userId}`,
+        });
+      }
       return res.status(400).json({ status: 'error', message: result.message });
     }
 
     const confidence = getUTRConfidence(utrId.trim());
 
+    let autoVerified = false;
     if (confidence >= AUTO_VERIFY_THRESHOLD) {
       try {
         await verifyPayment(paymentId);
+        autoVerified = true;
         console.log(`payment: auto-verified id=${paymentId} confidence=${confidence}`);
       } catch (e) {
         console.error('auto-verify failed:', e.message);
@@ -1292,6 +1350,31 @@ app.post('/api/payment/submit-utr', requireAuth, async (req, res) => {
     });
 
     console.log(`payment: utr submitted id=${paymentId} uid=${req.user.userId} confidence=${confidence}`);
+
+    // Slack: pending → #payments_pending; auto-verified → #payments_verified.
+    // Resolve the user row so the alert can carry name / phone / avatar.
+    try {
+      const client = getClient();
+      const { data: userRow } = await client
+        .from('users')
+        .select('id, email, name, picture, phone')
+        .eq('id', req.user.userId)
+        .single();
+      const paymentPayload = {
+        id: paymentId,
+        utrId: utrId.trim(),
+        plan: result.record && result.record.plan,
+        amount: result.record && result.record.amount,
+      };
+      slack.notifyUtrSubmitted({
+        user: userRow || { id: req.user.userId, email: req.user.email },
+        payment: paymentPayload,
+        confidence,
+        autoVerified,
+      });
+    } catch (e) {
+      console.warn('slack utr-submit enrichment failed:', e.message);
+    }
   } catch (error) {
     res.status(500).json({ status: 'error', message: 'Internal error' });
   }
@@ -1305,6 +1388,32 @@ app.get('/api/payment/status/:paymentId', async (req, res) => {
       return res.status(404).json({ status: 'error', message: 'Payment not found' });
     }
     res.json({ status: 'success', data: result });
+
+    // Slack: one-shot expiry alert exactly when the polling endpoint
+    // flips the row to expired. No cron required — the user's polling
+    // is what triggers it. If the user never polls (closes the tab),
+    // the row stays "pending" in the DB, but admin-side queries still
+    // see it; that's an acceptable tradeoff vs adding a background job.
+    if (result.justExpired) {
+      try {
+        let userRow = null;
+        if (result.userId) {
+          const client = getClient();
+          const { data } = await client
+            .from('users')
+            .select('id, email, name, picture, phone')
+            .eq('id', result.userId)
+            .single();
+          userRow = data || null;
+        }
+        slack.notifyPaymentExpired({
+          payment: { id: result.paymentId, plan: result.plan, amount: result.amount },
+          user: userRow,
+        });
+      } catch (e) {
+        console.warn('slack payment-expired enrichment failed:', e.message);
+      }
+    }
   } catch (error) {
     res.status(500).json({ status: 'error', message: 'Internal error' });
   }
@@ -1320,6 +1429,35 @@ app.post('/api/payment/verify/:paymentId', requireAdminAuth, async (req, res) =>
       return res.status(400).json({ status: 'error', message: result.message });
     }
     res.json({ status: 'success', message: 'Payment verified', data: result.record });
+
+    // Slack: post to #payments_verified. Enrich with the user row so the
+    // alert has a name + avatar; failure to enrich never blocks the response.
+    try {
+      const userId = result.record && result.record.user_id;
+      let userRow = null;
+      if (userId) {
+        const client = getClient();
+        const { data } = await client
+          .from('users')
+          .select('id, email, name, picture, phone')
+          .eq('id', userId)
+          .single();
+        userRow = data || null;
+      }
+      slack.notifyPaymentVerified({
+        user: userRow || { id: userId, email: '—' },
+        payment: {
+          id: result.record.id,
+          utrId: result.record.utr_id,
+          plan: result.record.plan,
+          amount: result.record.amount,
+        },
+        autoVerified: false,
+        verifiedBy: 'admin',
+      });
+    } catch (e) {
+      console.warn('slack verify enrichment failed:', e.message);
+    }
   } catch (error) {
     res.status(500).json({ status: 'error', message: 'Internal error' });
   }
@@ -1376,6 +1514,7 @@ app.post('/api/reviews', reviewLimiter, async (req, res) => {
 
     res.status(201).json({ status: 'success', review: data });
     console.log(`reviews: new id=${data.id} rating=${r}`);
+    slack.notifyNewReview({ review: data });
   } catch (error) {
     res.status(500).json({ status: 'error', message: 'Internal error' });
   }

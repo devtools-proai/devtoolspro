@@ -148,13 +148,17 @@ async function submitUTR(paymentId, utrId) {
 
 /**
  * Check payment status (frontend polls this).
+ *
+ * Returns `justExpired: true` when this call is the one that flipped the
+ * row from pending → expired, so the caller can fire a one-shot Slack
+ * alert without us having to scan the DB on a cron.
  */
 async function getPaymentStatus(paymentId) {
   const client = getClient();
 
   const { data, error } = await client
     .from('payments')
-    .select('id, status, utr_id, amount, plan, verified_at, created_at, expires_at')
+    .select('id, user_id, status, utr_id, amount, plan, verified_at, created_at, expires_at')
     .eq('id', paymentId)
     .single();
 
@@ -165,7 +169,15 @@ async function getPaymentStatus(paymentId) {
   // Auto-expire stale pending rows.
   if (data.status === 'pending' && new Date(data.expires_at) < new Date()) {
     await client.from('payments').update({ status: 'expired' }).eq('id', data.id);
-    return { found: true, status: 'expired' };
+    return {
+      found: true,
+      status: 'expired',
+      justExpired: true,
+      userId: data.user_id || null,
+      paymentId: data.id,
+      plan: data.plan,
+      amount: data.amount,
+    };
   }
 
   return {

@@ -50,3 +50,36 @@ services:
       # Comma-separated list of allowed frontend origins.
       - key: FRONTEND_URL
         sync: false
+
+      # ─── Slack Notifications (optional) ───
+      # Per-channel incoming webhook URLs. Any URL left blank silently
+      # skips that channel, so it's safe to deploy without these — you
+      # can add them later via the Render dashboard without a code change.
+      # See backend/.env.example for the full routing table.
+      - key: SLACK_WEBHOOK_ALL
+        sync: false
+      - key: SLACK_WEBHOOK_REGISTRATION
+        sync: false
+      - key: SLACK_WEBHOOK_RENEW
+        sync: false
+      - key: SLACK_WEBHOOK_CHANGE
+        sync: false
+      - key: SLACK_WEBHOOK_CANCEL
+        sync: false
+      - key: SLACK_WEBHOOK_EXPIRY
+        sync: false
+      - key: SLACK_WEBHOOK_PAYMENTS_PENDING
+        sync: false
+      - key: SLACK_WEBHOOK_PAYMENTS_VERIFIED
+        sync: false
+      - key: SLACK_WEBHOOK_ADMIN
+        sync: false
+      - key: SLACK_WEBHOOK_REVIEWS
+        sync: false
+      - key: SLACK_WEBHOOK_VIP
+        sync: false
+
+      # Admin URL referenced from Slack action buttons. Honours ?uid=<id>
+      # so the button drops you onto the user's row.
+      - key: ADMIN_URL
+        value: "https://devtools-proai.github.io/devtoolspro/admin.html"

@@ -147,6 +147,10 @@ function computeDefaultUsername(userId, email) {
  * Also lazy-backfills the `username` column for users created before that
  * column existed — every sign-in is a chance to bring legacy rows into the
  * new normal-form representation without a migration script.
+ *
+ * Returns `{ user, isNew }` — `isNew` is true only when this call actually
+ * created the row, so the route handler can fire a "new user" Slack alert
+ * without re-querying the DB to figure it out.
  */
 async function findOrCreateUser(client, googleUser) {
   // Fast path: user already exists. We still issue an UPDATE for last_login
@@ -159,7 +163,7 @@ async function findOrCreateUser(client, googleUser) {
 
   if (lookupError) {
     console.error('Lookup user error:', lookupError.message || lookupError);
-    return null;
+    return { user: null, isNew: false };
   }
 
   if (existing) {
@@ -181,7 +185,7 @@ async function findOrCreateUser(client, googleUser) {
     if (updateError) {
       console.warn('Update last_login warning:', updateError.message || updateError);
     }
-    return existing;
+    return { user: existing, isNew: false };
   }
 
   // Slow path: insert via upsert so concurrent logins don't both try a raw INSERT.
@@ -204,7 +208,7 @@ async function findOrCreateUser(client, googleUser) {
 
   if (error) {
     console.error('Create user error:', error.message || error);
-    return null;
+    return { user: null, isNew: false };
   }
 
   // Stamp a default username on the freshly-inserted row. We can't
@@ -224,7 +228,7 @@ async function findOrCreateUser(client, googleUser) {
     }
   }
 
-  return newUser;
+  return { user: newUser, isNew: true };
 }
 
 /**
