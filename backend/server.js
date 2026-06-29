@@ -449,16 +449,19 @@ app.post('/auth/register', requireAuth, async (req, res) => {
       return res.status(400).json({ status: 'error', message: 'Name and source are required' });
     }
 
-    // Phone is optional at registration, but if supplied we normalise
-    // to digits-only and validate the length. Format-strict so the
-    // WhatsApp click-to-chat URL on the admin side just works (no
-    // re-parsing of stray hyphens / spaces / country prefixes there).
-    let phoneNormalised = null;
-    if (phone && String(phone).trim()) {
-      phoneNormalised = String(phone).replace(/\D+/g, '');
-      if (phoneNormalised.length < 8 || phoneNormalised.length > 15) {
-        return res.status(400).json({ status: 'error', message: 'WhatsApp number must be 8-15 digits' });
-      }
+    // WhatsApp number is now MANDATORY. The entire fulfilment flow
+    // (payment verification, Meet link delivery, renewal reminders)
+    // happens over WhatsApp, so a missing/invalid number means we
+    // literally cannot deliver the subscription. We normalise to
+    // digits-only and validate the length so the click-to-chat URL
+    // on the admin side just works (no re-parsing of stray hyphens /
+    // spaces / country prefixes there).
+    if (!phone || !String(phone).trim()) {
+      return res.status(400).json({ status: 'error', message: 'WhatsApp number is required — we deliver your subscription and updates there.' });
+    }
+    const phoneNormalised = String(phone).replace(/\D+/g, '');
+    if (phoneNormalised.length < 8 || phoneNormalised.length > 15) {
+      return res.status(400).json({ status: 'error', message: 'WhatsApp number must be 8-15 digits — include the country code.' });
     }
 
     const client = getClient();
@@ -467,9 +470,9 @@ app.post('/auth/register', requireAuth, async (req, res) => {
     const updatePayload = {
       name: fullName,
       source: String(source).trim().slice(0, 60),
+      phone: phoneNormalised,
       registration_complete: true,
     };
-    if (phoneNormalised) updatePayload.phone = phoneNormalised;
 
     const { error } = await client
       .from('users')

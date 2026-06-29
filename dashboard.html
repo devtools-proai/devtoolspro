@@ -398,6 +398,29 @@
         .reg-helper { font-size: 12px; color: rgb(120,115,145); margin: 0.55rem 0 0; line-height: 1.5; }
         .reg-error { font-size: 13px; color: #f87171; margin: 0; }
 
+        /* ─── "Stay connected on WhatsApp" note ───
+           Shared callout used at every point where the flow hands off
+           to WhatsApp (registration, payment, cancel, pending-change).
+           Green WhatsApp-brand accent so it reads as a channel cue, not
+           an error. */
+        .wa-stay-note {
+            display: flex; align-items: flex-start; gap: 0.7rem;
+            padding: 0.85rem 1rem; border-radius: 12px;
+            background: rgba(37,211,102,0.08);
+            border: 1px solid rgba(37,211,102,0.22);
+        }
+        .wa-stay-icon {
+            flex-shrink: 0; width: 24px; height: 24px; margin-top: 1px;
+            display: inline-flex; align-items: center; justify-content: center;
+            color: #25D366;
+        }
+        .wa-stay-icon svg { width: 20px; height: 20px; }
+        .wa-stay-text { font-size: 12.5px; line-height: 1.55; color: rgb(180,200,185); }
+        .wa-stay-text strong { color: #6ee7b7; font-weight: 700; }
+        /* Compact variant for tight spaces (payment / modal footers) */
+        .wa-stay-note.compact { padding: 0.65rem 0.85rem; }
+        .wa-stay-note.compact .wa-stay-text { font-size: 11.5px; }
+
         /* CTA — vibrant violet */
         .reg-cta { width: 100%; padding: 1.15rem 1.5rem; background: linear-gradient(135deg,#a855f7 0%,#9333ea 100%); border: none; border-radius: 14px; color: white; font-size: 16px; font-weight: 700; font-family: inherit; letter-spacing: -0.005em; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 10px; box-shadow: 0 16px 40px -10px rgba(168,85,247,0.55), inset 0 1px 0 rgba(255,255,255,0.15); transition: transform .18s, box-shadow .18s, background .2s; margin-top: 0.5rem; }
         .reg-cta:hover:not(:disabled) { transform: translateY(-1px); background: linear-gradient(135deg,#9333ea 0%,#7e22ce 100%); box-shadow: 0 20px 50px -10px rgba(168,85,247,0.7), inset 0 1px 0 rgba(255,255,255,0.2); }
@@ -1382,13 +1405,13 @@
                                     </div>
                                 </div>
                                 <div>
-                                    <label class="reg-field-label" for="reg-phone">WhatsApp number <span class="reg-field-suffix">(for plan reminders)</span></label>
-                                    <input type="tel" id="reg-phone" inputmode="tel" autocomplete="tel" placeholder="+91 9019879108" maxlength="20" class="reg-input">
-                                    <p class="reg-helper">We'll only message you about your subscription — never marketing. Include the country code (e.g. +91 for India).</p>
+                                    <label class="reg-field-label" for="reg-phone">WhatsApp number <span class="reg-field-suffix" style="color:#f87171;">(required)</span></label>
+                                    <input type="tel" id="reg-phone" required inputmode="tel" autocomplete="tel" placeholder="+91 9019879108" maxlength="20" class="reg-input">
+                                    <p class="reg-helper">Include the country code (e.g. +91 for India). We'll only message you about your subscription — never marketing.</p>
                                 </div>
                                 <div>
-                                    <label class="reg-field-label" for="reg-source">How did you hear about us?</label>
-                                    <select id="reg-source" class="reg-input">
+                                    <label class="reg-field-label" for="reg-source">How did you hear about us? <span class="reg-field-suffix" style="color:#f87171;">(required)</span></label>
+                                    <select id="reg-source" required class="reg-input">
                                         <option value="" disabled selected>Select an option</option>
                                         <option value="Instagram">Instagram</option>
                                         <option value="LinkedIn">LinkedIn</option>
@@ -1398,6 +1421,16 @@
                                         <option value="Friends">Friends</option>
                                         <option value="Others">Others</option>
                                     </select>
+                                </div>
+                                <!-- WhatsApp connection notice — fulfilment happens over
+                                     WhatsApp, so we make the dependency explicit before the
+                                     user submits. Mirrored at every other WhatsApp handoff
+                                     (payment, cancel, pending-change) via .wa-stay-note. -->
+                                <div class="wa-stay-note" role="note">
+                                    <span class="wa-stay-icon">
+                                        <svg fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884"/></svg>
+                                    </span>
+                                    <span class="wa-stay-text">Keep this WhatsApp number active and reachable. Your payment confirmation, Google Meet link, and all subscription updates are sent there.</span>
                                 </div>
                                 <p id="reg-error" class="reg-error hidden"></p>
                                 <button type="submit" id="reg-submit" class="reg-cta" data-label="Continue">
@@ -1778,6 +1811,12 @@
                                 </div>
                                 <div id="utr-status" class="utr-status hidden"></div>
                                 <p id="utr-error" class="utr-error hidden"></p>
+                                <div class="wa-stay-note compact" role="note" style="margin-bottom: 0.25rem;">
+                                    <span class="wa-stay-icon">
+                                        <svg fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884"/></svg>
+                                    </span>
+                                    <span class="wa-stay-text">After you submit, we verify your UTR and reach out on <strong>WhatsApp</strong> with your Google Meet link. Keep your registered number reachable.</span>
+                                </div>
                                 <button id="utr-submit" class="utr-cta" type="button" data-label="Submit &amp; Connect on WhatsApp">
                                     <span>Submit &amp; Connect on WhatsApp</span>
                                     <svg fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 12h14M13 6l6 6-6 6"/></svg>
@@ -2541,24 +2580,27 @@
         errEl.classList.add('hidden');
         if (!first || !last || !source) { errEl.textContent = 'Name and source are required'; errEl.classList.remove('hidden'); return; }
 
-        // Phone is optional but if supplied must be 8-15 digits after
-        // stripping separators. Block the submit locally so the admin
-        // never sees half-baked numbers in the users.phone column.
-        let phoneNorm = '';
-        if (phoneRaw) {
-            phoneNorm = phoneRaw.replace(/\D+/g, '');
-            if (phoneNorm.length < 8 || phoneNorm.length > 15) {
-                errEl.textContent = 'WhatsApp number must be 8-15 digits — include the country code.';
-                errEl.classList.remove('hidden');
-                return;
-            }
+        // WhatsApp number is required — the whole fulfilment flow (payment
+        // verification, Meet link, reminders) runs over WhatsApp, so we
+        // block the submit locally rather than let the server 400 round-trip.
+        if (!phoneRaw) {
+            errEl.textContent = 'WhatsApp number is required — we deliver your subscription and updates there.';
+            errEl.classList.remove('hidden');
+            document.getElementById('reg-phone')?.focus();
+            return;
+        }
+        const phoneNorm = phoneRaw.replace(/\D+/g, '');
+        if (phoneNorm.length < 8 || phoneNorm.length > 15) {
+            errEl.textContent = 'WhatsApp number must be 8-15 digits — include the country code.';
+            errEl.classList.remove('hidden');
+            document.getElementById('reg-phone')?.focus();
+            return;
         }
 
         setBtnLoading(btn, true, 'Saving…');
         try {
             const token = getToken();
-            const body = { firstName: first, lastName: last, source };
-            if (phoneNorm) body.phone = phoneNorm;
+            const body = { firstName: first, lastName: last, source, phone: phoneNorm };
             const res = await fetch(`${API_BASE}/auth/register`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify(body) });
             const data = await res.json();
             if (data.status === 'success') { setUser(data.user); showView('view-plans'); }
@@ -3639,6 +3681,12 @@
                 </p>
                 <p id="modal-utr-err" class="modal-error hidden"></p>
             </div>
+            <div class="wa-stay-note compact" role="note">
+                <span class="wa-stay-icon">
+                    <svg fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884"/></svg>
+                </span>
+                <span class="wa-stay-text">We'll confirm your payment and send your setup details on <strong>WhatsApp</strong>. Keep your registered number reachable.</span>
+            </div>
             <div class="modal-actions">
                 <button class="modal-btn modal-btn-ghost" type="button" id="modal-utr-back">← Back to payment</button>
                 <button class="modal-btn modal-btn-primary" type="button" id="modal-utr-submit" data-label="Submitting…">
@@ -3875,6 +3923,12 @@
                     : `You'll keep <b>${escapeHTML(plan)}</b> access until <b>${escapeHTML(endDate)}</b>. After that, no renewal charge will be taken and your subscription ends. You can resubscribe anytime. Submitting will open WhatsApp so our team can confirm with you.`}</p>
             </div>
             <p id="modal-cancel-err" class="modal-error hidden"></p>
+            <div class="wa-stay-note compact" role="note">
+                <span class="wa-stay-icon">
+                    <svg fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884"/></svg>
+                </span>
+                <span class="wa-stay-text">Submitting opens <strong>WhatsApp</strong> with your account and plan details so our team can confirm the cancellation. Keep your registered number reachable for the confirmation.</span>
+            </div>
             <div class="modal-actions">
                 <button class="modal-btn modal-btn-ghost" type="button" id="modal-cancel-keep">${alreadyCancelled ? 'Close' : 'Keep my subscription'}</button>
                 ${submitBtnHtml}
