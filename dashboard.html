@@ -3899,7 +3899,11 @@
     function renderModalCancelConfirm(titleEl, subEl, bodyEl) {
         const user = getUser() || {};
         const plan = user.currentPlan || '—';
+        // Short form for the summary row, full IST+UTC for the warning
+        // notice — same date shown twice in two precisions so the user
+        // first sees a calendar date, then the exact cutoff moment.
         const endDate = user.planEndDate ? new Date(user.planEndDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '—';
+        const endMoment = formatBillingMoment(user.planEndDate);
         const startDate = user.planStartDate ? new Date(user.planStartDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '—';
         const alreadyCancelled = (user.planStatus || '').toLowerCase() === 'cancelled';
 
@@ -3936,8 +3940,8 @@
             <div class="modal-cancel-notice">
                 <svg fill="none" stroke="currentColor" stroke-width="1.6" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
                 <p>${alreadyCancelled
-                    ? `Your subscription is already cancelled. You'll keep <b>${escapeHTML(plan)}</b> access until <b>${escapeHTML(endDate)}</b>. No renewal charge will be taken after that date.`
-                    : `You'll keep <b>${escapeHTML(plan)}</b> access until <b>${escapeHTML(endDate)}</b>. After that, no renewal charge will be taken and your subscription ends. You can resubscribe anytime. Submitting will open WhatsApp so our team can confirm with you.`}</p>
+                    ? `Your subscription is already cancelled. You'll keep <b>${escapeHTML(plan)}</b> access until <b>${escapeHTML(endMoment)}</b>. After that, your account access will be <b>automatically disabled</b> until you renew. No renewal charge will be taken on the cutoff.`
+                    : `You'll keep <b>${escapeHTML(plan)}</b> access until <b>${escapeHTML(endMoment)}</b>. After that, no renewal charge will be taken and your account access will be <b>automatically disabled</b> until you renew. You can resubscribe anytime, including before the cutoff — submitting opens WhatsApp so our team can confirm with you.`}</p>
             </div>
             <p id="modal-cancel-err" class="modal-error hidden"></p>
             <div class="wa-stay-note compact" role="note">
@@ -3963,6 +3967,26 @@
         return String(s ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
     }
 
+    /* Format a UTC ISO timestamp as "1 Jul 2026, 5:30 AM IST (12:00 AM UTC)".
+       Mirrors backend/utils/datefmt.js's formatBillingMoment() — keep in sync.
+       Why both timezones: plan_end_date is stored as 00:00 UTC of the 1st
+       of next month, which is 05:30 AM IST on the same date. Showing only
+       one timezone leaves a 5h30m ambiguity window for users who read the
+       message as "midnight my time". The WhatsApp cancel template and the
+       admin-side cancel_confirm template both depend on this helper. */
+    function formatBillingMoment(iso) {
+        if (!iso) return 'N/A';
+        const d = new Date(iso);
+        if (isNaN(d.getTime())) return 'N/A';
+        const dOpts = { day: 'numeric', month: 'short', year: 'numeric' };
+        const tOpts = { hour: 'numeric', minute: '2-digit', hour12: true };
+        const ist = `${d.toLocaleDateString('en-IN', { ...dOpts, timeZone: 'Asia/Kolkata' })}, ` +
+                    `${d.toLocaleTimeString('en-IN', { ...tOpts, timeZone: 'Asia/Kolkata' })} IST`;
+        const utc = `${d.toLocaleDateString('en-IN', { ...dOpts, timeZone: 'UTC' })}, ` +
+                    `${d.toLocaleTimeString('en-IN', { ...tOpts, timeZone: 'UTC' })} UTC`;
+        return `${ist} (${utc})`;
+    }
+
     async function submitCancellation() {
         const btn = document.getElementById('modal-cancel-submit');
         const errEl = document.getElementById('modal-cancel-err');
@@ -3971,7 +3995,12 @@
 
         const user = getUser() || {};
         const plan = user.currentPlan || '—';
+        // Two date representations — short for the on-screen done card,
+        // full IST+UTC for the WhatsApp message body (which needs to be
+        // unambiguous since the admin reads it later, possibly in a
+        // different timezone).
         const endDate = user.planEndDate ? new Date(user.planEndDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '—';
+        const endMoment = formatBillingMoment(user.planEndDate);
 
         try {
             const res = await fetch(`${API_BASE}/auth/cancel-plan`, {
@@ -3994,15 +4023,27 @@
 
             // Open WhatsApp with a pre-filled message containing every detail
             // the team needs to confirm.
+            //
+            // The body explicitly includes the precise cycle-end moment in
+            // both IST and UTC so the admin sees the same instant no matter
+            // where they're reading from. It also spells out the next steps
+            // (account auto-disables after this date unless renewed) so
+            // there's no separate explanation needed on the admin's end —
+            // they just hit reply with the cancel_confirm template.
             const waMessage = [
                 "Hi, I'd like to cancel my DevTools Pro subscription.",
                 '',
                 `Name: ${user.name || '—'}`,
                 `Email: ${user.email || '—'}`,
                 `Current plan: ${plan}`,
-                `Active until: ${endDate}`,
+                `Active until: ${endMoment}`,
                 '',
-                'I understand the plan stays active until the date above, and no renewal charge will be taken after that.',
+                'I understand:',
+                `• My plan stays active until the date above.`,
+                `• No renewal charge will be taken after that.`,
+                `• My account access will be automatically disabled after the cutoff until I renew.`,
+                `• I can renew before that date to keep my subscription running.`,
+                '',
                 'Please confirm my cancellation. Thanks.',
             ].join('\n');
             const waUrl = `https://api.whatsapp.com/send?phone=${WHATSAPP_NUMBER}&text=${encodeURIComponent(waMessage)}`;
@@ -4021,6 +4062,7 @@
     function renderModalCancelDone(titleEl, subEl, bodyEl) {
         const user = getUser() || {};
         const endDate = user.planEndDate ? new Date(user.planEndDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '—';
+        const endMoment = formatBillingMoment(user.planEndDate);
         titleEl.textContent = 'Cancellation submitted';
         subEl.textContent = "We've opened WhatsApp so our team can confirm with you.";
 
@@ -4030,12 +4072,14 @@
                     <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
                 </div>
                 <p class="modal-done-msg">
-                    You'll keep access to your current plan until <b>${escapeHTML(endDate)}</b>.
-                    After that, your subscription ends automatically — no renewal charge.
+                    You'll keep access to your current plan until <b>${escapeHTML(endDate)}</b>
+                    (precisely <b>${escapeHTML(endMoment)}</b>).
+                    After that, your account access will be <b>automatically disabled</b> until you renew — no renewal charge will be taken.
                 </p>
                 <ul class="modal-done-list">
-                    <li>Reply on WhatsApp if you need anything before then</li>
-                    <li>You can resubscribe anytime from the dashboard</li>
+                    <li>Want to keep your subscription? Tap <b>Renew Now</b> before the date above.</li>
+                    <li>Reply on WhatsApp if you need anything in the meantime.</li>
+                    <li>You can resubscribe anytime from the dashboard.</li>
                 </ul>
             </div>
             <div class="modal-actions modal-actions-single">

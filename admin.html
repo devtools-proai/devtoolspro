@@ -230,6 +230,7 @@
         .wa-tmpl-btn.tmpl-renewal  .tmpl-icon { background: rgba(245,158,11,0.14); color: var(--amber); border: 1px solid rgba(245,158,11,0.3); }
         .wa-tmpl-btn.tmpl-expired  .tmpl-icon { background: rgba(248,113,113,0.14); color: var(--red);    border: 1px solid rgba(248,113,113,0.3); }
         .wa-tmpl-btn.tmpl-welcome  .tmpl-icon { background: rgba(34,197,94,0.14);   color: var(--green);  border: 1px solid rgba(34,197,94,0.3); }
+        .wa-tmpl-btn.tmpl-cancel   .tmpl-icon { background: rgba(244,114,182,0.12); color: #f472b6;        border: 1px solid rgba(244,114,182,0.3); }
         .wa-tmpl-btn.tmpl-newuser  .tmpl-icon { background: rgba(56,189,248,0.14);  color: #38bdf8;        border: 1px solid rgba(56,189,248,0.3); }
         .wa-tmpl-btn.tmpl-general  .tmpl-icon { background: rgba(168,85,247,0.14);  color: var(--violet-soft); border: 1px solid rgba(168,85,247,0.3); }
         .wa-tmpl-btn .tmpl-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
@@ -1092,6 +1093,28 @@
             return then.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
         }
 
+        // Format a UTC ISO timestamp as "1 Jul 2026, 5:30 AM IST (12:00 AM UTC)".
+        //
+        // Mirrors backend/utils/datefmt.js's formatBillingMoment() — both
+        // copies MUST stay in sync. The backend stores plan_end_date as
+        // 00:00 UTC of the 1st of next month; in IST that's 05:30 AM IST
+        // on the same date. WhatsApp templates need both timezones in the
+        // body so users (mostly IST) and the admin team (potentially in
+        // any TZ) read the same moment unambiguously — there's no "is the
+        // deadline midnight my time or midnight UTC?" guessing.
+        function formatBillingMoment(iso) {
+            if (!iso) return 'N/A';
+            const d = new Date(iso);
+            if (isNaN(d.getTime())) return 'N/A';
+            const dOpts = { day: 'numeric', month: 'short', year: 'numeric' };
+            const tOpts = { hour: 'numeric', minute: '2-digit', hour12: true };
+            const ist = `${d.toLocaleDateString('en-IN', { ...dOpts, timeZone: 'Asia/Kolkata' })}, ` +
+                        `${d.toLocaleTimeString('en-IN', { ...tOpts, timeZone: 'Asia/Kolkata' })} IST`;
+            const utc = `${d.toLocaleDateString('en-IN', { ...dOpts, timeZone: 'UTC' })}, ` +
+                        `${d.toLocaleTimeString('en-IN', { ...tOpts, timeZone: 'UTC' })} UTC`;
+            return `${ist} (${utc})`;
+        }
+
         // Render the per-row WhatsApp icon button. Three visual states
         // driven by daysUntilRenewal — calm / due soon / expired.
         // Cancelled users keep a calm-green button (they'd benefit from
@@ -1159,22 +1182,23 @@
                 icon: '<svg fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>',
                 build: (u) => {
                     const plan = u.currentPlan || 'your plan';
-                    const renewBy = u.planEndDate
-                        ? new Date(u.planEndDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
-                        : 'soon';
+                    const cycleMoment = formatBillingMoment(u.planEndDate);
                     const price = WA_PLAN_INR[u.currentPlan];
                     return [
                         `Hi ${u.name || 'there'},`,
                         ``,
-                        `Quick reminder from DevTools Pro — your *${plan}* subscription renews on *${renewBy}*.`,
+                        `Quick reminder from DevTools Pro — your *${plan}* subscription's next billing cycle starts on:`,
+                        `*${cycleMoment}*`,
                         ``,
-                        `To keep your IDE access uninterrupted, please complete the renewal payment before that date.`,
+                        `To keep your IDE access running without a break, please *renew before this date*.`,
                         price ? `Renewal amount: *₹${price.toLocaleString('en-IN')}*.` : '',
                         ``,
-                        `Sign in and tap *Renew Now* on your dashboard:`,
+                        `If you don't want to continue, please *cancel before the date above* — otherwise the system will automatically *disable your account access* after this cutoff until you renew.`,
+                        ``,
+                        `Sign in and tap *Renew Now* or *Cancel* on your dashboard:`,
                         DASHBOARD_URL,
                         ``,
-                        `Reply here if you'd like help with the renewal — happy to walk you through it.`,
+                        `Reply here if you'd like help — happy to walk you through it.`,
                         ``,
                         `— Team DevTools Pro`,
                     ].filter(Boolean).join('\n');
@@ -1187,20 +1211,56 @@
                 icon: '<svg fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 2m6-2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>',
                 build: (u) => {
                     const plan = u.currentPlan || 'your plan';
-                    const endedOn = u.planEndDate
-                        ? new Date(u.planEndDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
-                        : 'recently';
+                    const endedMoment = formatBillingMoment(u.planEndDate);
                     return [
                         `Hi ${u.name || 'there'},`,
                         ``,
-                        `We noticed your *${plan}* DevTools Pro subscription ended on *${endedOn}* and wanted to check if you'd like to renew.`,
+                        `Your *${plan}* DevTools Pro subscription ended on:`,
+                        `*${endedMoment}*`,
                         ``,
-                        `Your account, projects, and Meet link are all preserved — reactivation takes 2 minutes via UPI.`,
+                        `Your account access is currently *disabled* because no renewal was processed before the cutoff. Your data, projects, and Meet link are all preserved — reactivation takes 2 minutes via UPI.`,
                         ``,
                         `Sign in and tap *Select Plan* on your dashboard:`,
                         DASHBOARD_URL,
                         ``,
                         `If something pushed you to pause, we'd love to hear about it — reply here, no pressure.`,
+                        ``,
+                        `— Team DevTools Pro`,
+                    ].join('\n');
+                },
+            },
+            cancel_confirm: {
+                cls: 'tmpl-cancel',
+                label: 'Cancellation confirmed',
+                desc: (u) => {
+                    const status = (u.planStatus || '').toLowerCase();
+                    if (status === 'cancelled') {
+                        const d = daysUntilRenewal(u.planEndDate);
+                        if (d === null) return 'Cancelled — confirm end of access.';
+                        if (d < 0) return 'Cancellation already in effect.';
+                        if (d === 0) return 'Access ends today.';
+                        return `Access ends in ${d} day${d === 1 ? '' : 's'}.`;
+                    }
+                    return 'Confirm cancellation request.';
+                },
+                icon: '<svg fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>',
+                build: (u) => {
+                    const plan = u.currentPlan || 'your plan';
+                    const cycleMoment = formatBillingMoment(u.planEndDate);
+                    return [
+                        `Hi ${u.name || 'there'},`,
+                        ``,
+                        `Your cancellation request for *${plan}* is confirmed. ✅`,
+                        ``,
+                        `*Your access stays active until:*`,
+                        `*${cycleMoment}*`,
+                        ``,
+                        `After this date, no further renewal will be charged and your account access will be *automatically disabled* until you resubscribe.`,
+                        ``,
+                        `*Changed your mind?* You can renew before the cutoff to keep everything running uninterrupted — just sign in and tap *Renew Now* on your dashboard:`,
+                        DASHBOARD_URL,
+                        ``,
+                        `If you have feedback on what prompted the cancellation, we'd genuinely love to hear it. Reply here anytime.`,
                         ``,
                         `— Team DevTools Pro`,
                     ].join('\n');
@@ -1334,14 +1394,21 @@
             // but hasn't picked a plan yet (planStatus none/empty and no
             // currentPlan) — exactly the "just filled the form" case the
             // admin wants to nudge toward payment.
+            //
+            // "Cancellation confirmed" leads for users who've already
+            // hit Cancel — they need a clear "your access ends on X,
+            // here's how to undo" message with the precise cutoff in
+            // IST and UTC.
             const isFreshSignup = !user.currentPlan
                 && (!user.planStatus || user.planStatus === 'none');
+            const isCancelled = (user.planStatus || '').toLowerCase() === 'cancelled';
             const order = (() => {
-                if (isFreshSignup)                                return ['newuser', 'welcome', 'general', 'renewal', 'expired'];
-                if (d !== null && d < 0)                          return ['expired', 'renewal', 'general', 'welcome', 'newuser'];
-                if (d !== null && d <= RENEWAL_WARN_DAYS)         return ['renewal', 'expired', 'welcome', 'general', 'newuser'];
-                if (user.planStatus === 'processing')             return ['welcome', 'renewal', 'general', 'expired', 'newuser'];
-                return ['renewal', 'welcome', 'general', 'expired', 'newuser'];
+                if (isFreshSignup)                                return ['newuser', 'welcome', 'general', 'renewal', 'expired', 'cancel_confirm'];
+                if (isCancelled)                                  return ['cancel_confirm', 'renewal', 'general', 'expired', 'welcome', 'newuser'];
+                if (d !== null && d < 0)                          return ['expired', 'renewal', 'cancel_confirm', 'general', 'welcome', 'newuser'];
+                if (d !== null && d <= RENEWAL_WARN_DAYS)         return ['renewal', 'cancel_confirm', 'expired', 'welcome', 'general', 'newuser'];
+                if (user.planStatus === 'processing')             return ['welcome', 'renewal', 'general', 'expired', 'cancel_confirm', 'newuser'];
+                return ['renewal', 'welcome', 'general', 'cancel_confirm', 'expired', 'newuser'];
             })();
 
             listEl.innerHTML = order.map(key => {
