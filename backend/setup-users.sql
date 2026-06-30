@@ -51,13 +51,13 @@ CREATE TABLE IF NOT EXISTS users (
   -- ping sent 3d ago". Both are NULL until the first nudge.
   last_reminded_at TIMESTAMPTZ,
   last_reminded_template TEXT,
-  -- Soft-delete marker. When non-NULL the user is considered deleted:
-  -- hidden from /admin/users by default, blocked from signing in via
-  -- /auth/me + /auth/google, and excluded from /admin/stats counts.
-  -- The row itself stays in the table so admin can restore by
-  -- clearing this column (the toast UI exposes a 10-second undo).
-  -- Manual hard-delete is intentionally NOT supported through the
-  -- API — payment audit trails depend on these rows existing.
+  -- Soft-delete / "archive" marker. When non-NULL the user is moved to
+  -- the recovery panel in the admin UI and excluded from /admin/stats
+  -- counts. It is NOT a sign-in block — /auth/google and /auth/me both
+  -- auto-clear this column when the user is active again, so admin
+  -- "delete" is purely an organisational move. The row itself always
+  -- stays in the table (payment audit trails depend on these rows
+  -- existing); manual hard-delete is intentionally not exposed.
   deleted_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );

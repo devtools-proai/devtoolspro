@@ -70,7 +70,10 @@ app.use(cors({
     if (!IS_PROD && allowedOrigins.length === 0) return cb(null, true); // dev convenience
     return cb(new Error(`CORS blocked: ${origin}`), false);
   },
-  methods: ['GET', 'POST', 'PATCH'],
+  // DELETE is required by the admin registry's soft-delete action; without
+  // it the browser's CORS preflight blocks the request and the network
+  // call surfaces as a generic "Failed to fetch" with no useful error.
+  methods: ['GET', 'POST', 'PATCH', 'DELETE'],
   allowedHeaders: ['Content-Type', 'Authorization', 'Idempotency-Key'],
 }));
 
@@ -174,18 +177,30 @@ app.post('/auth/google', async (req, res) => {
     }
 
     const client = getClient();
-    const { user, isNew } = await findOrCreateUser(client, result.user);
+    let { user, isNew } = await findOrCreateUser(client, result.user);
     if (!user) {
       return res.status(500).json({ status: 'error', message: 'Failed to create user' });
     }
+    // Auto-restore on sign-in. Admin "delete" is now an organisational
+    // move into the recovery panel, not a hard suspension — the user
+    // signing back in is the explicit signal that they want back into
+    // the active list. We clear deleted_at and emit the same Slack
+    // event as a manual restore so the audit trail stays complete.
+    let wasArchived = false;
     if (user.deleted_at) {
-      // Account was soft-deleted by an admin. Refuse the session so a
-      // returning user can't keep using the service; admin can restore
-      // from the registry to undo.
-      return res.status(403).json({
-        status: 'error',
-        message: 'This account has been suspended. Please contact support.',
-      });
+      const { data: restored, error: restoreErr } = await client
+        .from('users')
+        .update({ deleted_at: null })
+        .eq('id', user.id)
+        .select()
+        .single();
+      if (!restoreErr && restored) {
+        user = restored;
+        wasArchived = true;
+        console.log(`auth: auto-restored uid=${user.id} on sign-in`);
+      } else if (restoreErr) {
+        console.warn('auto-restore on sign-in warning:', restoreErr.message || restoreErr);
+      }
     }
 
     const sessionToken = generateSessionToken(user);
@@ -200,9 +215,13 @@ app.post('/auth/google', async (req, res) => {
     console.log(`auth: login uid=${user.id}`);
 
     // Fire a Slack alert only for first-time signups — returning logins
-    // would flood the channel and aren't actionable.
+    // would flood the channel and aren't actionable. An auto-restore is
+    // a separate, audit-worthy event (an archived user returned on
+    // their own) and rides the same channel as manual restores.
     if (isNew) {
       slack.notifyNewUser(userRowToDto(user));
+    } else if (wasArchived) {
+      slack.notifyUserRestored({ user: userRowToDto(user) });
     }
   } catch (error) {
     console.error('Auth error:', error.message);
@@ -214,24 +233,38 @@ app.post('/auth/google', async (req, res) => {
 app.get('/auth/me', requireAuth, async (req, res) => {
   try {
     const client = getClient();
-    const { data: user, error } = await client
+    const { data: userRow, error } = await client
       .from('users')
       .select('*')
       .eq('id', req.user.userId)
       .single();
 
-    if (error || !user) {
+    if (error || !userRow) {
       return res.status(404).json({ status: 'error', message: 'User not found' });
     }
+    // Reassignable handle — auto-restore below may swap in a fresh row.
+    let user = userRow;
+
+    // Auto-restore on any signed-in activity. Soft-delete is no longer a
+    // hard suspension; it's purely an admin-side organisational move
+    // into the recovery panel. As soon as the user is active again
+    // (sign-in, /auth/me poll on dashboard load, etc.) we pull them
+    // back into the main list. Idempotent — only fires while
+    // deleted_at is non-null.
     if (user.deleted_at) {
-      // Soft-deleted account — refuse to materialise the session so
-      // a stale JWT can't keep the dashboard alive after an admin
-      // suspension. Frontend treats 403 as "log out and show signin".
-      return res.status(403).json({
-        status: 'error',
-        code: 'ACCOUNT_SUSPENDED',
-        message: 'This account has been suspended.',
-      });
+      const { data: restored, error: restoreErr } = await client
+        .from('users')
+        .update({ deleted_at: null })
+        .eq('id', user.id)
+        .select()
+        .single();
+      if (!restoreErr && restored) {
+        user = restored;
+        console.log(`auth: auto-restored uid=${user.id} on /auth/me`);
+        slack.notifyUserRestored({ user: userRowToDto(user) });
+      } else if (restoreErr) {
+        console.warn('auto-restore on /auth/me warning:', restoreErr.message || restoreErr);
+      }
     }
 
     // Lazy backfill: if this row predates the username column, stamp
@@ -859,10 +892,13 @@ app.patch('/admin/users/:id', requireAdminAuth, async (req, res) => {
 });
 
 // ─── DELETE /admin/users/:id ───
-// Soft-delete: sets users.deleted_at to NOW(). Row stays in the
-// database (payment audit trail, history, restorability) but is
-// hidden from default admin views and blocks future sign-ins.
-// Restore via POST /admin/users/:id/restore (idempotent + reversible).
+// Soft-delete (archive): sets users.deleted_at to NOW(). Row stays in
+// the database (payment audit trail, history, restorability) and is
+// moved out of default admin views into the "Deleted only" panel.
+// This is an organisational move only — sign-in is NOT blocked.
+// /auth/google and /auth/me auto-clear deleted_at the next time the
+// user is active, restoring them into the main list. Admin can also
+// restore manually via POST /admin/users/:id/restore.
 app.delete('/admin/users/:id', requireAdminAuth, async (req, res) => {
   try {
     const { id } = req.params;

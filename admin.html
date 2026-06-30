@@ -784,10 +784,10 @@
                     <div class="modal-pending-row" style="border-color: rgba(248,113,113,0.32); background: rgba(248,113,113,0.08);">
                         <svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24" style="color: var(--red);"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01M5 19h14a2 2 0 001.84-2.75L13.74 4a2 2 0 00-3.5 0L3.16 16.25A2 2 0 005 19z"/></svg>
                         <div class="modal-pending-text">
-                            <span class="modal-pending-title" style="color: var(--red);">Account deleted</span>
+                            <span class="modal-pending-title" style="color: var(--red);">Moved to Deleted panel</span>
                             <span class="modal-pending-detail">
                                 Deleted on <strong id="edit-deleted-date">…</strong>.
-                                Sign-in is blocked. Restore to bring this user back.
+                                Sign-in is not blocked — they'll auto-restore on their next sign-in. You can also restore them manually below.
                             </span>
                         </div>
                     </div>
@@ -1832,7 +1832,7 @@
         document.getElementById('delete-btn').addEventListener('click', async () => {
             if (!editingUser) return;
             const name = editingUser.name || editingUser.email || 'this user';
-            if (!confirm(`Delete ${name}?\n\nThey will be signed out and blocked from signing back in. You can restore them at any time from the "Deleted only" filter.`)) return;
+            if (!confirm(`Delete ${name}?\n\nThey'll be moved to the "Deleted only" panel. Sign-in is NOT blocked — the next time they sign in they'll auto-restore into this table. You can also restore them manually any time.`)) return;
 
             const btn = document.getElementById('delete-btn');
             const lbl = document.getElementById('delete-label');
