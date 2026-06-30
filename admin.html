@@ -454,6 +454,123 @@
 
         @media (max-width: 1080px) { .stats { grid-template-columns: repeat(2, 1fr); } .modal-body { grid-template-columns: 1fr; } }
         @media (max-width: 660px)  { .stats { grid-template-columns: 1fr; } .admin-main { padding: 1rem; } .admin-topbar { padding: 0.85rem 1rem; } table thead { display: none; } table tbody td { display: block; padding: 0.4rem 1rem; border-bottom: 0; } table tbody tr { display: block; padding: 0.85rem 0; border-bottom: 1px solid var(--line); } }
+
+        /* ═══════════════════════════════════════════════════════════════
+           Mobile responsiveness sweep
+           ───────────────────────────────────────────────────────────────
+           Additive-only overrides for the admin console at ≤768px and
+           ≤480px. Pairs with the existing 660px rule above that converts
+           the users table to a stacked-card layout — adds per-cell
+           labels (via data-label) so the admin can tell which value is
+           which once thead is hidden.
+           ═══════════════════════════════════════════════════════════════ */
+
+        /* ── ≤ 768px (tablet portrait + large phones) ─────────────── */
+        @media (max-width: 768px) {
+            /* The desktop rule caps .table-wrap at calc(100vh - 320px),
+               which assumes the stats grid is a single 100px row. On
+               mobile the stats stack to 4 rows ~440px tall, leaving
+               near-zero scroll height. Let the page handle scrolling
+               instead. */
+            .table-wrap { max-height: none; overflow: visible; }
+
+            /* The Username + UTR cells use fixed-width caps for the
+               truncate ellipsis. On phones the cell itself is narrower
+               than the cap, so let them expand to fill available space. */
+            .user-name, .user-email {
+                max-width: calc(100vw - 140px);
+            }
+        }
+
+        /* ── ≤ 660px (mobile table — pairs with existing rule above) ── */
+        @media (max-width: 660px) {
+            /* Per-cell label prefix. The cells are emitted with
+               data-label="Plan", data-label="Status", etc. — this
+               rule injects each label as a small uppercase tag so
+               the value below makes sense without the table header.
+               Cells flagged with [data-no-label] (the user cell,
+               which is self-explanatory with avatar + name) opt out. */
+            tbody td[data-label]::before {
+                content: attr(data-label) " · ";
+                display: inline-block;
+                min-width: 78px;
+                font-weight: 700;
+                color: var(--ink-3);
+                text-transform: uppercase;
+                letter-spacing: 0.10em;
+                font-size: 10px;
+                margin-right: 4px;
+            }
+            tbody td[data-no-label]::before { content: none; }
+
+            /* Match the row's left-align so the prefixed label sits
+               cleanly under the avatar+name cell above. */
+            tbody td { text-align: left !important; }
+        }
+
+        /* ── ≤ 480px (small phones) ───────────────────────────────── */
+        @media (max-width: 480px) {
+            /* Drop the topbar pill — "Admin Registry" is implied by
+               context and the row is tight on a 320px viewport. */
+            .admin-topbar-pill { display: none; }
+            .admin-topbar-left { gap: 8px; }
+            .admin-topbar .brand-mark { font-size: 17px; }
+
+            /* Toolbar: search input goes full-width on its own row;
+               selects + spacers wrap below. */
+            .toolbar { gap: 8px; }
+            .search { min-width: 100%; flex: 1 0 100%; }
+            .toolbar select { padding: 9px 12px; font-size: 12px; }
+
+            /* Stats values slightly smaller so the four cards stack
+               without each pushing other content offscreen. */
+            .stat-value { font-size: 22px; }
+            .stat { padding: 0.85rem 1rem; }
+
+            /* Edit modal — tighter padding, smaller title, wrap the
+               three footer buttons into a 2-column grid (Save / Cancel
+               on row 1, Delete on row 2). */
+            .modal-backdrop { padding: 0.75rem; }
+            .modal { padding: 1.25rem 1rem; border-radius: 14px; }
+            .modal-title { font-size: 18px; }
+            .modal-sub { font-size: 11px; }
+            .modal-foot { flex-wrap: wrap; gap: 8px; }
+            .modal-foot .spacer { display: none; }
+            .modal-foot .btn-delete,
+            .modal-foot .btn-restore,
+            .modal-foot .btn-primary,
+            .modal-foot .btn-ghost {
+                flex: 1 0 calc(50% - 4px);
+                justify-content: center;
+            }
+
+            /* Toast — push to full viewport width with edge gutters
+               so the message + Undo button don't crowd. */
+            .toast {
+                left: 0.5rem; right: 0.5rem;
+                min-width: 0;
+                max-width: calc(100vw - 1rem);
+                padding: 0.65rem 0.85rem; gap: 10px;
+                /* Override the desktop translateX(-50%) — at this
+                   width we anchor to the edges instead of centering. */
+                transform: translateY(120%);
+            }
+            .toast.show { animation: toast-mobile-in .35s cubic-bezier(.2,.8,.2,1) forwards; }
+            .toast.hide { animation: toast-mobile-out .25s cubic-bezier(.4,0,1,1) forwards; }
+            @keyframes toast-mobile-in  { from { opacity: 0; transform: translateY(120%); } to { opacity: 1; transform: translateY(0); } }
+            @keyframes toast-mobile-out { to   { opacity: 0; transform: translateY(120%); } }
+            .toast-text { font-size: 12.5px; }
+            .toast-undo { padding: 6px 10px; font-size: 11.5px; }
+
+            /* Login card on small phones. */
+            .login-card { padding: 1.75rem 1.25rem; }
+            .login-title { font-size: 26px; }
+            .login-sub { font-size: 12.5px; }
+
+            /* Template picker popover — at 320px the existing 320px
+               width sits with 0 margin to viewport edges. Tighten. */
+            .wa-popover { width: calc(100vw - 1rem); }
+        }
     </style>
 </head>
 <body>
@@ -989,9 +1106,16 @@
                 const statusCell = isDeleted
                     ? `<span class="pill tombstone" title="Deleted ${escapeHTML(fmtDate(u.deletedAt))}">Deleted</span>`
                     : statusPill(u.planStatus);
+                // data-label values are picked up by the mobile @media
+                // rule that switches the table to a stacked-card layout
+                // (≤ 660px). Each cell prefixes its value with the label
+                // so the admin can still tell which value is which when
+                // <thead> is hidden. The "User" cell already self-labels
+                // (avatar + name + email) so it skips the prefix via the
+                // `data-no-label` attribute the CSS rule looks for.
                 return `
                     <tr${rowClass} data-id="${escapeHTML(u.id)}">
-                        <td>
+                        <td data-no-label>
                             <div class="user-cell">
                                 <span class="user-avatar">${u.picture ? `<img src="${escapeHTML(u.picture)}" alt="" referrerpolicy="no-referrer">` : escapeHTML(initials(u.name))}</span>
                                 <div style="min-width:0; flex: 1;">
@@ -1001,18 +1125,18 @@
                                 ${renderWaButton(u)}
                             </div>
                         </td>
-                        <td>
+                        <td data-label="Plan">
                             ${planPill(u.currentPlan)}
                             ${pendingLine}
                         </td>
-                        <td>${statusCell}</td>
-                        <td>${escapeHTML(fmtDate(u.planStartDate))}</td>
-                        <td>${escapeHTML(fmtDate(u.planEndDate))}</td>
-                        <td><span class="user-handle" title="${escapeHTML(u.email || '')}">${escapeHTML(displayHandle(u))}</span></td>
-                        <td><span class="mono" title="${escapeHTML(u.utrId || '')}">${escapeHTML(u.utrId || '—')}</span></td>
-                        <td>${escapeHTML(fmtDate(u.updatedAt))}</td>
-                        <td>${escapeHTML(fmtDate(u.lastLogin))}</td>
-                        <td>${escapeHTML(fmtDate(u.createdAt))}</td>
+                        <td data-label="Status">${statusCell}</td>
+                        <td data-label="Started">${escapeHTML(fmtDate(u.planStartDate))}</td>
+                        <td data-label="Renews">${escapeHTML(fmtDate(u.planEndDate))}</td>
+                        <td data-label="Username"><span class="user-handle" title="${escapeHTML(u.email || '')}">${escapeHTML(displayHandle(u))}</span></td>
+                        <td data-label="UTR"><span class="mono" title="${escapeHTML(u.utrId || '')}">${escapeHTML(u.utrId || '—')}</span></td>
+                        <td data-label="Updated">${escapeHTML(fmtDate(u.updatedAt))}</td>
+                        <td data-label="Last login">${escapeHTML(fmtDate(u.lastLogin))}</td>
+                        <td data-label="Created">${escapeHTML(fmtDate(u.createdAt))}</td>
                     </tr>
                 `;
             }).join('');

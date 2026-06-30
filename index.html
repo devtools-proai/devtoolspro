@@ -1064,6 +1064,62 @@
             display: inline-flex; align-items: center; justify-content: center; color: var(--ink-1); cursor: pointer;
         }
         .mobile-menu-overlay .close-btn svg { width: 20px; height: 20px; }
+
+        /* ═══════════════════════════════════════════════════════════════
+           Mobile responsiveness sweep
+           ───────────────────────────────────────────────────────────────
+           Additive-only overrides for tablet (≤768px) and phone (≤480px).
+           Every rule lives inside an @media gate so the desktop layout
+           above is provably unaffected — touch one of these only if you
+           want to change mobile behaviour specifically.
+           ═══════════════════════════════════════════════════════════════ */
+
+        /* ── ≤ 768px (tablet portrait) ────────────────────────────── */
+        @media (max-width: 768px) {
+            /* Kill the 3D tilt + float on the hero IDE mockup. On phones
+               the perspective transform causes the mockup to overflow
+               the viewport horizontally and the float wastes precious
+               vertical real estate. */
+            .ide-mockup { transform: none !important; animation: none !important; }
+
+            /* Pull the floating accent badges in tight so they don't
+               poke outside the viewport once the hero grid stacks. */
+            .hero-badge.top-left   { top: -10px; left: -8px;  }
+            .hero-badge.bottom-right { bottom: -10px; right: -8px; }
+
+            /* Comparison table — allow horizontal scroll inside its
+               rounded container. Without this the table forces the
+               whole page to scroll sideways on a 375px viewport. */
+            .compare-wrap { overflow-x: auto !important; -webkit-overflow-scrolling: touch; }
+            .compare-table { min-width: 540px; }
+            .compare-table th, .compare-table td { padding: 0.75rem 0.9rem; font-size: 12.5px; }
+        }
+
+        /* ── ≤ 480px (small phones) ───────────────────────────────── */
+        @media (max-width: 480px) {
+            /* Compact sticky banner + header on small phones. */
+            .top-banner { font-size: 11px; padding: 6px 10px; line-height: 1.35; }
+            .site-header .brand-mark { font-size: 18px; }
+            .site-header .btn-primary { padding: 0.45rem 0.8rem !important; font-size: 11.5px; }
+
+            /* Hero: drop the 100vh min-height (with the float-wa bubble
+               overlapping it makes the section feel cramped). Stack the
+               CTA buttons full-width so each is a single, tappable bar. */
+            .hero { min-height: auto; padding: 2rem 1rem 3rem; }
+            .hero-ctas { flex-direction: column; align-items: stretch; }
+            .hero-ctas .btn { width: 100%; }
+
+            /* Decorative badges are pure noise at this size — hide. */
+            .hero-badge { display: none; }
+
+            /* Plan card price slightly smaller — keeps the savings pill
+               on the same row instead of wrapping awkwardly. */
+            .plan-price-amount { font-size: 32px; }
+
+            /* FAQ + footer breathing room. */
+            .faq-toggle { padding: 0.95rem 1.1rem; font-size: 13.5px; }
+            .site-footer { padding: 2.5rem 1rem 1.75rem; }
+        }
     </style>
 </head>
 <body class="antialiased" data-curr="USD">

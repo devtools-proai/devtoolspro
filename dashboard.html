@@ -1001,6 +1001,22 @@
             .dash-history-table tbody td { display: block; padding: 0.4rem 1rem; border-bottom: 0; text-align: left !important; }
             .dash-history-table tbody td:last-child { text-align: left !important; }
             .dash-history-table tbody tr { display: block; padding: 0.85rem 0; border-bottom: 1px solid rgba(255,255,255,0.05); }
+            /* Each <td> carries data-label="…" — surface it as a small
+               uppercase tag before the value so the row is readable now
+               that thead is hidden. The Date cell self-labels with its
+               own day/time markup, so it opts out. */
+            .dash-history-table tbody td[data-label]::before {
+                content: attr(data-label) " · ";
+                display: inline-block;
+                min-width: 70px;
+                font-weight: 700;
+                color: rgb(140,135,165);
+                text-transform: uppercase;
+                letter-spacing: 0.10em;
+                font-size: 10px;
+                margin-right: 4px;
+            }
+            .dash-history-table tbody td[data-label="Date"]::before { content: none; }
         }
 
         /* ═══════════════════════════════════════════════════════════════
@@ -1271,6 +1287,151 @@
         .modal-cancel-notice p { font-size: 12px; color: rgb(203,199,224); line-height: 1.55; margin: 0; }
         .modal-cancel-notice p b { color: #f5f3ff; }
 
+        /* ═══════════════════════════════════════════════════════════════
+           Mobile responsiveness sweep
+           ───────────────────────────────────────────────────────────────
+           Additive-only overrides for the registration form, plan picker,
+           payment / UTR views, the dashboard shell, and the plan modal.
+           Every rule lives inside an @media gate so the existing desktop
+           styles above are provably untouched. Existing breakpoints
+           (560/600/660/880/1080/1180) handle most layout collapse — this
+           block fixes the gaps the audit identified at ≤768px and ≤480px.
+           ═══════════════════════════════════════════════════════════════ */
+
+        /* ── ≤ 768px (tablet portrait + large phones) ─────────────── */
+        @media (max-width: 768px) {
+            /* Dashboard shell on phones — the existing 1080px rule
+               wraps the sidebar into a horizontal strip but lets the
+               profile card + side CTAs + sign-out wrap onto extra
+               rows, eating ~140px before any plan content. Reduce
+               the strip to a single horizontal scrollable nav bar
+               and tuck the chrome away (sign-out moves into the
+               topbar's existing right side; profile is implicit
+               from the welcome row). */
+            .dash-sidebar {
+                flex-wrap: nowrap; overflow-x: auto; overflow-y: hidden;
+                padding: 0.5rem 0.75rem; gap: 0.4rem;
+                -webkit-overflow-scrolling: touch;
+                /* Hide scrollbar but keep functionality */
+                scrollbar-width: none;
+            }
+            .dash-sidebar::-webkit-scrollbar { display: none; }
+            /* Hide the bulky profile card (avatar + name + email + plan)
+               on phones — that info is already shown in the main plan
+               card directly below. KEEP .dash-side-foot visible so the
+               sign-out button and Upgrade CTA remain reachable. */
+            .dash-profile-card { display: none; }
+            .dash-side-foot    { flex-shrink: 0; }
+            .dash-side-cta,
+            .dash-side-signout { white-space: nowrap; padding: 8px 12px; font-size: 12.5px; }
+            .dash-nav          { flex-direction: row; gap: 6px; flex-wrap: nowrap; flex-shrink: 0; }
+            .dash-nav-item     { padding: 8px 12px; font-size: 12.5px; white-space: nowrap; }
+            .dash-shell        { padding: 0.6rem 0.85rem 0.75rem; gap: 0.7rem; }
+
+            /* The admin's "View dashboard" mode locks the body to no-scroll
+               and sets the inner .dash-main as the scrollport. Confirm the
+               port has touch momentum. */
+            .dash-main { -webkit-overflow-scrolling: touch; }
+
+            /* Topbar slim down. */
+            .dash-topbar { padding: 0.6rem 0.9rem; }
+            .dash-topbar-brand .brand-mark { font-size: 17px; }
+
+            /* History table on phones — page itself should scroll, not
+               an inner container with a cramped max-height. */
+            .dash-history-table-wrap { max-height: none; overflow: visible; }
+        }
+
+        /* ── ≤ 560px (small tablets + phones) ─────────────────────── */
+        @media (max-width: 560px) {
+            /* Registration form two-column row → stack. At 375px the
+               two columns are ~155px each, way too narrow for typed
+               names + placeholders. */
+            .reg-row-2 { grid-template-columns: 1fr; gap: 1.4rem; }
+        }
+
+        /* ── ≤ 480px (phones) ─────────────────────────────────────── */
+        @media (max-width: 480px) {
+            /* ─── Sign-in welcome panes ─── */
+            .welcome-pane { padding: 1.6rem 1.15rem; border-radius: 1.25rem; }
+            .welcome-h1   { font-size: 32px; margin: 14px 0 16px; }
+            .welcome-h2   { font-size: 22px; margin: 14px 0 22px; }
+            .welcome-lede { font-size: 14px; margin-bottom: 22px; }
+            .welcome-features li { gap: 12px; }
+            .welcome-feat-title { font-size: 14px; }
+            .welcome-feat-desc  { font-size: 12.5px; }
+
+            /* ─── Registration ─── */
+            .reg-title { font-size: 30px; margin-bottom: 1.5rem; }
+            .reg-info-pane { padding: 1.5rem 1.25rem; }
+            .reg-identity { gap: 1rem; padding-bottom: 1rem; }
+            .reg-identity-thumb { width: 60px; height: 60px; }
+            .reg-trust-stats { gap: 0.4rem; }
+            .reg-trust-stat { padding: 0.7rem 0.35rem; }
+            .reg-trust-stat .v { font-size: 17px; }
+            .reg-trust-stat .k { font-size: 9px; }
+            .reg-cta { padding: 1rem 1.25rem; font-size: 15px; }
+
+            /* ─── Plan picker ─── */
+            .plans-title { font-size: 28px; }
+            .plans-stage { gap: 1.75rem; }
+
+            /* ─── Payment view ─── */
+            .pay-title { font-size: 26px; }
+            .pay-sub { font-size: 14px; margin-bottom: 1.5rem; }
+            .pay-summary { padding: 1.5rem 1.25rem; }
+            .pay-summary-amt { font-size: 32px; }
+            .pay-summary-plan { font-size: 24px; }
+            /* Keep .pay-trust at 3 columns but shrink everything inside
+               so the row still fits even on a 320px phone. */
+            .pay-trust { gap: 0.5rem; padding-top: 1.25rem; margin-top: 1.25rem; }
+            .pay-trust-item span { font-size: 8.5px; letter-spacing: 0.10em; }
+            .pay-trust-item svg  { width: 16px; height: 16px; }
+
+            /* ─── UTR view ─── */
+            .utr-title { font-size: 26px; }
+            .utr-desc { font-size: 14px; margin-bottom: 1.5rem; }
+            .utr-pane { padding: 1.5rem 1.25rem; }
+            .utr-input { padding: 14px 14px 14px 40px; font-size: 14.5px; }
+            .utr-cta { padding: 1rem 1.25rem; font-size: 15px; }
+            .utr-guide-title { font-size: 22px; }
+
+            /* ─── Dashboard cards ─── */
+            .dash-card { padding: 1rem 1.1rem; border-radius: 14px; }
+            .dash-card-title { font-size: 20px; }
+            .dash-history-title { font-size: 24px; }
+            .dash-card-name { font-size: 18px; }
+
+            /* Action buttons stack full-width on dashboard cards. */
+            .dash-actions { flex-direction: column; align-items: stretch; }
+            .dash-btn { width: 100%; justify-content: center; }
+
+            /* Membership card — let it use full row width instead of the
+               420px desktop cap (the inherited 660px rule already does
+               this; this just keeps it explicit). */
+            .dash-card-3d { max-width: 100%; margin: 0.5rem 0 0.25rem; }
+
+            /* ─── Plan action modal ─── */
+            .plan-modal-backdrop { padding: 0.75rem; }
+            .plan-modal { padding: 1.5rem 1.15rem; border-radius: 16px; max-height: calc(100vh - 1.5rem); }
+            .plan-modal-title { font-size: 19px; }
+            .plan-modal-sub   { font-size: 12.5px; }
+            .plan-modal-head  { padding-right: 2.5rem; margin-bottom: 1rem; }
+            .plan-modal-close { width: 32px; height: 32px; top: 0.75rem; right: 0.75rem; }
+            .modal-actions { flex-direction: column-reverse; gap: 0.5rem; align-items: stretch; }
+            .modal-actions .modal-btn { width: 100%; }
+            .modal-actions-single .modal-btn { min-width: 0; }
+
+            /* Cancel modal summary rows — make labels wrap above values
+               instead of squeezing both on a single 280px-wide line. */
+            .modal-cancel-row { flex-direction: column; align-items: flex-start; gap: 4px; }
+            .modal-cancel-row .v { font-size: 13.5px; }
+
+            /* ─── Plans bottom bar — keep the CTA full-width inside the
+               sticky bar (mostly already handled at 660px, this just
+               guards against any text-overflow). */
+            .plans-bar-value { font-size: 14px; }
+        }
     </style>
 </head>
 <body class="bg-gray-950 text-gray-100 antialiased min-h-screen relative overflow-x-hidden">
@@ -4220,20 +4381,24 @@
                 statusLabel = 'Pending'; statusClass = 'pending'; dotClass = 'amber';
             }
 
+            // data-label values are picked up by the mobile @media rule
+            // that converts the table to a stacked-card layout at ≤660px.
+            // Each cell prefixes its value with the label so the row is
+            // still readable when <thead> is hidden on phones.
             return `
                 <tr>
-                    <td>
+                    <td data-label="Date">
                         <span class="dash-history-date-day">${escape(dateStr)}</span>
                         <span class="dash-history-date-time">${escape(timeStr)}</span>
                     </td>
-                    <td>
+                    <td data-label="Plan">
                         <span class="dash-history-plan">
                             <span class="dash-history-plan-dot ${dotClass}"></span>${escape(h.plan || '—')}
                         </span>
                     </td>
-                    <td class="dash-history-amount">${escape(fmtINR(amount))}</td>
-                    <td><span class="dash-history-status ${statusClass}">${escape(statusLabel)}</span></td>
-                    <td class="${h.utrId ? 'dash-history-utr' : 'dash-history-utr dash-history-utr-pending'}">${escape(h.utrId || 'Processing…')}</td>
+                    <td data-label="Amount" class="dash-history-amount">${escape(fmtINR(amount))}</td>
+                    <td data-label="Status"><span class="dash-history-status ${statusClass}">${escape(statusLabel)}</span></td>
+                    <td data-label="UTR" class="${h.utrId ? 'dash-history-utr' : 'dash-history-utr dash-history-utr-pending'}">${escape(h.utrId || 'Processing…')}</td>
                 </tr>
             `;
         }).join('');
