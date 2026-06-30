@@ -280,7 +280,12 @@
         .nav-fallback-avatar { width: 30px; height: 30px; border-radius: 50%; background: linear-gradient(135deg,#f59e0b,#ec4899); display: inline-flex; align-items: center; justify-content: center; font-size: 13px; border: 2px solid rgba(255,255,255,0.12); }
 
         /* Vertical-centering wrapper for sign-in only (other views unaffected) */
-        .signin-stage { min-height: calc(100vh - 64px); display: flex; align-items: center; justify-content: center; padding: 0; }
+        /* min-height: 100vh resolves to the "tall" viewport on mobile
+           (URL bar hidden), which inflates the stage and pushes the
+           bottom of the welcome content past the visible area. 100dvh
+           tracks the actual visible viewport so centering lands inside
+           it. vh stays as the older-browser fallback. */
+        .signin-stage { min-height: calc(100vh - 64px); min-height: calc(100dvh - 64px); display: flex; align-items: center; justify-content: center; padding: 0; }
         /* Cancel <main>'s pt-8/pb-16 only when the sign-in view is rendered, so the
            page is exactly 100vh tall and never scrolls. Other views keep main's padding. */
         #view-signin { margin-top: -2rem; margin-bottom: -4rem; }
@@ -550,7 +555,10 @@
         /* ═══════════════════════════════════════════════════════════════
            2026 SaaS — Payment / UPI (#view-payment)
            ═══════════════════════════════════════════════════════════════ */
-        .pay-stage { max-width: 1280px; margin: 0 auto; padding: 1rem 0; min-height: calc(100vh - 64px); display: flex; flex-direction: column; justify-content: center; }
+        /* Same dvh treatment as .signin-stage — keeps the payment
+           page centred in the actual visible viewport so the QR card
+           and CTA never get pushed past the bottom on mobile. */
+        .pay-stage { max-width: 1280px; margin: 0 auto; padding: 1rem 0; min-height: calc(100vh - 64px); min-height: calc(100dvh - 64px); display: flex; flex-direction: column; justify-content: center; }
         /* Cancel <main>'s pt-8/pb-16 only on the payment view, so the page is
            exactly 100vh tall and the content sits in the visual middle. */
         #view-payment { margin-top: -2rem; margin-bottom: -4rem; }
@@ -924,12 +932,19 @@
         .dash-flip-btn:hover { background: rgba(255,255,255,0.08); color: #f5f3ff; border-color: rgba(255,255,255,0.18); }
         .dash-flip-btn svg { width: 14px; height: 14px; }
 
-        .dash-card-3d { perspective: 1500px; max-width: 420px; margin: 0.5rem auto 0.25rem; }
-        .dash-card-3d-inner { position: relative; width: 100%; aspect-ratio: 1.586; transform-style: preserve-3d; transition: transform .8s cubic-bezier(.2,.8,.2,1); }
-        .dash-card-3d-inner.flipped { transform: rotateY(180deg); }
-        .dash-card-3d-face { position: absolute; inset: 0; backface-visibility: hidden; -webkit-backface-visibility: hidden; padding: 1.4rem 1.6rem; border-radius: 18px; background: linear-gradient(135deg, rgba(48,28,90,0.85) 0%, rgba(20,14,40,0.95) 100%); border: 1px solid rgba(168,85,247,0.25); box-shadow: 0 30px 60px -20px rgba(0,0,0,0.7), 0 0 60px rgba(168,85,247,0.15); display: flex; flex-direction: column; justify-content: space-between; overflow: hidden; }
+        .dash-card-3d { perspective: 1500px; -webkit-perspective: 1500px; max-width: 420px; margin: 0.5rem auto 0.25rem; }
+        .dash-card-3d-inner { position: relative; width: 100%; aspect-ratio: 1.586; transform-style: preserve-3d; -webkit-transform-style: preserve-3d; transition: transform .8s cubic-bezier(.2,.8,.2,1); }
+        .dash-card-3d-inner.flipped { transform: rotateY(180deg); -webkit-transform: rotateY(180deg); }
+        .dash-card-3d-face { position: absolute; inset: 0; backface-visibility: hidden; -webkit-backface-visibility: hidden; padding: 1.4rem 1.6rem; border-radius: 18px; background: linear-gradient(135deg, rgba(48,28,90,0.85) 0%, rgba(20,14,40,0.95) 100%); border: 1px solid rgba(168,85,247,0.25); box-shadow: 0 30px 60px -20px rgba(0,0,0,0.7), 0 0 60px rgba(168,85,247,0.15); display: flex; flex-direction: column; justify-content: space-between; overflow: hidden; /* Lift each face onto its own GPU layer so iOS Safari respects backface-visibility. Without this the renderer can fold the no-transform front face into a 2D layer and the back face bleeds through (showing as a mirrored "ghost" overlay on top of the front content). */ -webkit-transform: translateZ(0); transform: translateZ(0); will-change: transform; }
         .dash-card-3d-face::after { content: ''; position: absolute; right: -80px; top: -80px; width: 280px; height: 280px; background: radial-gradient(circle, rgba(168,85,247,0.22), transparent 60%); pointer-events: none; }
-        .dash-card-3d-back { transform: rotateY(180deg); }
+        /* Both faces get an explicit transform — the front pinned at
+           rotateY(0deg) and the back at rotateY(180deg). Browsers (esp.
+           iOS Safari) honour backface-visibility only when each face
+           participates in 3D in its own right; a "naked" front face
+           with no transform falls back to a flattened 2D layer and the
+           back face leaks through. */
+        .dash-card-3d-front { transform: rotateY(0deg) translateZ(0); -webkit-transform: rotateY(0deg) translateZ(0); }
+        .dash-card-3d-back  { transform: rotateY(180deg) translateZ(0); -webkit-transform: rotateY(180deg) translateZ(0); }
         .dash-card-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; position: relative; z-index: 1; }
         .dash-card-row.bottom { align-items: flex-end; }
         .dash-card-brand { display: block; font-size: 14.5px; font-weight: 800; letter-spacing: 0.18em; color: #f5f3ff; }
@@ -1035,12 +1050,20 @@
             transition: opacity .3s ease, visibility .3s;
             pointer-events: none;
             overflow-y: auto;
+            /* iOS Safari address bar is a known source of "modal top cut
+               off" bugs because 100vh resolves to the LARGER viewport
+               (URL bar hidden). 100dvh follows the visible viewport in
+               real time, so the modal can never exceed what the user
+               can scroll to. vh stays as the fallback for older
+               browsers. */
+            -webkit-overflow-scrolling: touch;
         }
         .plan-modal-backdrop.show { opacity: 1; visibility: visible; pointer-events: auto; }
 
         .plan-modal {
             position: relative; width: 100%; max-width: 720px;
             max-height: calc(100vh - 3rem);
+            max-height: calc(100dvh - 3rem);
             display: flex; flex-direction: column;
             padding: 2rem 2.25rem;
             border-radius: 22px;
@@ -1412,8 +1435,23 @@
             .dash-card-3d { max-width: 100%; margin: 0.5rem 0 0.25rem; }
 
             /* ─── Plan action modal ─── */
-            .plan-modal-backdrop { padding: 0.75rem; }
-            .plan-modal { padding: 1.5rem 1.15rem; border-radius: 16px; max-height: calc(100vh - 1.5rem); }
+            /* On phones the backdrop anchors the modal at the top of
+               the visible viewport instead of vertically centering it.
+               Centering caused the title (and the close button) to
+               clip past the top edge whenever the body got tall enough
+               to scroll — e.g. the Renew flow's QR + summary + steps.
+               Top-anchoring lets the modal grow downward and scroll
+               inside its own body without ever hiding the head. */
+            .plan-modal-backdrop {
+                padding: 0.75rem;
+                align-items: flex-start;
+            }
+            .plan-modal {
+                padding: 1.5rem 1.15rem;
+                border-radius: 16px;
+                max-height: calc(100vh - 1.5rem);
+                max-height: calc(100dvh - 1.5rem);
+            }
             .plan-modal-title { font-size: 19px; }
             .plan-modal-sub   { font-size: 12.5px; }
             .plan-modal-head  { padding-right: 2.5rem; margin-bottom: 1rem; }
@@ -1468,7 +1506,11 @@
             <!-- VIEW: Sign In (2026 flagship welcome) -->
             <div id="view-signin" class="hidden animate-fade-in">
               <div class="signin-stage">
-                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 w-full max-w-[1480px] mx-auto">
+                <!-- Single column under lg, two columns at lg+. The right
+                     pane (feature highlights) is now visible on mobile
+                     too so the user sees what they're signing up for
+                     before scrolling away. -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8 w-full max-w-[1480px] mx-auto">
                     <section class="welcome-pane left">
                         <span class="welcome-pill violet">Get Started</span>
                         <h1 class="welcome-h1">
@@ -1492,7 +1534,11 @@
                         <p class="welcome-legal">We only use your email and name. No other data is accessed. By continuing, you agree to our terms of service.</p>
                     </section>
 
-                    <aside class="welcome-pane right hidden lg:flex">
+                    <!-- Right pane visible at every breakpoint. .welcome-pane
+                         already declares display: flex, so omitting the
+                         Tailwind hidden/flex toggle lets it appear in the
+                         single-column mobile layout as well. -->
+                    <aside class="welcome-pane right">
                         <span class="welcome-pill amber">What You Get</span>
                         <h2 class="welcome-h2">Everything in one place</h2>
                         <ul class="welcome-features">
