@@ -2470,6 +2470,76 @@
         }
     }
 
+    /* ─── Reserved-tab helpers for WhatsApp redirect ───────────────────
+       Mobile browsers (Chrome Android, Safari iOS, and Chrome's mobile-
+       view emulator on desktop) restrict window.open() to synchronous
+       click handlers. Once we hit `await fetch(...)`, the user-gesture
+       token is gone and a later window.open() is silently blocked,
+       which is exactly what was breaking the post-payment WhatsApp
+       redirect on mobile.
+
+       The fix is the standard "reserved tab" pattern:
+         1. openReservedTab()        — runs synchronously on click and
+                                       opens about:blank, returning a
+                                       handle (or null if blocked).
+         2. redirectToWhatsApp(...)  — once the fetch chain resolves,
+                                       points the reserved tab at the
+                                       real URL. If the tab handle is
+                                       null (some mobile configs return
+                                       null even when the tab opens),
+                                       falls back to same-tab nav,
+                                       which is always allowed.
+         3. closeReservedTab(...)    — used on validation / network
+                                       errors so the user doesn't end
+                                       up with a stranded blank tab.
+
+       We paint a tiny loading message into the reserved tab so users
+       don't see a confusing blank page while we wait on the API. */
+    function openReservedTab() {
+        try {
+            const w = window.open('about:blank', '_blank');
+            if (w && w.document) {
+                try {
+                    w.document.write(
+                        '<!doctype html><html><head>'
+                        + '<meta charset="utf-8">'
+                        + '<meta name="viewport" content="width=device-width,initial-scale=1">'
+                        + '<title>Opening WhatsApp…</title>'
+                        + '<style>html,body{margin:0;height:100%;background:#0a0a0a;color:#f5f3ff;'
+                        + 'font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif;'
+                        + 'display:flex;align-items:center;justify-content:center;text-align:center;padding:24px}'
+                        + '.box{max-width:280px}.dot{display:inline-block;width:8px;height:8px;margin:0 3px;'
+                        + 'border-radius:50%;background:#a855f7;animation:p 1.2s infinite ease-in-out both}'
+                        + '.dot:nth-child(2){animation-delay:.15s}.dot:nth-child(3){animation-delay:.3s}'
+                        + '@keyframes p{0%,80%,100%{transform:scale(.6);opacity:.4}40%{transform:scale(1);opacity:1}}'
+                        + 'p{font-size:14px;color:#cdc9e0;margin:14px 0 0}</style></head>'
+                        + '<body><div class="box">'
+                        + '<div><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>'
+                        + '<p>Connecting to WhatsApp…</p></div></body></html>'
+                    );
+                    w.document.close();
+                } catch (_) { /* about:blank doc.write can fail on rare configs — harmless */ }
+            }
+            return w || null;
+        } catch (_) {
+            return null;
+        }
+    }
+    function redirectToWhatsApp(reservedTab, url) {
+        if (!url) return;
+        if (reservedTab && !reservedTab.closed) {
+            try { reservedTab.location.href = url; return; } catch (_) { /* fall through */ }
+        }
+        // Popup was blocked or revoked — same-tab navigation always works.
+        // The user can use the back button to return to the dashboard.
+        window.location.href = url;
+    }
+    function closeReservedTab(reservedTab) {
+        if (reservedTab && !reservedTab.closed) {
+            try { reservedTab.close(); } catch (_) { /* ignored */ }
+        }
+    }
+
     /* ─── View switching ─── */
     const views = ['view-signin','view-register','view-plans','view-payment','view-utr','view-dashboard'];
     function showView(id) {
@@ -2939,6 +3009,17 @@
         errEl.classList.add('hidden');
         if (!utr || utr.length < 6) { errEl.textContent = 'Enter a valid UTR (min 6 characters)'; errEl.classList.remove('hidden'); return; }
 
+        // Reserve the WhatsApp tab synchronously while we still have the
+        // user-gesture token. Mobile browsers (Chrome Android, Safari iOS,
+        // and desktop Chrome's mobile-view emulator) block window.open()
+        // calls that happen after an `await` because the gesture context
+        // is gone by then. Opening "about:blank" right here pre-allocates
+        // the tab; we point it at the WhatsApp URL once the fetch chain
+        // resolves. If the browser refuses to open the tab (returns
+        // null), we fall back to same-tab navigation, which is always
+        // allowed.
+        const waWindow = openReservedTab();
+
         setBtnLoading(btn, true, 'Submitting…');
         const token = getToken();
         const user = getUser();
@@ -2951,7 +3032,11 @@
                     email: user.email,
                     selectedPlan: selectedPlan,
                     utrId: utr,
-                    submissionTimestamp: new Date().toISOString()
+                    submissionTimestamp: new Date().toISOString(),
+                    // Legacy plan-picker only fires for first-time signups
+                    // (active users go through openPlanModal instead), so
+                    // this hint is informational rather than load-bearing.
+                    flow: 'first-time',
                 })
             });
             const data = await res.json();
@@ -2999,17 +3084,20 @@
                 setUser(updatedUser);
                 // Clear the payment id once the row has been updated
                 currentPaymentId = null;
-                window.open(data.data.whatsappUrl, '_blank');
+                redirectToWhatsApp(waWindow, data.data.whatsappUrl);
                 showView('view-dashboard');
                 renderDashboard(updatedUser);
             } else if (data.status === 'duplicate') {
+                closeReservedTab(waWindow);
                 errEl.textContent = 'This UTR has already been used';
                 errEl.classList.remove('hidden');
             } else {
+                closeReservedTab(waWindow);
                 errEl.textContent = data.message || 'Submission failed';
                 errEl.classList.remove('hidden');
             }
         } catch {
+            closeReservedTab(waWindow);
             errEl.textContent = 'Connection error. Try again.';
             errEl.classList.remove('hidden');
         } finally {
@@ -3905,12 +3993,27 @@
             return;
         }
 
+        // Reserve the WhatsApp tab while we still have the user-gesture
+        // token (see openReservedTab below for the rationale — mobile
+        // browsers block window.open() called after `await`). For
+        // renew / change flows this is the only thing that makes the
+        // redirect work in mobile view at all.
+        const waWindow = openReservedTab();
+
         setBtnLoading(btn, true, 'Submitting…');
         const user = getUser() || {};
         const plan = planModalState.selectedPlan;
+        // Flow hint for the server — controls whether /api/submit
+        // assigns a fresh Meet link + setup-call message ('first-time')
+        // or returns a renewal-style confirmation with no Meet link.
+        // First-time signups land in the legacy /view-plans flow, not
+        // here, so anything reaching submitModalUtr is renewal /
+        // upgrade / downgrade / switch.
+        const submitFlow = planModalState.flow || 'renew';
 
         try {
-            // 1) Submission row → assigns Meet link, returns WhatsApp URL
+            // 1) Submission row → assigns Meet link (first-time only),
+            //    returns flow-appropriate WhatsApp URL.
             const subRes = await fetch(`${API_BASE}/api/submit`, {
                 method: 'POST', headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -3920,17 +4023,20 @@
                     selectedPlan: plan,
                     utrId: utr,
                     submissionTimestamp: new Date().toISOString(),
+                    flow: submitFlow,
                 }),
             });
             const subData = await subRes.json();
 
             if (subData.status === 'duplicate') {
+                closeReservedTab(waWindow);
                 errEl.textContent = 'This UTR has already been used';
                 errEl.classList.remove('hidden');
                 setBtnLoading(btn, false);
                 return;
             }
             if (subData.status !== 'success' || !subData.data) {
+                closeReservedTab(waWindow);
                 errEl.textContent = subData.message || 'Submission failed. Try again.';
                 errEl.classList.remove('hidden');
                 setBtnLoading(btn, false);
@@ -4008,16 +4114,21 @@
             setUser(updatedUser);
             renderDashboard(updatedUser);
 
-            // 5) Open WhatsApp in a new tab and show the done step
-            if (subData.data.whatsappUrl) {
-                window.open(subData.data.whatsappUrl, '_blank', 'noopener');
-            }
-
-            // Clear the payment id so a future modal open doesn't reuse it
+            // 5) Render the done step FIRST so the dashboard reflects
+            //    the new plan immediately, then point the reserved
+            //    WhatsApp tab at the deep link. Doing the redirect last
+            //    avoids the user seeing a flash of the old UI if mobile
+            //    falls back to same-tab navigation.
             planModalState.paymentId = null;
             planModalState.step = 'done';
             renderPlanModalStep();
+            if (subData.data.whatsappUrl) {
+                redirectToWhatsApp(waWindow, subData.data.whatsappUrl);
+            } else {
+                closeReservedTab(waWindow);
+            }
         } catch (e) {
+            closeReservedTab(waWindow);
             errEl.textContent = 'Connection error. Please try again.';
             errEl.classList.remove('hidden');
         } finally {

@@ -208,9 +208,52 @@ function generateQuickReply(userData, meetLink) {
   ].join('\n');
 }
 
+/**
+ * Renewal / plan-change WhatsApp payload. Used by /api/submit when the
+ * client passes flow !== 'first-time' — the user already went through
+ * Meet setup on their original signup, so a fresh Meet link would only
+ * confuse them. The submissions row is still recorded (meet_link is
+ * left null) so admin can correlate the renewal payment with the user.
+ *
+ * Mirrors the structure of generateSetupMessage so the route handler
+ * can use either return shape interchangeably (meetLink may be null).
+ */
+function generateRenewalSetupMessage(userData, opts = {}) {
+  const planName = userData.selectedPlan.split(' —')[0].trim();
+  const isChange = opts.flow === 'change';
+  const verb = isChange ? 'plan change' : 'renewal';
+  const title = isChange ? 'Plan change — payment received' : 'Renewal — payment received';
+
+  const message = [
+    `✅ *${title}*`,
+    ``,
+    `Hi ${userData.firstName}! Your ${verb} payment is in.`,
+    ``,
+    `📋 *Your details*`,
+    `• Name: ${userData.firstName} ${userData.lastName}`.trim(),
+    `• Email: ${userData.email}`,
+    `• Plan: ${planName}`,
+    `• UTR: ${userData.utrId}`,
+    ``,
+    `🔔 We've queued this for verification. You'll get a confirmation here once it's active — no Meet call needed for ${verb}s; you're already set up.`,
+    ``,
+    `Reply here if anything needs attention.`,
+    ``,
+    `— DevTools Pro Team 🚀`,
+  ].join('\n');
+
+  return {
+    meetLink: null,
+    whatsappMessage: message,
+    autoReplyNote: `Renewal queued for verification — typically completes within a few hours.`,
+    planName,
+  };
+}
+
 module.exports = {
   getNextMeetLink,
   generateSetupMessage,
+  generateRenewalSetupMessage,
   generateQuickReply,
   getMeetLinks,
   isValidMeetUrl,

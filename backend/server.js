@@ -21,7 +21,7 @@ const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const { v4: uuidv4 } = require('uuid');
 const { initDB, addSubmission, getAllSubmissions, getSubmissionByUTR, getStats, getClient } = require('./db');
-const { generateSetupMessage, generateQuickReply } = require('./meet-service');
+const { generateSetupMessage, generateRenewalSetupMessage, generateQuickReply } = require('./meet-service');
 const {
   createPaymentRecord, findOpenPaymentForUser, getPaymentOwner,
   submitUTR, getPaymentStatus, verifyPayment,
@@ -324,11 +324,12 @@ app.post('/auth/update-plan', requireAuth, async (req, res) => {
 
     // Get the canonical email on the users row — we never trust the JWT
     // payload's email as the lookup key for the submission. We also
-    // capture the previous plan up front so we can label the Slack alert
-    // as new / renew / upgrade / downgrade once the write succeeds.
+    // capture the previous plan + meet_link up front so we can label the
+    // Slack alert as new / renew / upgrade / downgrade and preserve the
+    // existing Meet link on renewals.
     const { data: userRow, error: userErr } = await client
       .from('users')
-      .select('id, email, current_plan')
+      .select('id, email, current_plan, meet_link')
       .eq('id', req.user.userId)
       .single();
 
@@ -360,9 +361,16 @@ app.post('/auth/update-plan', requireAuth, async (req, res) => {
       }
     }
 
-    // Server-controlled meet_link: from the matching submission if we have it,
-    // else from the latest submission for this user, else null.
+    // Server-controlled meet_link resolution. Preference order:
+    //   1. The Meet link on the matching submission row (first-time
+    //      signups always have one here).
+    //   2. The user's existing meet_link (renewals / changes — the
+    //      submission row deliberately stores null because no new
+    //      setup call is needed, so we carry over the original link).
+    //   3. The latest submission's meet_link as a last-resort fallback.
+    //   4. null when this is genuinely a fresh user with no history.
     const serverMeetLink = (matchingSub && matchingSub.meet_link)
+      || userRow.meet_link
       || (subs && subs[0] && subs[0].meet_link)
       || null;
 
@@ -1070,9 +1078,20 @@ app.post('/admin/users/:id/mark-reminded', requireAdminAuth, async (req, res) =>
 // ═══════════════════════════════════════════
 
 // ─── POST /api/submit ───
+// `flow` is an optional client hint about whether this submission is a
+// fresh signup ('first-time' or omitted) or a continuation of an
+// existing subscription ('renew' / 'change' / 'downgrade'). Only the
+// first-time flow gets a Meet link assigned + a setup-call message;
+// renewals and changes reuse the user's existing setup and get a
+// shorter "payment received" confirmation. Server-side this only
+// affects the WhatsApp message we return and whether we burn a Meet
+// link slot from the pool — admin-side plan validation and UTR
+// dedup are identical across flows.
+const FIRST_TIME_FLOWS = new Set(['', 'first-time', 'first_time', 'firsttime']);
+
 app.post('/api/submit', submitLimiter, async (req, res) => {
   try {
-    const { firstName, lastName, email, selectedPlan, utrId, submissionTimestamp } = req.body || {};
+    const { firstName, lastName, email, selectedPlan, utrId, submissionTimestamp, flow } = req.body || {};
 
     const requiredFields = { firstName, lastName, email, selectedPlan, utrId };
     for (const [field, value] of Object.entries(requiredFields)) {
@@ -1093,8 +1112,13 @@ app.post('/api/submit', submitLimiter, async (req, res) => {
       return res.status(400).json({ status: 'error', message: 'Invalid plan' });
     }
 
+    const flowKey = String(flow || '').trim().toLowerCase();
+    const isFirstTime = FIRST_TIME_FLOWS.has(flowKey);
+
     const userData = { firstName, lastName, email, selectedPlan, utrId };
-    const setupInfo = generateSetupMessage(userData);
+    const setupInfo = isFirstTime
+      ? generateSetupMessage(userData)
+      : generateRenewalSetupMessage(userData, { flow: flowKey });
 
     const submission = {
       id: uuidv4(),
@@ -1104,6 +1128,10 @@ app.post('/api/submit', submitLimiter, async (req, res) => {
       selectedPlan: planClean,
       utrId: utrId.trim(),
       submissionTimestamp: submissionTimestamp || new Date().toISOString(),
+      // For renewals / changes we deliberately leave meet_link null on
+      // the submissions row. /auth/update-plan falls back to the user's
+      // existing meet_link in that case (set during their original
+      // first-time signup) so the dashboard's Meet link never disappears.
       meetLink: setupInfo.meetLink,
       notes: setupInfo.autoReplyNote,
     };
@@ -1121,7 +1149,8 @@ app.post('/api/submit', submitLimiter, async (req, res) => {
     }
 
     const whatsappNumber = process.env.WHATSAPP_NUMBER || '919019879108';
-    const quickReply = generateQuickReply(userData, setupInfo.meetLink);
+    // quickReply is only meaningful when a Meet link is present.
+    const quickReply = setupInfo.meetLink ? generateQuickReply(userData, setupInfo.meetLink) : null;
     const whatsappUrl = `https://api.whatsapp.com/send?phone=${whatsappNumber}&text=${encodeURIComponent(setupInfo.whatsappMessage)}`;
 
     res.status(201).json({
@@ -1134,10 +1163,11 @@ app.post('/api/submit', submitLimiter, async (req, res) => {
         whatsappUrl,
         whatsappMessage: setupInfo.whatsappMessage,
         quickReply,
+        flow: flowKey || 'first-time',
       },
     });
 
-    console.log(`submit: id=${submission.id} plan=${planClean}`);
+    console.log(`submit: id=${submission.id} plan=${planClean} flow=${flowKey || 'first-time'}`);
   } catch (error) {
     console.error('submit error:', error.message);
     res.status(500).json({ status: 'error', message: 'Internal server error' });
