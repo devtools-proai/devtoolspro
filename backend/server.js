@@ -27,6 +27,7 @@ const {
   submitUTR, getPaymentStatus, verifyPayment,
   getPendingPayments, getUTRConfidence,
 } = require('./payment-verify');
+const { isValidMeetUrl } = require('./meet-service');
 const {
   verifyGoogleToken, findOrCreateUser, generateSessionToken, requireAuth,
   GOOGLE_CLIENT_ID, adminCredsConfigured, verifyAdminCreds,
@@ -775,7 +776,20 @@ app.patch('/admin/users/:id', requireAdminAuth, async (req, res) => {
     if ('planStartDate' in body) updates.plan_start_date = body.planStartDate || null;
     if ('planEndDate'   in body) updates.plan_end_date   = body.planEndDate   || null;
     if ('utrId'         in body) updates.utr_id          = body.utrId         || null;
-    if ('meetLink'      in body) updates.meet_link       = body.meetLink      || null;
+    if ('meetLink'      in body) {
+      // Same strict validation as the assignment pool — even an admin's
+      // manual edit can't introduce a Meet URL that doesn't match the
+      // canonical `https://meet.google.com/xxx-xxxx-xxx` format. Empty
+      // string clears the column (legitimate when an admin un-assigns).
+      const raw = body.meetLink ? String(body.meetLink).trim() : '';
+      if (raw && !isValidMeetUrl(raw)) {
+        return res.status(400).json({
+          status: 'error',
+          message: 'Meet link must look like https://meet.google.com/xxx-xxxx-xxx (lowercase 3-4-3 dashed format).',
+        });
+      }
+      updates.meet_link = raw || null;
+    }
     if ('phone'         in body) {
       // Normalise to digits-only so the WhatsApp click-to-chat URL on
       // every row just works without re-parsing. Empty string clears.

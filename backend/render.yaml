@@ -36,12 +36,14 @@ services:
       - key: ADMIN_KEY
         sync: false
 
-      # Meet link pool
+      # Meet link pool — values managed in the Render dashboard.
+      # Each value is validated against the canonical Google Meet URL
+      # format on boot; production refuses to start with zero valid links.
+      # Add more slots (MEET_LINK_3, MEET_LINK_4, …) here AND in the
+      # dashboard to grow the pool.
       - key: MEET_LINK_1
         sync: false
       - key: MEET_LINK_2
-        sync: false
-      - key: MEET_LINK_3
         sync: false
 
       - key: WHATSAPP_NUMBER
