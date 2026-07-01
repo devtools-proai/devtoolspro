@@ -436,6 +436,199 @@
         .reg-cta:disabled { opacity: 0.7; cursor: not-allowed; transform: none; }
         .reg-cta svg { width: 18px; height: 18px; }
 
+        /* ─── Terms & Conditions consent row ───────────────────────────
+           Visual checkbox pattern: the native <input> is visually
+           hidden but remains focusable + keyboard-operable (space/enter
+           tick it); the coloured .reg-terms-box is the pixel-perfect
+           substitute driven by :checked / :focus-visible on the sibling
+           input. Screen readers still announce the underlying checkbox
+           via the wrapping <label>, so accessibility survives. */
+        .reg-terms {
+            display: flex; align-items: flex-start; gap: 12px;
+            padding: 12px 14px; margin-top: 0.5rem;
+            border-radius: 12px;
+            background: rgba(20,16,42,0.4);
+            border: 1px solid rgba(255,255,255,0.06);
+            cursor: pointer;
+            transition: border-color .18s, background .18s;
+        }
+        .reg-terms:hover { border-color: rgba(168,85,247,0.24); background: rgba(20,16,42,0.55); }
+        .reg-terms-input {
+            /* Visually hidden but still focusable + form-participating. */
+            position: absolute;
+            width: 1px; height: 1px; padding: 0; margin: -1px;
+            overflow: hidden; clip: rect(0,0,0,0);
+            white-space: nowrap; border: 0;
+        }
+        .reg-terms-box {
+            flex-shrink: 0;
+            width: 20px; height: 20px; margin-top: 1px;
+            border-radius: 6px;
+            background: rgba(15,10,28,0.9);
+            border: 1.5px solid rgba(255,255,255,0.18);
+            display: inline-flex; align-items: center; justify-content: center;
+            color: transparent;
+            transition: background .18s, border-color .18s, color .18s;
+        }
+        .reg-terms-box svg { width: 12px; height: 12px; }
+        .reg-terms-input:checked + .reg-terms-box {
+            background: linear-gradient(135deg, #a855f7 0%, #9333ea 100%);
+            border-color: #a855f7;
+            color: #ffffff;
+            box-shadow: 0 4px 12px -2px rgba(168,85,247,0.5);
+        }
+        .reg-terms-input:focus-visible + .reg-terms-box {
+            box-shadow: 0 0 0 3px rgba(168,85,247,0.35);
+        }
+        .reg-terms-text {
+            font-size: 13.5px; line-height: 1.55;
+            color: rgb(200,195,220);
+        }
+        .reg-terms-link {
+            background: none; border: none; padding: 0;
+            font: inherit; color: #c4b5fd;
+            font-weight: 700; text-decoration: underline;
+            text-underline-offset: 3px;
+            cursor: pointer;
+        }
+        .reg-terms-link:hover { color: #e9d5ff; }
+
+        /* ─── Terms & Conditions modal ─────────────────────────────────
+           Higher z-index than the plan modal so it can sit on top of any
+           registration overlay. Mirrors the plan-modal shape (scrolling
+           body inside a flex column) so it feels native to the rest of
+           the design system. */
+        .terms-modal-backdrop {
+            position: fixed; inset: 0; z-index: 200;
+            background: rgba(8,5,18,0.82);
+            backdrop-filter: blur(16px) saturate(140%);
+            -webkit-backdrop-filter: blur(16px) saturate(140%);
+            display: flex; align-items: center; justify-content: center;
+            padding: 1.5rem;
+            opacity: 0; visibility: hidden;
+            transition: opacity .3s ease, visibility .3s;
+            pointer-events: none;
+            overflow-y: auto;
+        }
+        .terms-modal-backdrop.show { opacity: 1; visibility: visible; pointer-events: auto; }
+        .terms-modal {
+            position: relative; width: 100%; max-width: 760px;
+            max-height: calc(100vh - 3rem);
+            max-height: calc(100dvh - 3rem);
+            display: flex; flex-direction: column;
+            padding: 2rem 2.25rem 1.5rem;
+            border-radius: 22px;
+            background: linear-gradient(180deg, rgba(28,22,56,0.94) 0%, rgba(14,10,30,0.98) 100%);
+            border: 1px solid rgba(168,85,247,0.22);
+            box-shadow: 0 50px 120px -30px rgba(0,0,0,0.9), 0 0 60px rgba(168,85,247,0.18);
+            transform: translateY(20px) scale(.96);
+            transition: transform .35s cubic-bezier(.2,.8,.2,1);
+        }
+        .terms-modal-backdrop.show .terms-modal { transform: translateY(0) scale(1); }
+        .terms-modal-close {
+            position: absolute; top: 1rem; right: 1rem;
+            width: 36px; height: 36px; border-radius: 10px;
+            background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);
+            color: rgb(180,175,200); cursor: pointer; font-family: inherit;
+            display: inline-flex; align-items: center; justify-content: center;
+            transition: all .2s; z-index: 1;
+        }
+        .terms-modal-close:hover { background: rgba(255,255,255,0.08); border-color: rgba(255,255,255,0.16); color: white; }
+        .terms-modal-close svg { width: 18px; height: 18px; }
+        .terms-modal-head { padding-right: 2.5rem; margin-bottom: 1.25rem; }
+        .terms-modal-title { font-size: 24px; font-weight: 800; color: #f5f3ff; margin: 0 0 0.4rem; letter-spacing: -0.02em; }
+        .terms-modal-sub { font-size: 13.5px; color: rgb(170,165,195); margin: 0; line-height: 1.55; }
+        .terms-modal-body {
+            overflow-y: auto; min-height: 0;
+            padding-right: 0.75rem;
+            /* Subtle inner separator so the scroll region reads as
+               its own container distinct from the head + foot. */
+            border-top: 1px solid rgba(255,255,255,0.05);
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+            padding-top: 1.1rem;
+            padding-bottom: 1.1rem;
+        }
+        /* Custom scrollbar inside the modal for a polished feel. Chrome
+           / Safari / Edge honour ::-webkit-scrollbar; Firefox falls back
+           to its native scrollbar. */
+        .terms-modal-body::-webkit-scrollbar { width: 8px; }
+        .terms-modal-body::-webkit-scrollbar-track { background: transparent; }
+        .terms-modal-body::-webkit-scrollbar-thumb {
+            background: rgba(168,85,247,0.28); border-radius: 999px;
+            border: 2px solid transparent; background-clip: padding-box;
+        }
+        .terms-modal-body::-webkit-scrollbar-thumb:hover { background: rgba(168,85,247,0.5); background-clip: padding-box; border: 2px solid transparent; }
+        .terms-section { margin-bottom: 1.35rem; }
+        .terms-section:last-of-type { margin-bottom: 0.9rem; }
+        .terms-section h3 {
+            font-size: 14.5px; font-weight: 800; color: #f5f3ff;
+            margin: 0 0 0.55rem; letter-spacing: -0.005em;
+        }
+        .terms-section p, .terms-section li {
+            font-size: 13px; line-height: 1.65;
+            color: rgb(195,190,215); margin: 0 0 0.5rem;
+        }
+        .terms-section p:last-child, .terms-section li:last-child { margin-bottom: 0; }
+        .terms-section ul {
+            list-style: none; padding: 0; margin: 0 0 0.4rem;
+            display: flex; flex-direction: column; gap: 0.45rem;
+        }
+        .terms-section li {
+            padding-left: 18px; position: relative;
+        }
+        .terms-section li::before {
+            content: ''; position: absolute; left: 2px; top: 9px;
+            width: 6px; height: 6px; border-radius: 50%;
+            background: #a78bfa;
+        }
+        .terms-section b { color: #f5f3ff; font-weight: 700; }
+        .terms-section code {
+            font-family: ui-monospace, monospace; font-size: 12px;
+            padding: 1px 6px; border-radius: 5px;
+            background: rgba(168,85,247,0.14);
+            color: #e9d5ff;
+        }
+        .terms-consent-line {
+            margin: 1.1rem 0 0;
+            font-size: 12.5px; color: rgb(155,150,180);
+            font-style: italic;
+        }
+        .terms-modal-foot {
+            display: flex; justify-content: flex-end; gap: 0.6rem;
+            padding-top: 1.1rem;
+        }
+        .terms-btn {
+            padding: 0.7rem 1.25rem;
+            border-radius: 11px; font-family: inherit; font-size: 13.5px; font-weight: 700;
+            cursor: pointer; transition: all .18s;
+            display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+        }
+        .terms-btn-ghost {
+            background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(255,255,255,0.1);
+            color: rgb(200,195,220);
+        }
+        .terms-btn-ghost:hover { background: rgba(255,255,255,0.08); color: #f5f3ff; }
+        .terms-btn-primary {
+            background: linear-gradient(135deg, #a855f7 0%, #9333ea 100%);
+            border: none; color: #ffffff;
+            box-shadow: 0 12px 28px -8px rgba(168,85,247,0.55);
+        }
+        .terms-btn-primary:hover { transform: translateY(-1px); box-shadow: 0 16px 34px -8px rgba(168,85,247,0.7); }
+
+        @media (max-width: 480px) {
+            .terms-modal-backdrop { padding: 0.75rem; align-items: flex-start; }
+            .terms-modal { padding: 1.5rem 1.15rem 1rem; border-radius: 16px; max-height: calc(100vh - 1.5rem); max-height: calc(100dvh - 1.5rem); }
+            .terms-modal-title { font-size: 19px; }
+            .terms-modal-sub   { font-size: 12.5px; }
+            .terms-modal-head  { padding-right: 2.5rem; margin-bottom: 0.9rem; }
+            .terms-modal-close { width: 32px; height: 32px; top: 0.75rem; right: 0.75rem; }
+            .terms-section h3  { font-size: 13.5px; }
+            .terms-section p, .terms-section li { font-size: 12.5px; }
+            .terms-modal-foot  { flex-direction: column-reverse; }
+            .terms-btn         { width: 100%; }
+        }
+
         /* Right info pane */
         .reg-info-pane { position: relative; padding: 2.5rem 2.25rem; border-radius: 24px; background: linear-gradient(180deg, rgba(28,22,56,0.45) 0%, rgba(14,10,30,0.55) 100%); backdrop-filter: blur(18px) saturate(140%); -webkit-backdrop-filter: blur(18px) saturate(140%); border: 1px solid rgba(255,255,255,0.06); overflow: hidden; }
         .reg-info-pane::before { content: ''; position: absolute; inset: 0; border-radius: inherit; padding: 1px; background: linear-gradient(180deg, rgba(255,255,255,0.14), rgba(255,255,255,0.02) 30%, transparent 60%); -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude; pointer-events: none; }
@@ -1650,8 +1843,24 @@
                                     </span>
                                     <span class="wa-stay-text">Keep this WhatsApp number active and reachable. Your payment confirmation, Google Meet link, and all subscription updates are sent there.</span>
                                 </div>
+                                <!-- Terms & Conditions gate. The checkbox is a
+                                     real form input so browser autofill + screen
+                                     readers see it, but the visible box next to
+                                     it is a styled span so we can theme it in
+                                     line with the rest of the form. Submit is
+                                     disabled until the checkbox is ticked. -->
+                                <label class="reg-terms" for="reg-terms-check">
+                                    <input type="checkbox" id="reg-terms-check" class="reg-terms-input" required>
+                                    <span class="reg-terms-box" aria-hidden="true">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                                    </span>
+                                    <span class="reg-terms-text">
+                                        I have read and agree to the
+                                        <button type="button" class="reg-terms-link" id="reg-terms-link">Terms &amp; Conditions</button>.
+                                    </span>
+                                </label>
                                 <p id="reg-error" class="reg-error hidden"></p>
-                                <button type="submit" id="reg-submit" class="reg-cta" data-label="Continue">
+                                <button type="submit" id="reg-submit" class="reg-cta" data-label="Continue" disabled>
                                     <span>Continue</span>
                                     <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
                                 </button>
@@ -2455,6 +2664,117 @@
         </div>
     </main>
 
+    <!-- Terms & Conditions modal — opened from the registration form's
+         "Terms & Conditions" link. Static content; nothing here reads or
+         writes user state, so it lives entirely in the DOM. The Agree
+         footer button ticks the registration checkbox and closes the
+         modal in one gesture, which is the fastest path for users who
+         open the modal purely to satisfy the required-consent gate. -->
+    <div id="terms-modal" class="terms-modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="terms-modal-title" hidden>
+        <div class="terms-modal" role="document">
+            <button type="button" id="terms-modal-close" class="terms-modal-close" aria-label="Close">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>
+            <header class="terms-modal-head">
+                <h2 class="terms-modal-title" id="terms-modal-title">Terms &amp; Conditions</h2>
+                <p class="terms-modal-sub">Please read the following before creating your account. It describes what we collect, how we use it, and where it lives.</p>
+            </header>
+            <div class="terms-modal-body">
+                <section class="terms-section">
+                    <h3>1. Information we collect</h3>
+                    <ul>
+                        <li><b>From Google Sign-In:</b> your Google account ID, email address, name, and profile picture.</li>
+                        <li><b>From this form:</b> your first name, last name, WhatsApp number, and referral source.</li>
+                        <li><b>From your subscription activity:</b> the plan you select, the UPI transaction reference (UTR) you submit, your billing start and renewal dates, and — for first-time subscribers only — the Google Meet link assigned to your onboarding call.</li>
+                        <li><b>Automatic:</b> the timestamp of your most recent sign-in.</li>
+                    </ul>
+                </section>
+
+                <section class="terms-section">
+                    <h3>2. How we use your information</h3>
+                    <ul>
+                        <li>To create and maintain your account and subscription record.</li>
+                        <li>To deliver subscription notifications to your WhatsApp number: payment confirmations, the Google Meet link for setup, renewal reminders, and plan-change acknowledgements.</li>
+                        <li>To display your account details, plan, and billing dates on your dashboard.</li>
+                        <li>To let our support team identify you when you contact us.</li>
+                    </ul>
+                    <p>We do not send promotional or marketing messages. We do not sell, rent, or share your personal information with advertisers or unrelated third parties.</p>
+                </section>
+
+                <section class="terms-section">
+                    <h3>3. Where your information is stored</h3>
+                    <ul>
+                        <li>Application backend: a Node.js server hosted on Render.</li>
+                        <li>Database: Supabase (PostgreSQL), with row-level security enforced so only our authenticated backend can read or write your record.</li>
+                        <li>All connections between your browser, our backend, and the database use HTTPS/TLS.</li>
+                    </ul>
+                </section>
+
+                <section class="terms-section">
+                    <h3>4. Third-party service providers</h3>
+                    <p>We share the minimum data necessary with the following providers, solely to operate the service:</p>
+                    <ul>
+                        <li><b>Google</b> — to authenticate your sign-in (email and name only).</li>
+                        <li><b>Supabase</b> — as our database host.</li>
+                        <li><b>Render</b> — as our application host.</li>
+                        <li><b>WhatsApp</b> — to deliver subscription messages to the number you provide.</li>
+                        <li><b>Slack</b> — internal notifications to our operations team (your name, email, and plan events) so we can process your subscription promptly.</li>
+                    </ul>
+                </section>
+
+                <section class="terms-section">
+                    <h3>5. Payments</h3>
+                    <ul>
+                        <li>Payments are made directly to our UPI ID <code>devtoolpro@ybl</code>. We do not collect or store card numbers, bank credentials, CVV, or UPI PIN.</li>
+                        <li>We store the UTR / transaction reference you enter so we can verify and correlate your payment with your account.</li>
+                    </ul>
+                </section>
+
+                <section class="terms-section">
+                    <h3>6. Cancellation, deletion, and updates</h3>
+                    <ul>
+                        <li>You can cancel your subscription any time from the dashboard. Access continues until the end of the current billing cycle.</li>
+                        <li>To request account deletion, message us on WhatsApp. Your record is moved out of the active list; payment references are retained for audit purposes.</li>
+                        <li>You can update your name and WhatsApp number from the dashboard.</li>
+                    </ul>
+                </section>
+
+                <section class="terms-section">
+                    <h3>7. Security</h3>
+                    <ul>
+                        <li>Sign-in is via Google OAuth. We never see or store your Google password.</li>
+                        <li>Your session uses a signed token stored in your browser only, valid for 7 days.</li>
+                        <li>Administrative access to your record is limited to authorised operators and uses a separate short-lived (8-hour) session.</li>
+                    </ul>
+                </section>
+
+                <section class="terms-section">
+                    <h3>8. Retention</h3>
+                    <ul>
+                        <li>Active-account data is retained for as long as your account is active.</li>
+                        <li>Payment references are retained after account deletion for financial audit and compliance.</li>
+                    </ul>
+                </section>
+
+                <section class="terms-section">
+                    <h3>9. Changes to these terms</h3>
+                    <p>We may update these terms as the service evolves. If we do, we will ask you to accept the updated version before you next continue.</p>
+                </section>
+
+                <section class="terms-section">
+                    <h3>10. Contact</h3>
+                    <p>WhatsApp support: <b>+91 90198 79108</b>.</p>
+                </section>
+
+                <p class="terms-consent-line">By checking "I have read and agree to the Terms &amp; Conditions" on the registration form, you confirm that you have read and accept these terms.</p>
+            </div>
+            <footer class="terms-modal-foot">
+                <button type="button" class="terms-btn terms-btn-ghost" id="terms-modal-close-2">Close</button>
+                <button type="button" class="terms-btn terms-btn-primary" id="terms-modal-agree">I agree</button>
+            </footer>
+        </div>
+    </div>
+
     <!-- Plan Action Modal — overlay for Upgrade / Renew / Cancel flows.
          Rendered outside <main> so it can sit above the entire dashboard
          shell (including the sidebar). Body content is rendered into
@@ -2863,12 +3183,76 @@
         document.getElementById('reg-last').value = nameParts.slice(1).join(' ') || '';
     }
 
+    /* ─── Terms & Conditions modal wiring ────────────────────────────
+       The registration form's Continue button starts disabled and only
+       becomes enabled when the T&C checkbox is ticked. Toggling the
+       checkbox re-syncs the button state; the underlying <input
+       required> also acts as a native form-level guard in case the
+       submit handler is somehow invoked without the checkbox — a
+       belt-and-braces pair, since the required attribute alone is
+       trivial to bypass.
+       The "I agree" button inside the modal both ticks the checkbox
+       and closes the modal, which is the fastest path for users who
+       just want to satisfy the consent gate. */
+    function syncRegSubmitEnabled() {
+        const ok = !!document.getElementById('reg-terms-check')?.checked;
+        const btn = document.getElementById('reg-submit');
+        if (btn) btn.disabled = !ok;
+    }
+    document.getElementById('reg-terms-check')?.addEventListener('change', syncRegSubmitEnabled);
+
+    function openTermsModal() {
+        const m = document.getElementById('terms-modal');
+        if (!m) return;
+        m.hidden = false;
+        // Two-phase reveal so the CSS transition can play from the
+        // hidden state into the .show state.
+        requestAnimationFrame(() => m.classList.add('show'));
+        // Reset scroll to the top each time so a user who has read
+        // partway before doesn't lose their place-marker on close +
+        // reopen. Small UX polish; harmless if the body is empty.
+        const body = m.querySelector('.terms-modal-body');
+        if (body) body.scrollTop = 0;
+    }
+    function closeTermsModal() {
+        const m = document.getElementById('terms-modal');
+        if (!m) return;
+        m.classList.remove('show');
+        // Match the CSS transition duration before flipping the hidden
+        // attribute so the fade-out isn't cut short.
+        setTimeout(() => { m.hidden = true; }, 320);
+    }
+    document.getElementById('reg-terms-link')?.addEventListener('click', (e) => {
+        // Prevent the click from bubbling to the wrapping <label>, which
+        // would otherwise toggle the checkbox as a side-effect of the
+        // user just trying to open the modal to read the terms.
+        e.stopPropagation();
+        openTermsModal();
+    });
+    document.getElementById('terms-modal-close')?.addEventListener('click', closeTermsModal);
+    document.getElementById('terms-modal-close-2')?.addEventListener('click', closeTermsModal);
+    document.getElementById('terms-modal-agree')?.addEventListener('click', () => {
+        const cb = document.getElementById('reg-terms-check');
+        if (cb) { cb.checked = true; syncRegSubmitEnabled(); }
+        closeTermsModal();
+    });
+    document.getElementById('terms-modal')?.addEventListener('click', (e) => {
+        // Click on the backdrop (not the modal card) dismisses.
+        if (e.target === document.getElementById('terms-modal')) closeTermsModal();
+    });
+    document.addEventListener('keydown', (e) => {
+        if (e.key !== 'Escape') return;
+        const m = document.getElementById('terms-modal');
+        if (m && m.classList.contains('show')) closeTermsModal();
+    });
+
     document.getElementById('register-form').addEventListener('submit', async (e) => {
         e.preventDefault();
         const first = document.getElementById('reg-first').value.trim();
         const last = document.getElementById('reg-last').value.trim();
         const source = document.getElementById('reg-source').value;
         const phoneRaw = document.getElementById('reg-phone')?.value.trim() || '';
+        const termsOk = !!document.getElementById('reg-terms-check')?.checked;
         const errEl = document.getElementById('reg-error');
         const btn = document.getElementById('reg-submit');
         errEl.classList.add('hidden');
@@ -2888,6 +3272,18 @@
             errEl.textContent = 'WhatsApp number must be 8-15 digits — include the country code.';
             errEl.classList.remove('hidden');
             document.getElementById('reg-phone')?.focus();
+            return;
+        }
+
+        // Consent gate — required by law for the PII we collect below.
+        // The submit button starts disabled and toggles with the checkbox
+        // so this branch should be unreachable through the happy path,
+        // but we still guard the network call in case the disabled state
+        // was bypassed (devtools, older browsers, script errors).
+        if (!termsOk) {
+            errEl.textContent = 'Please read and accept the Terms & Conditions to continue.';
+            errEl.classList.remove('hidden');
+            document.getElementById('reg-terms-check')?.focus();
             return;
         }
 
