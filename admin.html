@@ -191,6 +191,51 @@
         .wa-btn.due-soon .wa-recent-dot,
         .wa-btn.expired-glow .wa-recent-dot { background: rgba(190,185,210,0.85); }
 
+        /* ─── Per-row Mail (Gmail) action ─── */
+        /* Sits next to the WhatsApp icon so the admin can pick the
+           channel per row. Same three urgency states as .wa-btn but
+           tinted blue so the two buttons never get visually confused
+           at a glance. Behaviour, popover, and mark-reminded bookkeeping
+           mirror the WhatsApp flow — see the JS block below. */
+        .mail-btn {
+            flex-shrink: 0;
+            width: 32px; height: 32px; border-radius: 9px;
+            display: inline-flex; align-items: center; justify-content: center;
+            background: rgba(56,189,248,0.10);
+            border: 1px solid rgba(56,189,248,0.32);
+            color: #38bdf8; cursor: pointer;
+            transition: background .2s, border-color .2s, transform .12s;
+            position: relative;
+        }
+        .mail-btn:hover { background: rgba(56,189,248,0.18); border-color: rgba(56,189,248,0.55); transform: scale(1.05); }
+        .mail-btn svg { width: 16px; height: 16px; }
+        @keyframes mail-pulse-amber { 0%,100% { box-shadow: 0 0 0 0 rgba(245,158,11,0.45); } 50% { box-shadow: 0 0 0 7px rgba(245,158,11,0); } }
+        @keyframes mail-pulse-red   { 0%,100% { box-shadow: 0 0 0 0 rgba(248,113,113,0.5);  } 50% { box-shadow: 0 0 0 7px rgba(248,113,113,0); } }
+        .mail-btn.due-soon { background: rgba(245,158,11,0.14); border-color: rgba(245,158,11,0.45); color: var(--amber); animation: mail-pulse-amber 1.6s ease-in-out infinite; }
+        .mail-btn.expired-glow { background: rgba(248,113,113,0.14); border-color: rgba(248,113,113,0.45); color: var(--red); animation: mail-pulse-red 1.6s ease-in-out infinite; }
+        .mail-btn.no-email { opacity: 0.45; cursor: not-allowed; }
+        .mail-btn.no-email:hover { background: rgba(56,189,248,0.10); border-color: rgba(56,189,248,0.32); transform: none; }
+        .mail-btn .mail-recent-dot {
+            position: absolute; top: -3px; right: -3px;
+            width: 9px; height: 9px; border-radius: 50%;
+            background: rgb(190,185,210);
+            border: 2px solid var(--bg-0);
+            box-shadow: 0 0 0 1px rgba(190,185,210,0.35);
+        }
+        .mail-btn.due-soon .mail-recent-dot,
+        .mail-btn.expired-glow .mail-recent-dot { background: rgba(190,185,210,0.85); }
+
+        /* Container that holds both channel buttons at the right edge of
+           the user cell. Uses margin-left:auto so the buttons hug the
+           right regardless of avatar / name widths. */
+        .row-actions {
+            margin-left: auto; flex-shrink: 0;
+            display: inline-flex; align-items: center; gap: 6px;
+        }
+        /* Inside .row-actions, the WA button no longer needs its own
+           margin-left:auto (the wrapper handles alignment). */
+        .row-actions .wa-btn { margin-left: 0; }
+
         /* Template picker popover — anchored to the clicked button via
            inline top/left set in JS. Single shared DOM element so we
            don't leak nodes when the admin clicks rapidly through rows. */
@@ -242,12 +287,65 @@
         }
         .wa-popover-foot.warn { color: var(--amber); }
 
+        /* Mail template picker popover — visually identical to the WA
+           popover so the admin's muscle memory transfers. Kept as a
+           separate DOM node (rather than reusing the WA one with mode
+           swapping) to keep state, timers, and click delegation trivial. */
+        .mail-popover {
+            position: fixed; z-index: 200;
+            width: 320px; max-width: calc(100vw - 2rem);
+            padding: 0.75rem;
+            border-radius: 14px;
+            background: linear-gradient(180deg, rgba(28,22,56,0.96) 0%, rgba(14,10,30,0.98) 100%);
+            border: 1px solid rgba(168,85,247,0.28);
+            box-shadow: 0 30px 70px -20px rgba(0,0,0,0.85), 0 0 50px rgba(168,85,247,0.18);
+            opacity: 0; visibility: hidden;
+            transform: translateY(-6px);
+            transition: opacity .18s ease, visibility .18s, transform .18s ease;
+        }
+        .mail-popover.show { opacity: 1; visibility: visible; transform: translateY(0); }
+        .mail-popover-head { padding: 4px 8px 10px; border-bottom: 1px solid rgba(255,255,255,0.05); margin-bottom: 6px; }
+        .mail-popover-head .name { display: block; font-size: 13.5px; font-weight: 700; color: var(--ink-0); }
+        .mail-popover-head .meta { display: block; font-size: 11px; color: var(--ink-3); margin-top: 2px; }
+        .mail-popover-head .meta .urgent { color: var(--amber); font-weight: 700; }
+        .mail-popover-head .meta .overdue { color: var(--red); font-weight: 700; }
+        .mail-popover-list { display: flex; flex-direction: column; gap: 4px; }
+        .mail-tmpl-btn {
+            display: flex; align-items: flex-start; gap: 10px;
+            padding: 0.6rem 0.7rem;
+            background: transparent; border: 1px solid transparent;
+            border-radius: 10px; color: var(--ink-0); text-align: left;
+            cursor: pointer; font-family: inherit; transition: all .15s;
+            text-decoration: none; width: 100%;
+        }
+        .mail-tmpl-btn:hover { background: rgba(56,189,248,0.08); border-color: rgba(56,189,248,0.24); }
+        .mail-tmpl-btn .tmpl-icon {
+            width: 28px; height: 28px; border-radius: 8px; flex-shrink: 0;
+            display: inline-flex; align-items: center; justify-content: center;
+        }
+        .mail-tmpl-btn .tmpl-icon svg { width: 14px; height: 14px; }
+        .mail-tmpl-btn.tmpl-renewal  .tmpl-icon { background: rgba(245,158,11,0.14); color: var(--amber); border: 1px solid rgba(245,158,11,0.3); }
+        .mail-tmpl-btn.tmpl-expired  .tmpl-icon { background: rgba(248,113,113,0.14); color: var(--red);    border: 1px solid rgba(248,113,113,0.3); }
+        .mail-tmpl-btn.tmpl-welcome  .tmpl-icon { background: rgba(34,197,94,0.14);   color: var(--green);  border: 1px solid rgba(34,197,94,0.3); }
+        .mail-tmpl-btn.tmpl-cancel   .tmpl-icon { background: rgba(244,114,182,0.12); color: #f472b6;        border: 1px solid rgba(244,114,182,0.3); }
+        .mail-tmpl-btn.tmpl-newuser  .tmpl-icon { background: rgba(56,189,248,0.14);  color: #38bdf8;        border: 1px solid rgba(56,189,248,0.3); }
+        .mail-tmpl-btn.tmpl-general  .tmpl-icon { background: rgba(168,85,247,0.14);  color: var(--violet-soft); border: 1px solid rgba(168,85,247,0.3); }
+        .mail-tmpl-btn .tmpl-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+        .mail-tmpl-btn .tmpl-title { font-size: 13px; font-weight: 600; color: var(--ink-0); }
+        .mail-tmpl-btn .tmpl-desc  { font-size: 11px; color: var(--ink-3); line-height: 1.45; }
+        .mail-popover-foot {
+            margin-top: 8px; padding: 8px 8px 4px; border-top: 1px solid rgba(255,255,255,0.05);
+            font-size: 10.5px; line-height: 1.5; color: var(--ink-3);
+        }
+        .mail-popover-foot.warn { color: var(--amber); }
+
         /* ─── Deleted-row styling ─── */
         /* Subtle dim + strikethrough so admins instantly see which
            rows are tombstones when the 'Show deleted' filter is on. */
         tbody tr.is-deleted { opacity: 0.55; }
         tbody tr.is-deleted .user-name { text-decoration: line-through; }
-        tbody tr.is-deleted .wa-btn { display: none; }
+        tbody tr.is-deleted .wa-btn,
+        tbody tr.is-deleted .mail-btn { display: none; }
         .pill.tombstone { background: rgba(248,113,113,0.12); color: var(--red); border: 1px solid rgba(248,113,113,0.28); }
 
         /* ─── Toast (delete undo) ─── */
@@ -569,7 +667,7 @@
 
             /* Template picker popover — at 320px the existing 320px
                width sits with 0 margin to viewport edges. Tighten. */
-            .wa-popover { width: calc(100vw - 1rem); }
+            .wa-popover, .mail-popover { width: calc(100vw - 1rem); }
         }
     </style>
 </head>
@@ -829,6 +927,22 @@
         <div class="wa-popover-list" id="wa-pop-list"></div>
         <footer class="wa-popover-foot" id="wa-pop-foot">
             Opens WhatsApp Web / app with the message pre-filled.
+        </footer>
+    </div>
+
+    <!-- Mail template-picker popover. Mirrors #wa-popover but opens
+         Gmail's compose window (mailto: fallback if the admin isn't
+         signed into Gmail) pre-filled with the user's email, a subject,
+         and a plain-text body. Same mark-reminded bookkeeping runs so
+         the "Last nudged" hint stays accurate across channels. -->
+    <div class="mail-popover" id="mail-popover" role="menu" aria-hidden="true">
+        <header class="mail-popover-head">
+            <span class="name" id="mail-pop-name">…</span>
+            <span class="meta" id="mail-pop-meta">…</span>
+        </header>
+        <div class="mail-popover-list" id="mail-pop-list"></div>
+        <footer class="mail-popover-foot" id="mail-pop-foot">
+            Opens Gmail's compose window with the message pre-filled.
         </footer>
     </div>
 
@@ -1122,7 +1236,10 @@
                                     <span class="user-name">${escapeHTML(u.name || '—')}</span>
                                     <span class="user-email">${escapeHTML(u.email || '')}</span>
                                 </div>
-                                ${renderWaButton(u)}
+                                <span class="row-actions">
+                                    ${renderMailButton(u)}
+                                    ${renderWaButton(u)}
+                                </span>
                             </div>
                         </td>
                         <td data-label="Plan">
@@ -1482,6 +1599,10 @@
             const footEl = document.getElementById('wa-pop-foot');
             if (!pop || !btn || !user) return;
 
+            // Only one popover on screen at a time — if the mail one is
+            // open, tuck it away first so we don't stack menus.
+            if (typeof closeMailPopover === 'function') closeMailPopover();
+
             nameEl.textContent = user.name || user.email || 'User';
 
             // Header meta — surface the urgency the icon was hinting at,
@@ -1503,9 +1624,8 @@
             }
             if (user.lastRemindedAt) {
                 const ago = relativeTime(user.lastRemindedAt);
-                const tpl = user.lastRemindedTemplate
-                    ? ` · ${escapeHTML(WA_TEMPLATES[user.lastRemindedTemplate]?.label || user.lastRemindedTemplate)}`
-                    : '';
+                const label = resolveLastNudgeLabel(user.lastRemindedTemplate);
+                const tpl = label ? ` · ${escapeHTML(label)}` : '';
                 metaHtml += `<br><span style="color: rgb(155,150,180);">Last nudged ${escapeHTML(ago)}${tpl}</span>`;
             }
             metaEl.innerHTML = metaHtml;
@@ -1658,6 +1778,469 @@
         // anchor button if the user scrolls before picking a template.
         window.addEventListener('scroll', closeWaPopover, true);
         window.addEventListener('resize', closeWaPopover);
+
+        // ═══════════════════════════════════════════════════════════
+        // Mail (Gmail) template picker — per-row icon → popover → mailto
+        // ═══════════════════════════════════════════════════════════
+        //
+        // Design mirrors the WhatsApp flow above so admins get the same
+        // muscle-memory experience across channels:
+        //
+        //   • Same three urgency states (calm / due-soon / expired)
+        //     driven by daysUntilRenewal() — the mail button is tinted
+        //     blue instead of green so the two icons never blur into
+        //     each other at a glance.
+        //
+        //   • Same "recently nudged" grey corner dot when
+        //     user.lastRemindedAt is within 48 hours, regardless of
+        //     which channel sent the last nudge.
+        //
+        //   • Same template registry shape as WA_TEMPLATES, but each
+        //     entry exposes `subject(u)` + `body(u)` instead of `build(u)`
+        //     since email needs a subject line and prefers plain text
+        //     (no `*bold*` markdown — Gmail's compose treats the body
+        //     as plain text via the URL parameter).
+        //
+        //   • Clicking a template opens Gmail's compose URL in a new
+        //     tab (or a mailto: link if the user has no email on file —
+        //     that fallback lets the admin paste the message wherever
+        //     they need). Bookkeeping via POST /admin/users/:id/mark-reminded
+        //     runs after opening so a hung POST never blocks the
+        //     compose tab — same fire-and-forget pattern as WA.
+        //
+        //   • Template values are recorded with an "email:" prefix
+        //     (e.g. "email:renewal") so the "Last nudged" hint can
+        //     tell WA and email pings apart. WA still writes bare keys
+        //     for backward compatibility with existing rows. See
+        //     resolveLastNudgeLabel() below.
+
+        // Resolve a raw last_reminded_template value from the DB into a
+        // human-readable label. Handles both channel-prefixed values
+        // ("email:renewal", "whatsapp:renewal") and bare legacy WA
+        // values ("renewal") without breaking. Falls back to the raw
+        // key if the template was renamed / removed from the registry.
+        function resolveLastNudgeLabel(raw) {
+            if (!raw) return '';
+            let channel = 'WhatsApp';
+            let key = String(raw);
+            if (key.startsWith('email:')) {
+                channel = 'Email';
+                key = key.slice('email:'.length);
+            } else if (key.startsWith('whatsapp:')) {
+                channel = 'WhatsApp';
+                key = key.slice('whatsapp:'.length);
+            }
+            const registry = channel === 'Email' ? MAIL_TEMPLATES : WA_TEMPLATES;
+            const label = registry[key]?.label || key;
+            return `${channel} — ${label}`;
+        }
+
+        // Template registry for the mail flow. Structure mirrors
+        // WA_TEMPLATES but each entry exposes subject() + body() so we
+        // can populate both fields of the compose URL. Bodies are
+        // plain text (no `*bold*` markers — Gmail's compose treats the
+        // body param as plain text and renders asterisks literally).
+        const MAIL_TEMPLATES = {
+            renewal: {
+                cls: 'tmpl-renewal',
+                label: 'Renewal reminder',
+                desc: (u) => {
+                    const d = daysUntilRenewal(u.planEndDate);
+                    if (d === null) return 'No renewal date on file.';
+                    if (d < 0) return `Plan expired ${-d} day${-d === 1 ? '' : 's'} ago.`;
+                    if (d === 0) return 'Plan renews today.';
+                    return `Renews in ${d} day${d === 1 ? '' : 's'}.`;
+                },
+                icon: '<svg fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>',
+                subject: (u) => {
+                    const d = daysUntilRenewal(u.planEndDate);
+                    if (d !== null && d < 0) return `Your DevTools Pro ${u.currentPlan || 'plan'} has expired — renew to restore access`;
+                    if (d !== null && d <= RENEWAL_WARN_DAYS) return `Renewal reminder: your DevTools Pro ${u.currentPlan || 'plan'} renews soon`;
+                    return `Renewal reminder for your DevTools Pro ${u.currentPlan || 'plan'}`;
+                },
+                body: (u) => {
+                    const plan = u.currentPlan || 'your plan';
+                    const cycleMoment = formatBillingMoment(u.planEndDate);
+                    const price = WA_PLAN_INR[u.currentPlan];
+                    return [
+                        `Hi ${u.name || 'there'},`,
+                        ``,
+                        `Quick reminder from DevTools Pro — your ${plan} subscription's next billing cycle starts on:`,
+                        cycleMoment,
+                        ``,
+                        `To keep your IDE access running without a break, please renew before this date.`,
+                        price ? `Renewal amount: ₹${price.toLocaleString('en-IN')}.` : '',
+                        ``,
+                        `If you don't want to continue, please cancel before the date above — otherwise the system will automatically disable your account access after this cutoff until you renew.`,
+                        ``,
+                        `Sign in and tap Renew Now or Cancel on your dashboard:`,
+                        DASHBOARD_URL,
+                        ``,
+                        `Reply to this email if you'd like help — happy to walk you through it.`,
+                        ``,
+                        `— Team DevTools Pro`,
+                    ].filter(Boolean).join('\n');
+                },
+            },
+            expired: {
+                cls: 'tmpl-expired',
+                label: 'Expired — reactivate',
+                desc: () => 'Plan past renewal date — bring them back.',
+                icon: '<svg fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 2m6-2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>',
+                subject: (u) => `Your DevTools Pro ${u.currentPlan || 'plan'} has ended — reactivate in 2 minutes`,
+                body: (u) => {
+                    const plan = u.currentPlan || 'your plan';
+                    const endedMoment = formatBillingMoment(u.planEndDate);
+                    return [
+                        `Hi ${u.name || 'there'},`,
+                        ``,
+                        `Your ${plan} DevTools Pro subscription ended on:`,
+                        endedMoment,
+                        ``,
+                        `Your account access is currently disabled because no renewal was processed before the cutoff. Your data, projects, and Meet link are all preserved — reactivation takes 2 minutes via UPI.`,
+                        ``,
+                        `Sign in and tap Select Plan on your dashboard:`,
+                        DASHBOARD_URL,
+                        ``,
+                        `If something pushed you to pause, we'd love to hear about it — reply to this email, no pressure.`,
+                        ``,
+                        `— Team DevTools Pro`,
+                    ].join('\n');
+                },
+            },
+            cancel_confirm: {
+                cls: 'tmpl-cancel',
+                label: 'Cancellation confirmed',
+                desc: (u) => {
+                    const status = (u.planStatus || '').toLowerCase();
+                    if (status === 'cancelled') {
+                        const d = daysUntilRenewal(u.planEndDate);
+                        if (d === null) return 'Cancelled — confirm end of access.';
+                        if (d < 0) return 'Cancellation already in effect.';
+                        if (d === 0) return 'Access ends today.';
+                        return `Access ends in ${d} day${d === 1 ? '' : 's'}.`;
+                    }
+                    return 'Confirm cancellation request.';
+                },
+                icon: '<svg fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>',
+                subject: (u) => `Your DevTools Pro ${u.currentPlan || 'plan'} cancellation is confirmed`,
+                body: (u) => {
+                    const plan = u.currentPlan || 'your plan';
+                    const cycleMoment = formatBillingMoment(u.planEndDate);
+                    return [
+                        `Hi ${u.name || 'there'},`,
+                        ``,
+                        `Your cancellation request for ${plan} is confirmed.`,
+                        ``,
+                        `Your access stays active until:`,
+                        cycleMoment,
+                        ``,
+                        `After this date, no further renewal will be charged and your account access will be automatically disabled until you resubscribe.`,
+                        ``,
+                        `Changed your mind? You can renew before the cutoff to keep everything running uninterrupted — just sign in and tap Renew Now on your dashboard:`,
+                        DASHBOARD_URL,
+                        ``,
+                        `If you have feedback on what prompted the cancellation, we'd genuinely love to hear it. Reply to this email anytime.`,
+                        ``,
+                        `— Team DevTools Pro`,
+                    ].join('\n');
+                },
+            },
+            welcome: {
+                cls: 'tmpl-welcome',
+                label: 'Welcome / setup',
+                desc: (u) => (u.planStatus === 'processing'
+                    ? 'Payment in queue — confirm UTR & schedule Meet.'
+                    : 'Friendly onboarding ping for a fresh subscriber.'),
+                icon: '<svg fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>',
+                subject: (u) => `Welcome to DevTools Pro — let's get your ${u.currentPlan || 'plan'} set up`,
+                body: (u) => {
+                    const plan = u.currentPlan || 'your plan';
+                    return [
+                        `Hi ${u.name || 'there'},`,
+                        ``,
+                        `Welcome to DevTools Pro!`,
+                        ``,
+                        `Your ${plan} subscription is being set up. ${u.utrId ? `Once we verify your UTR (${u.utrId})` : 'Once payment is confirmed'}, we'll share the Google Meet link for your 1:1 onboarding call.`,
+                        ``,
+                        `What's a good time today or tomorrow for a quick 15-minute setup call? We'll get your IDE up and running.`,
+                        ``,
+                        `Reply to this email with a time that works and we'll lock it in.`,
+                        ``,
+                        `— Team DevTools Pro`,
+                    ].join('\n');
+                },
+            },
+            newuser: {
+                cls: 'tmpl-newuser',
+                label: 'New signup — nudge to plan',
+                desc: (u) => (u.currentPlan
+                    ? 'Registered & already on a plan.'
+                    : 'Just registered — no plan picked yet.'),
+                icon: '<svg fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"/></svg>',
+                subject: () => `Ready to unlock Kiro at 50% off? Pick your DevTools Pro plan`,
+                body: (u) => {
+                    const heard = u.source ? ` (we saw you found us via ${u.source})` : '';
+                    return [
+                        `Hi ${u.name || 'there'},`,
+                        ``,
+                        `Thanks for signing up with DevTools Pro${heard}!`,
+                        ``,
+                        `You've created your account — the last step is picking a plan to unlock Kiro at 50% off with Claude Opus, Sonnet, and all premium models.`,
+                        ``,
+                        `Plans start at just ₹946/month (Pro). Sign in and tap Select Plan on your dashboard:`,
+                        DASHBOARD_URL,
+                        ``,
+                        `Payment is a quick UPI scan, and we'll hop on a 1:1 Google Meet to get your IDE set up. Reply to this email if you'd like a hand choosing the right plan — happy to help!`,
+                        ``,
+                        `— Team DevTools Pro`,
+                    ].join('\n');
+                },
+            },
+            general: {
+                cls: 'tmpl-general',
+                label: 'Check-in / blank',
+                desc: () => 'Open Gmail with just a friendly hello.',
+                icon: '<svg fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>',
+                subject: (u) => `Checking in on your DevTools Pro ${u.currentPlan || 'subscription'}`,
+                body: (u) => {
+                    const plan = u.currentPlan || 'your subscription';
+                    return [
+                        `Hi ${u.name || 'there'},`,
+                        ``,
+                        `Checking in from DevTools Pro — how's ${plan} working out for you?`,
+                        ``,
+                        `If there's anything we can help with (model picks, credits, Meet times, anything else), just reply to this email.`,
+                        ``,
+                        `— Team DevTools Pro`,
+                    ].join('\n');
+                },
+            },
+        };
+
+        // Render the per-row mail icon button. Same urgency states as
+        // the WA button (see renderWaButton) so a "renewal-due-soon"
+        // user glows amber on BOTH icons — the admin can pick the
+        // channel without losing the visual cue.
+        function renderMailButton(u) {
+            const d = daysUntilRenewal(u.planEndDate);
+            const status = (u.planStatus || '').toLowerCase();
+            const cls = ['mail-btn'];
+            const name = escapeHTML(u.name || u.email || 'user');
+            let title = `Send an email to ${name}`;
+            if (status === 'active' || status === 'processing') {
+                if (d !== null && d < 0) {
+                    cls.push('expired-glow');
+                    title = `Plan expired ${-d} day${-d === 1 ? '' : 's'} ago — send a renewal email`;
+                } else if (d !== null && d <= RENEWAL_WARN_DAYS) {
+                    cls.push('due-soon');
+                    title = `Renews in ${d} day${d === 1 ? '' : 's'} — send a reminder email`;
+                }
+            }
+            let recentBadge = '';
+            if (u.lastRemindedAt) {
+                const ageHrs = (Date.now() - new Date(u.lastRemindedAt).getTime()) / 3600000;
+                if (ageHrs >= 0 && ageHrs <= 48) {
+                    cls.push('recently-nudged');
+                    const ago = relativeTime(u.lastRemindedAt);
+                    title += ` · last nudged ${ago}`;
+                    recentBadge = `<span class="mail-recent-dot" aria-hidden="true"></span>`;
+                }
+            }
+            // If we don't have an email on file we can still open a
+            // mailto: with an empty To — but the admin loses the whole
+            // "extract email + one-click compose" benefit, so we mark
+            // the button as disabled-looking and update the popover
+            // footer to explain why. Click is still allowed so the
+            // admin can copy the body from the popover if they want.
+            if (!u.email) {
+                cls.push('no-email');
+                title = `No email on file for ${name}`;
+            }
+            return `<button class="${cls.join(' ')}" type="button"
+                            data-uid="${escapeHTML(u.id)}"
+                            title="${title}"
+                            aria-label="${title}">
+                        <svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+                        ${recentBadge}
+                    </button>`;
+        }
+
+        // Build a Gmail compose URL. `view=cm&fs=1` opens the standalone
+        // compose window in a new tab; `to`, `su`, and `body` are the
+        // standard prefill params. We encode each component so subjects
+        // with `&`, `?`, or `#` don't corrupt the URL.
+        //
+        // If the admin isn't signed into Gmail this URL prompts a
+        // Google sign-in — the fallback for non-Gmail admins is the
+        // "Copy body" flow inside the popover (still on the roadmap;
+        // for now they can copy the compose URL into their client of
+        // choice, or paste manually).
+        function buildMailUrl(email, subject, body) {
+            const params = new URLSearchParams();
+            if (email) params.set('to', email);
+            if (subject) params.set('su', subject);
+            if (body) params.set('body', body);
+            // Gmail's `view=cm&fs=1&tf=1` is the compose-in-new-window
+            // shape most admins expect. Ordering: view first so Gmail
+            // routes into compose mode before parsing the rest.
+            return `https://mail.google.com/mail/?view=cm&fs=1&tf=1&${params.toString()}`;
+        }
+
+        // Show the mail template popover anchored next to the clicked
+        // button. Same anchoring / clamping logic as openWaPopover.
+        function openMailPopover(btn, user) {
+            const pop = document.getElementById('mail-popover');
+            const nameEl = document.getElementById('mail-pop-name');
+            const metaEl = document.getElementById('mail-pop-meta');
+            const listEl = document.getElementById('mail-pop-list');
+            const footEl = document.getElementById('mail-pop-foot');
+            if (!pop || !btn || !user) return;
+
+            // Close the WA popover if it happens to be open — only one
+            // popover on screen at a time to avoid overlapping menus.
+            closeWaPopover();
+
+            nameEl.textContent = user.name || user.email || 'User';
+
+            const d = daysUntilRenewal(user.planEndDate);
+            let metaHtml = user.currentPlan ? `${escapeHTML(user.currentPlan)} · ` : '';
+            if (d === null) {
+                metaHtml += 'No renewal date on file';
+            } else if (d < 0) {
+                metaHtml += `<span class="overdue">Expired ${-d} day${-d === 1 ? '' : 's'} ago</span>`;
+            } else if (d === 0) {
+                metaHtml += `<span class="urgent">Renews today</span>`;
+            } else if (d <= RENEWAL_WARN_DAYS) {
+                metaHtml += `<span class="urgent">Renews in ${d} day${d === 1 ? '' : 's'}</span>`;
+            } else {
+                metaHtml += `Renews in ${d} days`;
+            }
+            if (user.lastRemindedAt) {
+                const ago = relativeTime(user.lastRemindedAt);
+                const label = resolveLastNudgeLabel(user.lastRemindedTemplate);
+                const tpl = label ? ` · ${escapeHTML(label)}` : '';
+                metaHtml += `<br><span style="color: rgb(155,150,180);">Last nudged ${escapeHTML(ago)}${tpl}</span>`;
+            }
+            metaEl.innerHTML = metaHtml;
+
+            // Same ordering heuristic as the WA popover so admins get a
+            // consistent "most relevant template first" experience
+            // regardless of which channel they picked.
+            const isFreshSignup = !user.currentPlan
+                && (!user.planStatus || user.planStatus === 'none');
+            const isCancelled = (user.planStatus || '').toLowerCase() === 'cancelled';
+            const order = (() => {
+                if (isFreshSignup)                                return ['newuser', 'welcome', 'general', 'renewal', 'expired', 'cancel_confirm'];
+                if (isCancelled)                                  return ['cancel_confirm', 'renewal', 'general', 'expired', 'welcome', 'newuser'];
+                if (d !== null && d < 0)                          return ['expired', 'renewal', 'cancel_confirm', 'general', 'welcome', 'newuser'];
+                if (d !== null && d <= RENEWAL_WARN_DAYS)         return ['renewal', 'cancel_confirm', 'expired', 'welcome', 'general', 'newuser'];
+                if (user.planStatus === 'processing')             return ['welcome', 'renewal', 'general', 'expired', 'cancel_confirm', 'newuser'];
+                return ['renewal', 'welcome', 'general', 'cancel_confirm', 'expired', 'newuser'];
+            })();
+
+            listEl.innerHTML = order.map(key => {
+                const t = MAIL_TEMPLATES[key];
+                if (!t) return '';
+                return `<button class="mail-tmpl-btn ${t.cls}" type="button" data-tmpl="${key}">
+                            <span class="tmpl-icon">${t.icon}</span>
+                            <span class="tmpl-text">
+                                <span class="tmpl-title">${escapeHTML(t.label)}</span>
+                                <span class="tmpl-desc">${escapeHTML(t.desc(user))}</span>
+                            </span>
+                        </button>`;
+            }).join('');
+
+            listEl.querySelectorAll('button[data-tmpl]').forEach(b => {
+                b.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const key = b.dataset.tmpl;
+                    const tpl = MAIL_TEMPLATES[key];
+                    if (!tpl) return;
+                    const subject = tpl.subject(user);
+                    const body = tpl.body(user);
+                    const url = buildMailUrl(user.email, subject, body);
+                    window.open(url, '_blank', 'noopener');
+                    closeMailPopover();
+                    // Record the nudge with an "email:" prefix so the
+                    // "Last nudged" hint can tell channels apart.
+                    api(`/admin/users/${encodeURIComponent(user.id)}/mark-reminded`, {
+                        method: 'POST',
+                        body: JSON.stringify({ template: `email:${key}` }),
+                    }).then(resp => {
+                        if (resp && resp.user) {
+                            const idx = allUsers.findIndex(x => x.id === resp.user.id);
+                            if (idx >= 0) {
+                                allUsers[idx] = resp.user;
+                                renderUserRows();
+                            }
+                        }
+                    }).catch(() => {});
+                });
+            });
+
+            // Footer note: three cases —
+            //   • email on file  → "Sends to email@example.com."
+            //   • no email        → warn, but still let them open Gmail
+            //     with an empty To so they can paste the address by hand.
+            const hasEmail = !!user.email;
+            footEl.classList.toggle('warn', !hasEmail);
+            footEl.textContent = hasEmail
+                ? `Sends to ${user.email}.`
+                : 'No email on file — Gmail will open with the To field empty.';
+
+            const r = btn.getBoundingClientRect();
+            const pw = 320;
+            const margin = 12;
+            let left = r.right + 8;
+            if (left + pw > window.innerWidth - margin) {
+                left = Math.max(margin, r.left - pw - 8);
+            }
+            let top = r.top;
+            pop.style.left = left + 'px';
+            pop.style.top  = top + 'px';
+            pop.classList.add('show');
+            pop.setAttribute('aria-hidden', 'false');
+            const ph = pop.getBoundingClientRect().height;
+            if (top + ph > window.innerHeight - margin) {
+                top = Math.max(margin, window.innerHeight - ph - margin);
+                pop.style.top = top + 'px';
+            }
+        }
+
+        function closeMailPopover() {
+            const pop = document.getElementById('mail-popover');
+            if (!pop) return;
+            pop.classList.remove('show');
+            pop.setAttribute('aria-hidden', 'true');
+        }
+
+        // Delegated click handler for mail icons + click-outside close.
+        // Kept as its own listener (rather than merged into the WA one)
+        // so the two channels stay decoupled — deleting either block
+        // shouldn't affect the other.
+        document.addEventListener('click', (e) => {
+            const btn = e.target.closest('.mail-btn[data-uid]');
+            if (btn) {
+                e.stopPropagation();       // don't open the edit modal
+                const uid = btn.dataset.uid;
+                const user = allUsers.find(u => u.id === uid);
+                if (user) openMailPopover(btn, user);
+                return;
+            }
+            const pop = document.getElementById('mail-popover');
+            if (pop && pop.classList.contains('show') && !pop.contains(e.target)) {
+                closeMailPopover();
+            }
+        });
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                const pop = document.getElementById('mail-popover');
+                if (pop && pop.classList.contains('show')) closeMailPopover();
+            }
+        });
+        window.addEventListener('scroll', closeMailPopover, true);
+        window.addEventListener('resize', closeMailPopover);
 
         // ─── Edit modal ───
         const modal = document.getElementById('edit-modal');
