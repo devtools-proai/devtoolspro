@@ -4,6 +4,48 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>DevTools Pro · Dashboard</title>
+    <meta name="description" content="Your DevTools Pro dashboard — pick a Kiro IDE plan at 50% off, complete UPI payment, and get your onboarding Google Meet link. Claude Opus + Sonnet included.">
+
+    <!-- ═══════════════════════════════════════════════════════════════
+         OPEN GRAPH (WhatsApp, Facebook, LinkedIn, Discord previews)
+         The setup / renewal WhatsApp messages sent by /api/submit
+         include a link to this page. Without these tags WhatsApp
+         falls back to a plain title-only preview with no thumbnail
+         — which is what users were seeing before the v1.3.2 fix.
+         og:image points to the JPEG export of og-image.svg;
+         WhatsApp doesn't reliably render SVGs so raster is required
+         for the thumbnail to actually show. The SVG stays listed as
+         an alternate for modern clients (X, LinkedIn, Discord) that
+         happily render vector previews.
+         ═══════════════════════════════════════════════════════════════ -->
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="DevTools Pro">
+    <meta property="og:title" content="DevTools Pro · Your Kiro IDE Dashboard">
+    <meta property="og:description" content="Pick a Kiro plan at 50% off, complete UPI payment in 30 seconds, and grab your 1:1 Google Meet onboarding link. Claude Opus + Sonnet included.">
+    <meta property="og:url" content="https://devtools-proai.github.io/devtoolspro/dashboard.html">
+    <meta property="og:image" content="https://devtools-proai.github.io/devtoolspro/og-image.jpg">
+    <meta property="og:image:secure_url" content="https://devtools-proai.github.io/devtoolspro/og-image.jpg">
+    <meta property="og:image:type" content="image/jpeg">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta property="og:image:alt" content="DevTools Pro — Kiro AI coding IDE subscriptions at 50% off market price.">
+    <meta property="og:locale" content="en_IN">
+    <meta property="og:locale:alternate" content="en_US">
+
+    <!-- Twitter / X card — same asset -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:site" content="@devtoolspro">
+    <meta name="twitter:title" content="DevTools Pro · Kiro IDE Dashboard">
+    <meta name="twitter:description" content="Kiro AI IDE at 50% off. Complete payment + get your onboarding Meet link in one flow.">
+    <meta name="twitter:image" content="https://devtools-proai.github.io/devtoolspro/og-image.jpg">
+    <meta name="twitter:image:alt" content="Kiro AI IDE at 50% off — DevTools Pro dashboard.">
+
+    <meta name="theme-color" content="#07050d">
+    <meta name="color-scheme" content="dark">
+    <meta name="referrer" content="strict-origin-when-cross-origin">
+    <!-- Dashboard is a signed-in surface — no reason for search engines to index -->
+    <meta name="robots" content="noindex, nofollow">
+
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 36 36'%3E%3Crect width='36' height='36' rx='8' fill='url(%23g)'/%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='36' y2='36'%3E%3Cstop offset='0%25' stop-color='%236366f1'/%3E%3Cstop offset='100%25' stop-color='%238b5cf6'/%3E%3C/linearGradient%3E%3C/defs%3E%3Cpath d='M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4' stroke='white' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round' fill='none' transform='translate(8,10) scale(0.8)'/%3E%3C/svg%3E">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>

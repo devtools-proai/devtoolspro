@@ -31,17 +31,20 @@
 
     <!-- ═══════════════════════════════════════════════════════════════
          OPEN GRAPH (Facebook, LinkedIn, WhatsApp, Discord previews)
-         og:image is 1200×630 (Facebook recommended) — replace og-image.svg
-         with a PNG export for max compatibility with older share clients.
+         Primary image is a 1200×630 JPEG rendered from og-image.svg.
+         WhatsApp does not reliably render SVG previews, so raster is
+         REQUIRED for the thumbnail to actually show up in-chat. The
+         SVG remains available at og-image.svg for anyone who wants
+         to swap it out; regenerate the JPEG whenever the SVG changes.
          ═══════════════════════════════════════════════════════════════ -->
     <meta property="og:type" content="website">
     <meta property="og:site_name" content="DevTools Pro">
     <meta property="og:title" content="Kiro IDE Subscription at 50% Off — DevTools Pro">
     <meta property="og:description" content="Buy Kiro AI IDE plans at half price. Pro ₹946, Pro+ ₹1,892, Pro Max ₹4,731, Power ₹9,461/mo. Claude Opus + Sonnet included. 1:1 Google Meet setup.">
     <meta property="og:url" content="https://devtools-proai.github.io/devtoolspro/">
-    <meta property="og:image" content="https://devtools-proai.github.io/devtoolspro/og-image.svg">
-    <meta property="og:image:secure_url" content="https://devtools-proai.github.io/devtoolspro/og-image.svg">
-    <meta property="og:image:type" content="image/svg+xml">
+    <meta property="og:image" content="https://devtools-proai.github.io/devtoolspro/og-image.jpg">
+    <meta property="og:image:secure_url" content="https://devtools-proai.github.io/devtoolspro/og-image.jpg">
+    <meta property="og:image:type" content="image/jpeg">
     <meta property="og:image:width" content="1200">
     <meta property="og:image:height" content="630">
     <meta property="og:image:alt" content="DevTools Pro — Kiro AI coding IDE subscriptions at 50% off market price.">
@@ -54,7 +57,7 @@
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="Kiro IDE Subscription at 50% Off — DevTools Pro">
     <meta name="twitter:description" content="Half-price Kiro plans. Claude Opus + Sonnet. UPI accepted. Live setup on Google Meet.">
-    <meta name="twitter:image" content="https://devtools-proai.github.io/devtoolspro/og-image.svg">
+    <meta name="twitter:image" content="https://devtools-proai.github.io/devtoolspro/og-image.jpg">
     <meta name="twitter:image:alt" content="Kiro AI IDE at 50% off — DevTools Pro pricing.">
 
     <!-- Visual platform hints -->
@@ -100,7 +103,7 @@
           "url": "https://devtools-proai.github.io/devtoolspro/",
           "logo": {
             "@type": "ImageObject",
-            "url": "https://devtools-proai.github.io/devtoolspro/og-image.svg",
+            "url": "https://devtools-proai.github.io/devtoolspro/og-image.jpg",
             "width": 1200,
             "height": 630
           },
@@ -139,7 +142,7 @@
           "@id": "https://devtools-proai.github.io/devtoolspro/#kiro-product",
           "name": "Kiro IDE Subscription — DevTools Pro (50% Off)",
           "description": "Genuine Kiro AI IDE subscription resold at 50% off market price. Includes Claude Opus 4.8, Claude Sonnet 4.6, Sonnet 4.5, Auto, Qwen3 Coder Next, DeepSeek v3.2, and MiniMax 2.1. Tiered monthly credits.",
-          "image": "https://devtools-proai.github.io/devtoolspro/og-image.svg",
+          "image": "https://devtools-proai.github.io/devtoolspro/og-image.jpg",
           "brand": { "@type": "Brand", "name": "DevTools Pro" },
           "category": "AI coding subscription",
           "audience": { "@type": "Audience", "audienceType": "Software developers" },
