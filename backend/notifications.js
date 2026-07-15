@@ -134,7 +134,13 @@ async function createForUser(userId, payload, createdBy = 'admin') {
     } else if (code === '23503') {
       userFacing = 'Could not send — the user may have been deleted. Refresh the page and try again.';
     } else if (code === '42501' || /permission denied/i.test(msg)) {
-      userFacing = 'Database permission denied. The backend needs the SERVICE_ROLE key (not the anon key) — check SUPABASE_KEY in your environment.';
+      // Two distinct causes of this:
+      //   1. SUPABASE_KEY is the anon key instead of service_role.
+      //   2. service_role has no GRANT on the notifications table
+      //      (older Supabase projects without ALTER DEFAULT PRIVILEGES).
+      // Case 2 is FAR more common in practice — the setup script now
+      // grants explicitly, so the fix is to re-run setup-notifications.sql.
+      userFacing = 'Database permission denied on the notifications table. Please re-run backend/setup-notifications.sql in the Supabase SQL editor — the latest version explicitly grants service_role access. If the error persists after that, double-check SUPABASE_KEY is the service_role key (not the anon key).';
     }
     return { success: false, status: 500, message: userFacing };
   }

@@ -58,6 +58,24 @@ CREATE INDEX IF NOT EXISTS idx_notifications_unread
   ON notifications (user_id, created_at DESC)
   WHERE read_at IS NULL AND dismissed_at IS NULL;
 
+-- ─── Table-level privileges ────────────────────────────────
+-- RLS bypass via service_role is ONE layer. Table-level GRANTs
+-- are the OTHER. On newer Supabase projects `ALTER DEFAULT
+-- PRIVILEGES` auto-grants service_role on every table in `public`,
+-- but older projects don't have this default and would 42501 on any
+-- INSERT / SELECT even though RLS would allow it. Being explicit
+-- here means the same setup script works on both.
+--
+-- Postgres role is the owner and always has full access anyway;
+-- listing it is defensive against unusual Supabase configurations
+-- where the SQL editor runs as `supabase_admin` and the postgres
+-- role otherwise lacks a direct grant.
+GRANT ALL PRIVILEGES ON TABLE notifications TO postgres, service_role;
+-- anon + authenticated are LATER blocked by the deny-all RLS policy
+-- below, but we still grant so PostgREST recognises the table on
+-- its own inspection queries. Belt-and-braces.
+GRANT ALL PRIVILEGES ON TABLE notifications TO anon, authenticated;
+
 -- ─── Row Level Security ────────────────────────────────────
 ALTER TABLE notifications ENABLE ROW LEVEL SECURITY;
 
@@ -70,6 +88,11 @@ CREATE POLICY "notifications_deny_anon" ON notifications
   TO anon, authenticated
   USING (false)
   WITH CHECK (false);
+
+-- Force PostgREST to pick up the fresh table + policies without a
+-- restart. Without this, brand-new tables sometimes return 42501
+-- until the schema cache refreshes on its own timer (~10 min).
+NOTIFY pgrst, 'reload schema';
 
 -- ═══════════════════════════════════════════════════════════
 -- DONE! Notifications table ready.

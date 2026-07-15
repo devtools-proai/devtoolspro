@@ -47,6 +47,13 @@ CREATE INDEX IF NOT EXISTS idx_payment_screenshots_user
   ON payment_screenshots (user_id, created_at DESC)
   WHERE user_id IS NOT NULL;
 
+-- ─── Table-level privileges ────────────────────────────────
+-- Same pattern as setup-notifications.sql — see the extended
+-- comment there for why we grant explicitly rather than rely on
+-- ALTER DEFAULT PRIVILEGES.
+GRANT ALL PRIVILEGES ON TABLE payment_screenshots TO postgres, service_role;
+GRANT ALL PRIVILEGES ON TABLE payment_screenshots TO anon, authenticated;
+
 -- ─── Row Level Security ────────────────────────────────────
 ALTER TABLE payment_screenshots ENABLE ROW LEVEL SECURITY;
 
@@ -57,6 +64,9 @@ CREATE POLICY "payment_screenshots_deny_anon" ON payment_screenshots
   TO anon, authenticated
   USING (false)
   WITH CHECK (false);
+
+-- Force PostgREST to pick up the fresh table without a restart.
+NOTIFY pgrst, 'reload schema';
 
 -- ═══════════════════════════════════════════════════════════
 -- DONE! Payment screenshots table ready.
