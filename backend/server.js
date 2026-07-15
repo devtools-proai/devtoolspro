@@ -29,6 +29,7 @@ const {
   attachScreenshotAndSubmitUTR, getScreenshotForAdmin,
 } = require('./payment-verify');
 const notifications = require('./notifications');
+const { normalizeIndianPhone, describeReason, isCanonical } = require('./utils/phone');
 const { isValidMeetUrl } = require('./meet-service');
 const {
   verifyGoogleToken, findOrCreateUser, generateSessionToken, requireAuth,
@@ -527,20 +528,23 @@ app.post('/auth/register', requireAuth, async (req, res) => {
       return res.status(400).json({ status: 'error', message: 'Name and source are required' });
     }
 
-    // WhatsApp number is now MANDATORY. The entire fulfilment flow
+    // WhatsApp number is MANDATORY. The entire fulfilment flow
     // (payment verification, Meet link delivery, renewal reminders)
     // happens over WhatsApp, so a missing/invalid number means we
-    // literally cannot deliver the subscription. We normalise to
-    // digits-only and validate the length so the click-to-chat URL
-    // on the admin side just works (no re-parsing of stray hyphens /
-    // spaces / country prefixes there).
+    // literally cannot deliver the subscription. We funnel every
+    // inbound number through the single canonical normaliser so the
+    // stored value is ALWAYS `91XXXXXXXXXX` (12 digits, Indian
+    // mobile). This closes the historic drift we saw in the admin
+    // WhatsApp column (some rows starting with 0, some with 9-digit
+    // truncations, some with non-91 country codes).
     if (!phone || !String(phone).trim()) {
       return res.status(400).json({ status: 'error', message: 'WhatsApp number is required — we deliver your subscription and updates there.' });
     }
-    const phoneNormalised = String(phone).replace(/\D+/g, '');
-    if (phoneNormalised.length < 8 || phoneNormalised.length > 15) {
-      return res.status(400).json({ status: 'error', message: 'WhatsApp number must be 8-15 digits — include the country code.' });
+    const phoneCheck = normalizeIndianPhone(phone);
+    if (!phoneCheck.valid) {
+      return res.status(400).json({ status: 'error', message: describeReason(phoneCheck.reason) });
     }
+    const phoneNormalised = phoneCheck.normalized;
 
     const client = getClient();
     const fullName = `${String(firstName).trim()} ${String(lastName).trim()}`;
@@ -763,6 +767,14 @@ function rowToAdminUser(u) {
     // quickly spot recently-fixed numbers.
     phoneUpdatedAt: u.phone_updated_at,
     phoneUpdatedBy: u.phone_updated_by,
+    // Whether phone is in the canonical `91XXXXXXXXXX` shape. Computed
+    // server-side so the admin UI can render an invalid-warning
+    // affordance without having to know the normalisation rules.
+    // A legacy row that hasn't been re-saved since the v1.3.1
+    // normaliser landed may still be non-canonical — the admin can
+    // fix it by opening the edit modal and hitting save, which
+    // re-runs the number through normalizeIndianPhone.
+    phoneCanonical: isCanonical(u.phone),
   };
 }
 
@@ -846,19 +858,27 @@ app.patch('/admin/users/:id', requireAdminAuth, async (req, res) => {
       }
       updates.meet_link = raw || null;
     }
-    // Phone (WhatsApp) — parsed here, stamped for audit AFTER we know
-    // whether the value actually changed (see below).
+    // Phone (WhatsApp) — funnels through the same canonical Indian
+    // normaliser used by /auth/register so admin edits can never
+    // introduce a non-canonical value. Empty string clears the field
+    // (legitimate when the admin has confirmed the row is
+    // unreachable and wants to remove the bad data).
     let phoneChanged = false;
     let phoneCleaned = null;
     if ('phone' in body) {
-      // Normalise to digits-only so the WhatsApp click-to-chat URL on
-      // every row just works without re-parsing. Empty string clears.
-      const cleaned = body.phone ? String(body.phone).replace(/\D+/g, '') : '';
-      if (cleaned && (cleaned.length < 8 || cleaned.length > 15)) {
-        return res.status(400).json({ status: 'error', message: 'Phone must be 8-15 digits' });
+      const raw = body.phone == null ? '' : String(body.phone).trim();
+      if (raw === '') {
+        // Explicit clear.
+        updates.phone = null;
+        phoneCleaned = null;
+      } else {
+        const phoneCheck = normalizeIndianPhone(raw);
+        if (!phoneCheck.valid) {
+          return res.status(400).json({ status: 'error', message: describeReason(phoneCheck.reason) });
+        }
+        updates.phone = phoneCheck.normalized;
+        phoneCleaned = phoneCheck.normalized;
       }
-      updates.phone = cleaned || null;
-      phoneCleaned = cleaned || null;
       phoneChanged = true; // resolved against DB below
     }
     if ('source'        in body) updates.source          = body.source        || null;

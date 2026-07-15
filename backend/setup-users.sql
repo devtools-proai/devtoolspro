@@ -81,6 +81,50 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS phone_updated_at TIMESTAMPTZ;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS phone_updated_by TEXT;
 
+-- v1.3.1: BACKFILL PHONE NUMBERS TO CANONICAL FORMAT.
+-- Historic data had mixed formats (bare 10-digit, leading 0, missing
+-- country code, garbage). New writes are locked to `91XXXXXXXXXX`
+-- via backend/utils/phone.js — this migration best-effort normalises
+-- existing rows to the same shape. We ONLY touch rows we can safely
+-- resolve; unresolvable rows are left as-is so the admin UI flags
+-- them with an invalid-warning chip and ops can fix them manually.
+--
+-- Safe transformations (idempotent — every branch checks the current
+-- value hasn't already been normalised so re-running is a no-op):
+--   1. Exactly 10 digits, starts with [6-9]           → prepend '91'
+--   2. 11 digits, starts with '0' + [6-9]             → drop 0, prepend '91'
+--   3. 12 digits, already '91' + [6-9] + 9 digits     → no-op (skipped)
+--
+-- Left untouched (admin fixes via edit modal):
+--   - 9-digit numbers (missing a digit somewhere)
+--   - 11-digit numbers not starting with 0
+--   - 12-digit numbers not starting with 91
+--   - Anything else weird
+--
+-- The backfill stamps phone_updated_at + phone_updated_by so the
+-- admin UI shows a "migrated" badge on touched rows, matching the
+-- existing "updated Nd ago" affordance.
+
+-- Branch 1: bare 10-digit Indian mobile.
+UPDATE users
+SET
+  phone = '91' || phone,
+  phone_updated_at = COALESCE(phone_updated_at, NOW()),
+  phone_updated_by = COALESCE(phone_updated_by, 'migration_v1.3.1')
+WHERE phone IS NOT NULL
+  AND LENGTH(phone) = 10
+  AND phone ~ '^[6-9][0-9]{9}$';
+
+-- Branch 2: 11-digit "0"-prefixed Indian mobile (legacy STD dialling).
+UPDATE users
+SET
+  phone = '91' || SUBSTRING(phone FROM 2),
+  phone_updated_at = COALESCE(phone_updated_at, NOW()),
+  phone_updated_by = COALESCE(phone_updated_by, 'migration_v1.3.1')
+WHERE phone IS NOT NULL
+  AND LENGTH(phone) = 11
+  AND phone ~ '^0[6-9][0-9]{9}$';
+
 -- Backfill updated_at on existing rows: prefer plan_start_date (last
 -- known business event) and fall back to created_at. Without this the
 -- column would be NULL on every existing row and the admin "Updated"

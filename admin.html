@@ -369,6 +369,22 @@
             letter-spacing: 0.02em; display: inline-flex; align-items: center; gap: 3px;
         }
         .wa-updated-hint svg { width: 10px; height: 10px; }
+        /* Invalid-format chip — same shape as .wa-cell-link but red
+           tint + no hover-launch behaviour (it's a warning, not a
+           clickable action). The parent row is still clickable to
+           open the edit modal, which is where ops fixes the value. */
+        .wa-cell-link.wa-cell-invalid {
+            border-color: rgba(248,113,113,0.42);
+            background: rgba(248,113,113,0.08);
+            color: rgba(252,165,165,0.95);
+            cursor: default;
+        }
+        .wa-cell-link.wa-cell-invalid:hover {
+            background: rgba(248,113,113,0.12);
+            border-color: rgba(248,113,113,0.55);
+        }
+        .wa-cell-link.wa-cell-invalid svg { color: rgba(252,165,165,0.9); }
+        .wa-invalid-hint { color: rgba(252,165,165,0.85) !important; }
 
         /* ─── Notification composer (edit modal) ─── */
         .notif-block {
@@ -1036,8 +1052,9 @@
                     <input class="field-input" id="edit-meet" type="url" placeholder="https://meet.google.com/…">
                 </div>
                 <div class="field">
-                    <label class="field-label" for="edit-phone">Phone (WhatsApp)</label>
-                    <input class="field-input" id="edit-phone" type="tel" inputmode="tel" placeholder="+91 9019879108">
+                    <label class="field-label" for="edit-phone">WhatsApp (+91 only) <span style="color: var(--ink-3); font-weight: 500; letter-spacing: normal; text-transform: none;">— 10-digit Indian mobile</span></label>
+                    <input class="field-input" id="edit-phone" type="tel" inputmode="tel" placeholder="+91 98765 43210" autocomplete="tel">
+                    <span id="edit-phone-hint" style="display:block; font-size: 11px; color: var(--ink-3); margin-top: 4px; letter-spacing: normal; text-transform: none;">Any format accepted; saved as +91 XXXXXXXXXX. Leave empty to clear.</span>
                 </div>
                 <div class="field">
                     <label class="field-label" for="edit-source">Source</label>
@@ -1444,49 +1461,71 @@
         let sortDir = 'desc';
 
         // ─── WhatsApp cell renderer ─────────────────────────────────
-        // Renders u.phone as a click-to-launch chip plus a small
-        // "updated Nd ago" hint if an admin changed the number
-        // recently (phoneUpdatedAt is stamped by PATCH /admin/users/:id
-        // only when the value actually differs — see server.js).
-        // The hint window is 14 days so the ops team notices recently-
-        // corrected numbers without the whole column being noisy.
+        // Renders u.phone as a click-to-launch chip when the number is
+        // in the canonical `91XXXXXXXXXX` shape (12 digits, Indian
+        // mobile). Non-canonical rows get a red warning chip with the
+        // raw value + tooltip, so ops can spot legacy data instantly
+        // and fix via the edit modal (which now runs every save
+        // through the same normaliser).
+        //
+        // The `phoneCanonical` flag is computed server-side by
+        // rowToAdminUser → utils/phone.isCanonical so both sides
+        // share a single source of truth.
         function renderWhatsAppCell(u) {
             if (!u || !u.phone) {
                 return '<span class="wa-cell-empty">—</span>';
             }
             const phone = String(u.phone);
-            const waUrl = `https://api.whatsapp.com/send?phone=${encodeURIComponent(phone)}`;
-            // Format the phone for display: keep it monospace-friendly
-            // but readable. We insert a thin space every 3-4 chars.
-            const display = phone.length > 10
-                ? `+${phone.slice(0, phone.length - 10)} ${phone.slice(-10, -5)} ${phone.slice(-5)}`
-                : phone;
-            let updatedHint = '';
-            if (u.phoneUpdatedAt) {
-                const ageMs = Date.now() - new Date(u.phoneUpdatedAt).getTime();
-                const ageDays = Math.floor(ageMs / (1000 * 60 * 60 * 24));
-                if (ageDays >= 0 && ageDays <= 14) {
-                    const label = ageDays === 0
-                        ? 'updated today'
-                        : ageDays === 1
-                            ? 'updated 1d ago'
-                            : `updated ${ageDays}d ago`;
-                    const by = u.phoneUpdatedBy ? ` (${u.phoneUpdatedBy})` : '';
-                    updatedHint = `
-                        <span class="wa-updated-hint" title="Changed ${escapeHTML(fmtDate(u.phoneUpdatedAt))}${escapeHTML(by)}">
-                            <svg fill="none" stroke="currentColor" stroke-width="2.4" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
-                            ${escapeHTML(label)}
-                        </span>`;
-                }
+
+            // Canonical: render the pretty +91 XXXXX XXXXX chip.
+            if (u.phoneCanonical) {
+                const sub = phone.slice(2);              // strip leading '91'
+                const display = `+91 ${sub.slice(0, 5)} ${sub.slice(5)}`;
+                const waUrl = `https://api.whatsapp.com/send?phone=${encodeURIComponent(phone)}`;
+                return `
+                    <div class="wa-cell">
+                        <a class="wa-cell-link" href="${escapeHTML(waUrl)}" target="_blank" rel="noopener" title="Open WhatsApp chat with ${escapeHTML(u.name || 'user')}">
+                            <svg fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path d="M20.52 3.48A11.9 11.9 0 0012.04 0C5.46 0 .12 5.34.12 11.92c0 2.1.55 4.15 1.6 5.96L0 24l6.28-1.65a11.9 11.9 0 005.76 1.47h.01c6.58 0 11.92-5.34 11.92-11.92 0-3.18-1.24-6.17-3.45-8.42zM12.05 21.8a9.87 9.87 0 01-5.03-1.38l-.36-.21-3.73.98 1-3.64-.23-.37a9.9 9.9 0 01-1.51-5.26c0-5.47 4.45-9.92 9.93-9.92 2.65 0 5.14 1.03 7.01 2.91a9.85 9.85 0 012.9 7.02c0 5.47-4.45 9.92-9.98 9.92z"/></svg>
+                            ${escapeHTML(display)}
+                        </a>
+                        ${renderPhoneUpdatedHint(u)}
+                    </div>`;
             }
+
+            // Non-canonical: red warning chip. We still show the raw
+            // digits (unformatted, no fake '+' prefix) so ops can see
+            // what's actually stored and fix it. Clicking opens the
+            // edit modal via the row's existing click handler.
+            const raw = phone;
             return `
                 <div class="wa-cell">
-                    <a class="wa-cell-link" href="${escapeHTML(waUrl)}" target="_blank" rel="noopener" title="Open WhatsApp chat with ${escapeHTML(u.name || 'user')}">
-                        <svg fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path d="M20.52 3.48A11.9 11.9 0 0012.04 0C5.46 0 .12 5.34.12 11.92c0 2.1.55 4.15 1.6 5.96L0 24l6.28-1.65a11.9 11.9 0 005.76 1.47h.01c6.58 0 11.92-5.34 11.92-11.92 0-3.18-1.24-6.17-3.45-8.42zM12.05 21.8a9.87 9.87 0 01-5.03-1.38l-.36-.21-3.73.98 1-3.64-.23-.37a9.9 9.9 0 01-1.51-5.26c0-5.47 4.45-9.92 9.93-9.92 2.65 0 5.14 1.03 7.01 2.91a9.85 9.85 0 012.9 7.02c0 5.47-4.45 9.92-9.98 9.92z"/></svg>
-                        ${escapeHTML(display)}
-                    </a>
-                    ${updatedHint}
+                    <span class="wa-cell-link wa-cell-invalid" title="This number isn't in the canonical +91 XXXXXXXXXX format. Click the row to open the edit modal and fix it.">
+                        <svg fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01M4.93 19h14.14a2 2 0 001.74-3l-7.07-12a2 2 0 00-3.48 0L3.19 16a2 2 0 001.74 3z"/></svg>
+                        ${escapeHTML(raw)}
+                    </span>
+                    <span class="wa-updated-hint wa-invalid-hint">Invalid format · fix in edit</span>
                 </div>`;
+        }
+
+        // Small helper shared between the canonical and the (future)
+        // fixed-again cases. Kept separate so the render function
+        // stays flat and readable.
+        function renderPhoneUpdatedHint(u) {
+            if (!u || !u.phoneUpdatedAt) return '';
+            const ageMs = Date.now() - new Date(u.phoneUpdatedAt).getTime();
+            const ageDays = Math.floor(ageMs / (1000 * 60 * 60 * 24));
+            if (ageDays < 0 || ageDays > 14) return '';
+            const label = ageDays === 0
+                ? 'updated today'
+                : ageDays === 1
+                    ? 'updated 1d ago'
+                    : `updated ${ageDays}d ago`;
+            const by = u.phoneUpdatedBy ? ` (${u.phoneUpdatedBy})` : '';
+            return `
+                <span class="wa-updated-hint" title="Changed ${escapeHTML(fmtDate(u.phoneUpdatedAt))}${escapeHTML(by)}">
+                    <svg fill="none" stroke="currentColor" stroke-width="2.4" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+                    ${escapeHTML(label)}
+                </span>`;
         }
 
         function compareForSort(a, b, key) {
