@@ -120,7 +120,23 @@ async function createForUser(userId, payload, createdBy = 'admin') {
 
   if (error) {
     console.error('notifications.createForUser insert error:', error.message || error);
-    return { success: false, status: 500, message: 'Failed to create notification' };
+    // Surface a specific message per known failure mode so admins
+    // can self-diagnose without having to open Render logs. This is
+    // safe because /admin/* is JWT-gated; the caller is authorised.
+    const msg = String(error.message || '');
+    const code = String(error.code || '');
+    let userFacing = msg || 'Failed to create notification';
+    // 42P01 = undefined_table — the `notifications` table hasn't
+    // been created yet. This is the #1 cause of the "Failed to send
+    // notification" error immediately after the v1.3 rollout.
+    if (code === '42P01' || /relation .*notifications.* does not exist/i.test(msg)) {
+      userFacing = 'The notifications table does not exist yet. Please run backend/setup-notifications.sql in the Supabase SQL editor, then try again.';
+    } else if (code === '23503') {
+      userFacing = 'Could not send — the user may have been deleted. Refresh the page and try again.';
+    } else if (code === '42501' || /permission denied/i.test(msg)) {
+      userFacing = 'Database permission denied. The backend needs the SERVICE_ROLE key (not the anon key) — check SUPABASE_KEY in your environment.';
+    }
+    return { success: false, status: 500, message: userFacing };
   }
   return { success: true, notification: data };
 }

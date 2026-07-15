@@ -434,8 +434,11 @@
             font-family: inherit; font-size: 13px; resize: vertical;
             margin-bottom: 8px;
         }
-        .notif-actions { display: flex; align-items: center; gap: 8px; }
-        .notif-msg { flex: 1; font-size: 11px; color: var(--ink-2); }
+        .notif-actions { display: flex; align-items: flex-start; gap: 8px; }
+        .notif-msg {
+            flex: 1; font-size: 11px; color: var(--ink-2);
+            line-height: 1.45; word-wrap: break-word;
+        }
         .notif-msg.ok { color: var(--green); }
         .notif-msg.err { color: var(--red); }
         .notif-send-btn {
@@ -1173,7 +1176,7 @@
                     <div class="payments-block" id="payments-block" style="display:none;">
                         <div class="payments-block-title">
                             <svg fill="none" stroke="currentColor" stroke-width="1.9" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.6 4.5A9 9 0 1112 21a9 9 0 008.6-6.5z"/></svg>
-                            Pending payments &amp; screenshots
+                            Awaiting verification
                         </div>
                         <div id="payments-list"></div>
                     </div>
@@ -2908,10 +2911,24 @@
          * Payment / screenshot viewer
          * ────────────────────────────────────────────────────────── */
 
-        // Fetches ALL pending payments (admin-scoped, cheap) once per
-        // modal open and renders the ones belonging to this user.
-        // Verified payments aren't returned by /api/payment/pending, so
-        // this list is naturally scoped to "still needs attention".
+        // Fetch payments that need admin action for this user.
+        //
+        // The backend's /api/payment/pending returns rows in BOTH
+        // `pending` and `awaiting_verification` status — `pending`
+        // is a stale open checkout session (user picked a plan,
+        // never submitted UTR + screenshot; auto-expires in 30 min)
+        // and `awaiting_verification` is what actually needs the
+        // admin to look at it.
+        //
+        // Showing `pending` rows in the admin's "needs attention"
+        // panel was confusing — it made users with no plan look like
+        // they had one, just because they'd opened a checkout
+        // session that never completed. We filter to
+        // `awaiting_verification` only here so the panel only ever
+        // contains rows the admin can actually act on. Stale
+        // `pending` rows are still visible via direct DB queries and
+        // the /api/payment/pending endpoint, they just don't clutter
+        // the admin ops view.
         async function preloadUserPayments(userId) {
             const block = document.getElementById('payments-block');
             const list = document.getElementById('payments-list');
@@ -2919,7 +2936,10 @@
             block.style.display = 'none';
             try {
                 const { data: rows } = await api('/api/payment/pending');
-                const mine = (rows || []).filter(r => r.user_id === userId);
+                const mine = (rows || []).filter(r =>
+                    r.user_id === userId &&
+                    r.status === 'awaiting_verification'
+                );
                 if (mine.length === 0) return;
                 block.style.display = '';
                 list.innerHTML = mine.map(renderPaymentItem).join('');
