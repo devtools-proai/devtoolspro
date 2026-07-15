@@ -19,12 +19,20 @@ Replaces Google Sheets with **Supabase (free PostgreSQL)**. Automatically attach
 2. Click **New Project** → give it a name + password
 3. Wait for project to spin up (~30 seconds)
 
-### 2. Create Database Table
+### 2. Create Database Tables
 
-1. In Supabase dashboard → **SQL Editor** → **New Query**
-2. Paste the contents of `setup-db.sql`
-3. Click **Run**
-4. You should see "Success" ✓
+Run each of these SQL scripts in **Supabase dashboard → SQL Editor → New Query**, one at a time. All scripts are idempotent — safe to re-run on an existing database.
+
+| File | What it creates | When to run |
+| ---- | --------------- | ----------- |
+| `setup-db.sql`                | `submissions` table + RLS lockdown       | First-time setup |
+| `setup-users.sql`             | `users` table + soft-delete + phone audit columns | First-time setup, and re-run after v1.3 upgrade to add `phone_updated_at` / `phone_updated_by` |
+| `setup-payments.sql`          | `payments` table + screenshot metadata columns    | First-time setup, and re-run after v1.3 upgrade to add `screenshot_*` columns |
+| `setup-payment-screenshots.sql` | `payment_screenshots` blob table                | New in v1.3 — required for the payment-screenshot upload flow |
+| `setup-notifications.sql`     | `notifications` table                             | New in v1.3 — required for admin → user dashboard notifications |
+| `setup-reviews.sql`           | `reviews` table                                   | First-time setup |
+
+You should see "Success" ✓ after each script.
 
 ### 3. Get Your API Keys
 

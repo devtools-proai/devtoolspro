@@ -848,6 +848,53 @@
         .utr-status { padding: 0.85rem 1rem; border-radius: 11px; background: rgba(15,10,28,0.5); border: 1px solid rgba(255,255,255,0.06); font-size: 13.5px; color: rgb(190,185,210); }
         .utr-error { font-size: 13.5px; color: #f87171; margin: 0; }
 
+        /* ─── Payment screenshot upload ─── */
+        /* Sits under the UTR field. Users drop / pick a file, we
+           downscale + JPEG-encode it on-canvas, run tesseract.js
+           over it to extract UTR + amount candidates, and submit
+           the whole bundle to /api/payment/upload-screenshot. */
+        .utr-shot-block { display: flex; flex-direction: column; gap: 10px; }
+        .utr-shot-dropzone {
+            position: relative;
+            padding: 20px; border-radius: 14px;
+            border: 2px dashed rgba(255,255,255,0.14);
+            background: rgba(15,10,28,0.45);
+            display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;
+            text-align: center; cursor: pointer;
+            transition: border-color .2s, background .2s;
+        }
+        .utr-shot-dropzone:hover, .utr-shot-dropzone.dragover { border-color: rgba(168,85,247,0.55); background: rgba(168,85,247,0.06); }
+        .utr-shot-dropzone svg { width: 26px; height: 26px; color: rgb(190,185,210); }
+        .utr-shot-title { font-size: 13.5px; font-weight: 700; color: #f5f3ff; }
+        .utr-shot-hint  { font-size: 11.5px; color: rgb(150,145,180); }
+        .utr-shot-input { display: none; }
+
+        .utr-shot-preview { display: none; gap: 12px; padding: 12px; border-radius: 12px; background: rgba(0,0,0,0.28); border: 1px solid rgba(255,255,255,0.06); }
+        .utr-shot-preview.show { display: flex; }
+        .utr-shot-preview img { width: 74px; height: 74px; border-radius: 8px; object-fit: cover; flex-shrink: 0; }
+        .utr-shot-preview-info { flex: 1; min-width: 0; font-size: 12px; }
+        .utr-shot-preview-info .row { margin-bottom: 3px; color: rgb(190,185,210); }
+        .utr-shot-preview-info .row strong { color: #f5f3ff; font-weight: 700; }
+        .utr-shot-remove {
+            flex-shrink: 0; background: none; border: none; color: #f87171;
+            cursor: pointer; padding: 4px 8px; font-size: 12px;
+            display: inline-flex; align-items: center; gap: 4px;
+            border-radius: 6px;
+        }
+        .utr-shot-remove:hover { background: rgba(248,113,113,0.1); }
+        .utr-shot-status {
+            font-size: 12.5px; padding: 8px 12px; border-radius: 8px;
+            border: 1px solid rgba(255,255,255,0.08); background: rgba(255,255,255,0.03);
+            color: rgb(190,185,210);
+            display: none; align-items: center; gap: 8px; line-height: 1.5;
+        }
+        .utr-shot-status.show { display: flex; }
+        .utr-shot-status svg { width: 15px; height: 15px; flex-shrink: 0; }
+        .utr-shot-status.ok   { border-color: rgba(74,222,128,0.32); background: rgba(74,222,128,0.06); color: #86efac; }
+        .utr-shot-status.warn { border-color: rgba(251,191,36,0.32); background: rgba(251,191,36,0.06); color: #fcd34d; }
+        .utr-shot-status.err  { border-color: rgba(248,113,113,0.32); background: rgba(248,113,113,0.06); color: #fca5a5; }
+        .utr-shot-status.working { border-color: rgba(129,140,248,0.32); background: rgba(129,140,248,0.06); color: #c7d2fe; }
+
         .utr-cta { width: 100%; padding: 1.15rem 1.5rem; margin-top: 0.5rem; background: linear-gradient(135deg, #a855f7 0%, #9333ea 100%); border: none; border-radius: 14px; color: white; font-size: 16px; font-weight: 700; font-family: inherit; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 10px; box-shadow: 0 16px 40px -10px rgba(168,85,247,0.55), inset 0 1px 0 rgba(255,255,255,0.18); transition: transform .18s, box-shadow .18s, background .2s; }
         .utr-cta:hover:not(:disabled) { transform: translateY(-1px); background: linear-gradient(135deg, #9333ea 0%, #7e22ce 100%); box-shadow: 0 22px 50px -10px rgba(168,85,247,0.7); }
         .utr-cta:disabled { opacity: 0.7; cursor: progress; }
@@ -930,6 +977,128 @@
         .dash-topbar { display: flex; align-items: center; justify-content: space-between; padding: 0.75rem 1.75rem; border-bottom: 1px solid rgba(255,255,255,0.06); backdrop-filter: blur(18px) saturate(140%); -webkit-backdrop-filter: blur(18px) saturate(140%); background: rgba(10,7,22,0.55); flex-shrink: 0; }
         .dash-topbar-brand { display: inline-flex; align-items: center; text-decoration: none; }
         .dash-topbar-brand .brand-mark { font-size: 20px; }
+
+        /* ─── Notification bell in the topbar ────────────────────
+           The bell shows a live unread count; clicking opens the
+           notifications panel. The panel is anchored to the bell so
+           it flows underneath, with a slight tail arrow. */
+        .dash-topbar-right { display: inline-flex; align-items: center; gap: 12px; }
+        .dash-notif-bell {
+            position: relative; width: 40px; height: 40px;
+            border-radius: 999px; border: 1px solid rgba(255,255,255,0.08);
+            background: rgba(255,255,255,0.04); color: #cbc7e0;
+            cursor: pointer; display: inline-flex; align-items: center; justify-content: center;
+            transition: background .15s, border-color .15s;
+        }
+        .dash-notif-bell:hover { background: rgba(129,140,248,0.12); border-color: rgba(129,140,248,0.4); color: #e0dcff; }
+        .dash-notif-bell svg { width: 18px; height: 18px; }
+        .dash-notif-badge {
+            position: absolute; top: 4px; right: 4px;
+            min-width: 18px; height: 18px; padding: 0 5px;
+            border-radius: 999px;
+            background: linear-gradient(135deg, #f43f5e, #f87171);
+            color: white; font-size: 10px; font-weight: 800;
+            display: none; align-items: center; justify-content: center;
+            border: 2px solid #0a0716;
+            letter-spacing: 0;
+        }
+        .dash-notif-badge.show { display: inline-flex; }
+        .dash-notif-badge.urgent { animation: bell-pulse 1.6s ease-in-out infinite; }
+        @keyframes bell-pulse {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(244,63,94,0.5); }
+            50%      { box-shadow: 0 0 0 6px rgba(244,63,94,0); }
+        }
+
+        /* ─── Notifications panel dropdown ─── */
+        .dash-notif-panel {
+            position: fixed; z-index: 400;
+            top: 60px; right: 20px;
+            width: 380px; max-width: calc(100vw - 2rem); max-height: 70vh;
+            background: linear-gradient(180deg, rgba(28,22,56,0.94) 0%, rgba(14,10,30,0.98) 100%);
+            border: 1px solid rgba(129,140,248,0.22);
+            border-radius: 16px;
+            box-shadow: 0 30px 80px -20px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,255,255,0.02);
+            backdrop-filter: blur(20px) saturate(140%);
+            display: flex; flex-direction: column;
+            opacity: 0; visibility: hidden; transform: translateY(-8px);
+            transition: opacity .18s ease, visibility .18s, transform .18s ease;
+        }
+        .dash-notif-panel.show { opacity: 1; visibility: visible; transform: translateY(0); }
+        .dash-notif-panel-head {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 14px 16px; border-bottom: 1px solid rgba(255,255,255,0.06);
+        }
+        .dash-notif-panel-title {
+            font-size: 13px; font-weight: 700; color: #f5f3ff;
+            letter-spacing: 0.02em;
+        }
+        .dash-notif-mark-all {
+            font-size: 11px; background: none; border: none; color: #a5b4fc;
+            cursor: pointer; padding: 4px 8px; border-radius: 6px;
+            font-weight: 600;
+        }
+        .dash-notif-mark-all:hover { background: rgba(129,140,248,0.14); color: #e0dcff; }
+        .dash-notif-mark-all:disabled { color: #5d5878; cursor: default; }
+        .dash-notif-list {
+            flex: 1; overflow-y: auto;
+            padding: 8px;
+        }
+        .dash-notif-empty {
+            text-align: center; color: #8b86a8; font-size: 12px;
+            padding: 30px 16px; line-height: 1.6;
+        }
+        .dash-notif-empty svg { width: 32px; height: 32px; color: #5d5878; margin: 0 auto 8px; display: block; }
+
+        .dash-notif-item {
+            position: relative;
+            display: flex; gap: 10px; padding: 12px 14px;
+            border-radius: 10px;
+            margin-bottom: 4px;
+            border: 1px solid rgba(255,255,255,0.04);
+            background: rgba(255,255,255,0.02);
+            transition: background .12s;
+        }
+        .dash-notif-item:hover { background: rgba(255,255,255,0.04); }
+        .dash-notif-item.unread { background: rgba(129,140,248,0.06); border-color: rgba(129,140,248,0.22); }
+        .dash-notif-item.unread::before {
+            content: ''; position: absolute; top: 14px; left: 4px;
+            width: 4px; height: 4px; border-radius: 50%;
+            background: #a855f7; box-shadow: 0 0 6px rgba(168,85,247,0.7);
+        }
+        .dash-notif-item.unread { padding-left: 18px; }
+        .dash-notif-kind {
+            flex-shrink: 0; width: 30px; height: 30px; border-radius: 8px;
+            display: inline-flex; align-items: center; justify-content: center;
+            background: rgba(129,140,248,0.14);
+            color: #a5b4fc;
+        }
+        .dash-notif-kind svg { width: 16px; height: 16px; }
+        .dash-notif-item.kind-warn .dash-notif-kind { background: rgba(251,191,36,0.14); color: #fcd34d; }
+        .dash-notif-item.kind-urgent .dash-notif-kind { background: rgba(248,113,113,0.14); color: #fca5a5; }
+        .dash-notif-item.kind-success .dash-notif-kind { background: rgba(74,222,128,0.14); color: #86efac; }
+        .dash-notif-content { flex: 1; min-width: 0; }
+        .dash-notif-title { font-size: 13px; font-weight: 600; color: #f5f3ff; margin-bottom: 3px; line-height: 1.4; }
+        .dash-notif-body { font-size: 12px; color: #cbc7e0; line-height: 1.55; word-wrap: break-word; white-space: pre-line; }
+        .dash-notif-meta { font-size: 10.5px; color: #8b86a8; margin-top: 6px; letter-spacing: 0.02em; }
+        .dash-notif-cta {
+            display: inline-block; margin-top: 8px;
+            padding: 5px 12px; border-radius: 6px;
+            background: linear-gradient(135deg, #6366f1, #a855f7);
+            color: white !important; font-size: 11px; font-weight: 600;
+            text-decoration: none;
+        }
+        .dash-notif-cta:hover { filter: brightness(1.1); }
+        .dash-notif-dismiss {
+            flex-shrink: 0; background: none; border: none;
+            color: #5d5878; cursor: pointer; padding: 4px;
+            width: 22px; height: 22px; border-radius: 4px;
+            font-size: 16px; line-height: 1;
+            transition: background .12s, color .12s;
+        }
+        .dash-notif-dismiss:hover { background: rgba(255,255,255,0.06); color: #cbc7e0; }
+        @media (max-width: 660px) {
+            .dash-notif-panel { right: 8px; top: 56px; width: calc(100vw - 16px); }
+        }
 
         /* Shell: pinned to the left edge (no centering), grid for sidebar + main */
         .dash-shell { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 1.1rem; max-width: none; margin: 0; padding: 0.85rem 1.5rem 1rem; flex: 1; min-height: 0; overflow: hidden; }
@@ -2242,6 +2411,42 @@
                                         Find this in your UPI app under transaction details.
                                     </p>
                                 </div>
+                                <!-- ─── Payment screenshot upload ───
+                                     Required. Sits right after the UTR
+                                     field so the user hasn't left the
+                                     visual/mental context of "prove you
+                                     paid". We downscale + JPEG-encode on
+                                     canvas before OCR to keep upload
+                                     size under ~250KB, then let
+                                     tesseract.js pick out the UTR +
+                                     amount for a quick sanity check.
+                                     The actual security gate is the
+                                     server, which stores the SHA-256
+                                     and rejects duplicates. -->
+                                <div class="utr-shot-block">
+                                    <label class="utr-label" for="pay-shot-input">Upload payment screenshot <span style="color: #f87171; font-weight: 500; font-size: 12px;">(required)</span></label>
+                                    <div class="utr-shot-dropzone" id="pay-shot-dropzone" tabindex="0" role="button" aria-label="Choose a screenshot of your UPI payment">
+                                        <svg fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M7 16a4 4 0 01-.88-7.9A5 5 0 0117 7a3 3 0 01.2 5.94M12 12v9m0-9l-3 3m3-3l3 3"/></svg>
+                                        <span class="utr-shot-title">Tap to upload or drag &amp; drop</span>
+                                        <span class="utr-shot-hint">JPG, PNG, WebP · Auto-compressed · Max 5MB before compression</span>
+                                        <input type="file" class="utr-shot-input" id="pay-shot-input" accept="image/jpeg,image/png,image/webp" capture="environment">
+                                    </div>
+                                    <div class="utr-shot-preview" id="pay-shot-preview">
+                                        <img id="pay-shot-preview-img" alt="">
+                                        <div class="utr-shot-preview-info">
+                                            <div class="row"><strong>Screenshot:</strong> <span id="pay-shot-preview-name">…</span></div>
+                                            <div class="row"><strong>Size:</strong> <span id="pay-shot-preview-size">…</span></div>
+                                            <div class="row" id="pay-shot-preview-extracted-row" style="display:none;">
+                                                <strong>Detected:</strong> <span id="pay-shot-preview-extracted">…</span>
+                                            </div>
+                                        </div>
+                                        <button type="button" class="utr-shot-remove" id="pay-shot-remove">
+                                            <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+                                            Remove
+                                        </button>
+                                    </div>
+                                    <div class="utr-shot-status" id="pay-shot-status"></div>
+                                </div>
                                 <div id="utr-status" class="utr-status hidden"></div>
                                 <p id="utr-error" class="utr-error hidden"></p>
                                 <div class="wa-stay-note compact" role="note" style="margin-bottom: 0.25rem;">
@@ -2341,7 +2546,33 @@
                     <a href="index.html" class="dash-topbar-brand" aria-label="DevTools Pro home">
                         <span class="brand-mark">DevTools Pro</span>
                     </a>
+                    <div class="dash-topbar-right">
+                        <!-- Notifications bell. The unread count badge
+                             hides when count = 0. Clicking opens the
+                             #dash-notif-panel below. Polled via
+                             GET /api/notifications every 60s while the
+                             dashboard is visible. -->
+                        <button type="button" class="dash-notif-bell" id="dash-notif-bell" aria-label="Notifications" aria-haspopup="dialog" aria-expanded="false">
+                            <svg fill="none" stroke="currentColor" stroke-width="1.9" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.4-1.4A2 2 0 0118 14.2V11a6 6 0 10-12 0v3.2c0 .53-.21 1.04-.6 1.4L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
+                            <span class="dash-notif-badge" id="dash-notif-badge">0</span>
+                        </button>
+                    </div>
                 </nav>
+
+                <!-- Notifications panel dropdown — anchored to the bell.
+                     Hidden by default; toggled by #dash-notif-bell. -->
+                <div class="dash-notif-panel" id="dash-notif-panel" role="dialog" aria-label="Notifications" aria-hidden="true">
+                    <header class="dash-notif-panel-head">
+                        <span class="dash-notif-panel-title">Notifications</span>
+                        <button type="button" class="dash-notif-mark-all" id="dash-notif-mark-all" disabled>Mark all read</button>
+                    </header>
+                    <div class="dash-notif-list" id="dash-notif-list">
+                        <div class="dash-notif-empty">
+                            <svg fill="none" stroke="currentColor" stroke-width="1.6" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.4-1.4A2 2 0 0118 14.2V11a6 6 0 10-12 0v3.2c0 .53-.21 1.04-.6 1.4L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
+                            <span>You're all caught up.</span>
+                        </div>
+                    </div>
+                </div>
 
                 <div class="dash-shell">
                     <!-- Sidebar -->
@@ -3443,6 +3674,263 @@
         setTimeout(() => { btn.innerHTML = original; }, 1500);
     });
 
+    /* ─── Screenshot upload state ─────────────────────────────
+       currentScreenshot holds the client-processed image + OCR
+       extraction results. Populated by the file-input change
+       handler and consumed by the UTR submit flow below. */
+    let currentScreenshot = null;   // { dataUrl, sizeBytes, extractedUtr, extractedAmount }
+
+    // Lazy loader for tesseract.js. The library is ~1MB so we
+    // defer loading until the user actually picks a file. Cached
+    // across multiple upload attempts in the same session.
+    let tesseractLoader = null;
+    function loadTesseract() {
+        if (tesseractLoader) return tesseractLoader;
+        tesseractLoader = new Promise((resolve, reject) => {
+            if (typeof Tesseract !== 'undefined') return resolve(Tesseract);
+            const script = document.createElement('script');
+            script.src = 'https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js';
+            script.async = true;
+            script.onload = () => resolve(typeof Tesseract !== 'undefined' ? Tesseract : null);
+            script.onerror = () => reject(new Error('OCR library failed to load'));
+            document.head.appendChild(script);
+        });
+        return tesseractLoader;
+    }
+
+    // Downscale + JPEG-encode a File to fit under ~250KB. UPI
+    // screenshots are typically 1080×~2000 phone screens; downscaling
+    // to 1200px on the long side keeps text readable for OCR while
+    // shrinking the base64 payload dramatically.
+    async function processImage(file) {
+        const url = URL.createObjectURL(file);
+        try {
+            const img = await new Promise((resolve, reject) => {
+                const i = new Image();
+                i.onload = () => resolve(i);
+                i.onerror = reject;
+                i.src = url;
+            });
+            const MAX_DIM = 1200;
+            const scale = Math.min(1, MAX_DIM / Math.max(img.width, img.height));
+            const w = Math.round(img.width * scale);
+            const h = Math.round(img.height * scale);
+            const canvas = document.createElement('canvas');
+            canvas.width = w; canvas.height = h;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, w, h);
+            // Try 0.82 quality first, drop to 0.7 if still oversize.
+            let dataUrl = canvas.toDataURL('image/jpeg', 0.82);
+            if (dataUrl.length > 350 * 1024) {
+                dataUrl = canvas.toDataURL('image/jpeg', 0.7);
+            }
+            if (dataUrl.length > 500 * 1024) {
+                dataUrl = canvas.toDataURL('image/jpeg', 0.55);
+            }
+            return { dataUrl, width: w, height: h };
+        } finally {
+            URL.revokeObjectURL(url);
+        }
+    }
+
+    // Very lightweight UTR extractor. Looks for the strongest
+    // 12-digit run in the OCR text, falling back to any 6-16 char
+    // alphanumeric ref token. UPI apps typically render the UTR
+    // as "UPI Ref No." / "UPI transaction ID" / "Transaction ID"
+    // followed by the number, so we bias towards numbers near
+    // those labels.
+    function extractUtrCandidates(text) {
+        if (!text) return { utr: null, amount: null };
+        const lines = String(text).split(/\r?\n/);
+        const findAll = (rx) => {
+            const hits = [];
+            for (const line of lines) {
+                let m;
+                const local = new RegExp(rx.source, rx.flags);
+                while ((m = local.exec(line)) !== null) hits.push({ line, value: m[1] || m[0] });
+            }
+            return hits;
+        };
+        // Prefer numbers that appear near a UTR-like label.
+        const labelled = findAll(/(?:UTR|UPI\s*Ref|Ref(?:erence)?\s*(?:No\.?|ID)?|Transaction\s*ID)\D{0,10}([A-Za-z0-9]{6,22})/i);
+        let utr = null;
+        if (labelled.length) {
+            utr = labelled[0].value;
+        } else {
+            // Anywhere 12-digit numeric run.
+            const twelve = findAll(/(?<!\d)(\d{12})(?!\d)/);
+            if (twelve.length) utr = twelve[0].value;
+        }
+        // Amount — look for "₹" or "Rs" or "INR" followed by digits.
+        let amount = null;
+        const amtHits = findAll(/(?:₹|Rs\.?|INR)\s*([\d,]+(?:\.\d{1,2})?)/i);
+        if (amtHits.length) {
+            const raw = amtHits[0].value.replace(/,/g, '');
+            const n = Number(raw);
+            if (Number.isFinite(n) && n > 0) amount = n;
+        }
+        return { utr: utr ? String(utr).trim() : null, amount };
+    }
+
+    function setShotStatus(msg, cls) {
+        const el = document.getElementById('pay-shot-status');
+        if (!el) return;
+        if (!msg) { el.classList.remove('show'); el.innerHTML = ''; return; }
+        el.classList.remove('ok', 'warn', 'err', 'working');
+        if (cls) el.classList.add(cls);
+        // Small icon per state.
+        const icon = cls === 'ok'
+            ? '<svg fill="none" stroke="currentColor" stroke-width="2.4" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>'
+            : cls === 'err'
+                ? '<svg fill="none" stroke="currentColor" stroke-width="2.4" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>'
+                : cls === 'warn'
+                    ? '<svg fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4m0 4h.01M4.93 19h14.14a2 2 0 001.74-3l-7.07-12a2 2 0 00-3.48 0L3.19 16a2 2 0 001.74 3z"/></svg>'
+                    : '<span class="brand-spinner"></span>';
+        el.innerHTML = `${icon}<span>${msg}</span>`;
+        el.classList.add('show');
+    }
+
+    function clearScreenshot() {
+        currentScreenshot = null;
+        document.getElementById('pay-shot-input').value = '';
+        document.getElementById('pay-shot-preview').classList.remove('show');
+        document.getElementById('pay-shot-preview-img').src = '';
+        document.getElementById('pay-shot-preview-extracted-row').style.display = 'none';
+        setShotStatus(null);
+    }
+
+    async function handleScreenshotFile(file) {
+        if (!file) return;
+        // Format guard.
+        if (!/^image\/(jpeg|png|webp)/i.test(file.type)) {
+            setShotStatus('Please upload a JPG, PNG, or WebP screenshot.', 'err');
+            return;
+        }
+        if (file.size > 5 * 1024 * 1024) {
+            setShotStatus('File is over 5MB. Please choose a smaller screenshot.', 'err');
+            return;
+        }
+        setShotStatus('Compressing screenshot…', 'working');
+        let processed;
+        try {
+            processed = await processImage(file);
+        } catch {
+            setShotStatus('Could not read the file. Is it a valid image?', 'err');
+            return;
+        }
+        // Populate the preview.
+        const preview = document.getElementById('pay-shot-preview');
+        document.getElementById('pay-shot-preview-img').src = processed.dataUrl;
+        document.getElementById('pay-shot-preview-name').textContent = file.name.slice(0, 40);
+        document.getElementById('pay-shot-preview-size').textContent = `${(processed.dataUrl.length / 1024).toFixed(0)}KB (compressed)`;
+        preview.classList.add('show');
+        currentScreenshot = {
+            dataUrl: processed.dataUrl,
+            sizeBytes: processed.dataUrl.length,
+            extractedUtr: null,
+            extractedAmount: null,
+        };
+        // Run OCR in the background. Failure is non-fatal — the user
+        // can still submit; the server just gets neutral OCR values.
+        setShotStatus('Reading UTR from your screenshot…', 'working');
+        try {
+            const Tess = await loadTesseract();
+            if (!Tess) {
+                setShotStatus('Screenshot ready. Please confirm the UTR you typed matches your payment.', 'warn');
+                return;
+            }
+            // Recognize is slow (~2-4s on desktop, longer on mobile).
+            // We use the English language pack; 'eng' works for UPI
+            // apps because UTR / amount labels are Latin script.
+            const result = await Tess.recognize(processed.dataUrl, 'eng', {
+                logger: () => {}, // silence noisy progress logs
+            });
+            const text = (result && result.data && result.data.text) || '';
+            const { utr, amount } = extractUtrCandidates(text);
+            currentScreenshot.extractedUtr = utr;
+            currentScreenshot.extractedAmount = amount;
+            const parts = [];
+            if (utr) parts.push('UTR: <strong>' + escapeHtml(utr) + '</strong>');
+            if (amount) parts.push('Amount: <strong>₹' + amount.toLocaleString('en-IN') + '</strong>');
+            const extRow = document.getElementById('pay-shot-preview-extracted-row');
+            const extSpan = document.getElementById('pay-shot-preview-extracted');
+            if (parts.length) {
+                extSpan.innerHTML = parts.join(' · ');
+                extRow.style.display = '';
+            }
+            // Cross-check against what the user typed. If both are set
+            // and they DON'T match, warn the user loudly BEFORE they
+            // hit submit — the server will reject the request otherwise
+            // and it's easier to fix here.
+            const typedUtr = document.getElementById('pay-utr').value.trim();
+            if (utr && typedUtr && utr.toLowerCase() !== typedUtr.toLowerCase()) {
+                setShotStatus(`UTR in screenshot (${utr}) doesn't match what you typed (${typedUtr}). Please recheck both.`, 'err');
+            } else if (utr && typedUtr && utr.toLowerCase() === typedUtr.toLowerCase()) {
+                setShotStatus('Screenshot verified — UTR matches your typed value.', 'ok');
+            } else if (utr) {
+                setShotStatus(`UTR detected: ${utr}. Please make sure it matches the value above.`, 'ok');
+            } else {
+                setShotStatus('Screenshot ready. (We could not auto-read the UTR — our team will verify manually.)', 'warn');
+            }
+        } catch (e) {
+            console.warn('OCR failed:', e);
+            setShotStatus('Screenshot ready. (Auto-read unavailable — our team will verify manually.)', 'warn');
+        }
+    }
+
+    // Small HTML escape for injecting user text into the extracted-row.
+    function escapeHtml(s) {
+        return String(s ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
+    }
+
+    // Wire up dropzone + file input + drag-and-drop + remove.
+    (function initShotUpload() {
+        const dropzone = document.getElementById('pay-shot-dropzone');
+        const input = document.getElementById('pay-shot-input');
+        const remove = document.getElementById('pay-shot-remove');
+        if (!dropzone || !input || !remove) return;
+        dropzone.addEventListener('click', () => input.click());
+        dropzone.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); input.click(); }
+        });
+        input.addEventListener('change', (e) => {
+            const f = e.target.files && e.target.files[0];
+            if (f) handleScreenshotFile(f);
+        });
+        // Drag + drop
+        ['dragenter', 'dragover'].forEach(evt => {
+            dropzone.addEventListener(evt, (e) => {
+                e.preventDefault(); e.stopPropagation();
+                dropzone.classList.add('dragover');
+            });
+        });
+        ['dragleave', 'drop'].forEach(evt => {
+            dropzone.addEventListener(evt, (e) => {
+                e.preventDefault(); e.stopPropagation();
+                dropzone.classList.remove('dragover');
+            });
+        });
+        dropzone.addEventListener('drop', (e) => {
+            const f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+            if (f) handleScreenshotFile(f);
+        });
+        remove.addEventListener('click', clearScreenshot);
+        // Re-verify on typed UTR change if screenshot is already loaded.
+        const utrInput = document.getElementById('pay-utr');
+        if (utrInput) {
+            utrInput.addEventListener('input', () => {
+                if (!currentScreenshot || !currentScreenshot.extractedUtr) return;
+                const typed = utrInput.value.trim();
+                const extr = currentScreenshot.extractedUtr;
+                if (typed && typed.toLowerCase() === extr.toLowerCase()) {
+                    setShotStatus('Screenshot verified — UTR matches your typed value.', 'ok');
+                } else if (typed && typed.length >= 6) {
+                    setShotStatus(`UTR in screenshot (${extr}) doesn't match what you typed (${typed}). Please recheck both.`, 'err');
+                }
+            });
+        }
+    })();
+
     /* ─── UTR submission ─── */
     document.getElementById('utr-submit').addEventListener('click', async () => {
         const utr = document.getElementById('pay-utr').value.trim();
@@ -3450,6 +3938,27 @@
         const btn = document.getElementById('utr-submit');
         errEl.classList.add('hidden');
         if (!utr || utr.length < 6) { errEl.textContent = 'Enter a valid UTR (min 6 characters)'; errEl.classList.remove('hidden'); return; }
+
+        // Screenshot is now mandatory — it's the primary anti-fraud
+        // signal + the visual evidence admins fall back to when the
+        // OCR / auto-verify heuristics don't fire.
+        if (!currentScreenshot || !currentScreenshot.dataUrl) {
+            errEl.textContent = 'Please upload your payment screenshot above.';
+            errEl.classList.remove('hidden');
+            document.getElementById('pay-shot-dropzone')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            return;
+        }
+
+        // Client-side mismatch guard. Server enforces this too but
+        // catching it here saves a network round-trip.
+        if (
+            currentScreenshot.extractedUtr &&
+            currentScreenshot.extractedUtr.toLowerCase() !== utr.toLowerCase()
+        ) {
+            errEl.textContent = `The UTR in your screenshot (${currentScreenshot.extractedUtr}) doesn't match the one you typed (${utr}). Please fix one of them.`;
+            errEl.classList.remove('hidden');
+            return;
+        }
 
         // Reserve the WhatsApp tab synchronously while we still have the
         // user-gesture token. Mobile browsers (Chrome Android, Safari iOS,
@@ -3483,21 +3992,38 @@
             });
             const data = await res.json();
             if (data.status === 'success' && data.data) {
-                // Attach the UTR to the existing row in `payments` (if we
-                // managed to create one earlier). High-confidence UTRs are
-                // auto-verified server-side. Failure is non-fatal: the
-                // submissions row + plan update still complete the flow.
+                // Attach the UTR + screenshot to the existing payments
+                // row. This is the new combined endpoint — it uploads
+                // the image, runs anti-fraud checks (duplicate sha256,
+                // OCR/UTR match), then flips the row to
+                // awaiting_verification (or verified when confidence
+                // is high enough). Failure surfaces to the user.
                 if (currentPaymentId) {
-                    try {
-                        await fetch(`${API_BASE}/api/payment/submit-utr`, {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                                'Authorization': `Bearer ${getToken()}`,
-                            },
-                            body: JSON.stringify({ paymentId: currentPaymentId, utrId: utr })
-                        });
-                    } catch (e) { console.warn('payment/submit-utr failed', e); }
+                    const shotRes = await fetch(`${API_BASE}/api/payment/upload-screenshot`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${getToken()}`,
+                        },
+                        body: JSON.stringify({
+                            paymentId: currentPaymentId,
+                            utrId: utr,
+                            imageDataUrl: currentScreenshot.dataUrl,
+                            extractedUtr: currentScreenshot.extractedUtr || null,
+                            extractedAmount: currentScreenshot.extractedAmount || null,
+                        }),
+                    });
+                    const shotJson = await shotRes.json().catch(() => ({}));
+                    if (!shotRes.ok || shotJson.status !== 'success') {
+                        // Server rejected — most likely
+                        // DUPLICATE_SCREENSHOT, UTR_MISMATCH_IN_SCREENSHOT,
+                        // or a plain "UTR already used". Surface the
+                        // message and stop the flow.
+                        closeReservedTab(waWindow);
+                        errEl.textContent = shotJson.message || 'Payment verification failed — please recheck your UTR and screenshot.';
+                        errEl.classList.remove('hidden');
+                        return;
+                    }
                 }
 
                 // Persist the plan update on the server and grab the authoritative
@@ -3524,8 +4050,10 @@
                     utrId: utr
                 };
                 setUser(updatedUser);
-                // Clear the payment id once the row has been updated
+                // Clear the payment id + screenshot state once the row has been updated
                 currentPaymentId = null;
+                clearScreenshot();
+                document.getElementById('pay-utr').value = '';
                 redirectToWhatsApp(waWindow, data.data.whatsappUrl);
                 showView('view-dashboard');
                 renderDashboard(updatedUser);
@@ -3547,6 +4075,224 @@
         }
     });
 
+    /* ═════════════════════════════════════════════════════════
+     * Notifications (admin → user dashboard messages)
+     * ─────────────────────────────────────────────────────────
+     * The bell in the topbar shows an unread count. Clicking it
+     * opens the panel below, which lists the last 30 non-dismissed
+     * notifications. Panel items can be individually dismissed;
+     * a "Mark all read" button clears the unread badge in one shot.
+     *
+     * Polled every 60s while the dashboard is visible so admins
+     * don't have to tell users to refresh.
+     * ─────────────────────────────────────────────────────────*/
+    let notifState = { items: [], unread: 0, loaded: false };
+    let notifPollTimer = null;
+
+    async function fetchNotifications() {
+        const token = getToken();
+        if (!token) return;
+        try {
+            const res = await fetch(`${API_BASE}/api/notifications`, {
+                headers: { 'Authorization': `Bearer ${token}` },
+            });
+            // 401 handled by auth flow elsewhere; just skip here.
+            if (!res.ok) return;
+            const data = await res.json();
+            if (data.status === 'success') {
+                notifState.items = data.notifications || [];
+                notifState.unread = data.unread || 0;
+                notifState.loaded = true;
+                renderNotifBell();
+                // Only re-render the list if the panel is open —
+                // saves DOM churn while the panel is closed.
+                const panel = document.getElementById('dash-notif-panel');
+                if (panel && panel.classList.contains('show')) renderNotifList();
+            }
+        } catch (e) {
+            console.warn('fetchNotifications failed:', e.message || e);
+        }
+    }
+
+    function renderNotifBell() {
+        const badge = document.getElementById('dash-notif-badge');
+        if (!badge) return;
+        if (notifState.unread > 0) {
+            badge.textContent = notifState.unread > 99 ? '99+' : String(notifState.unread);
+            badge.classList.add('show');
+            // Urgent pulse if any unread notification is 'urgent' kind.
+            const hasUrgent = notifState.items.some(n => !n.readAt && n.kind === 'urgent');
+            badge.classList.toggle('urgent', hasUrgent);
+        } else {
+            badge.classList.remove('show', 'urgent');
+        }
+        const markAll = document.getElementById('dash-notif-mark-all');
+        if (markAll) markAll.disabled = notifState.unread === 0;
+    }
+
+    function renderNotifList() {
+        const list = document.getElementById('dash-notif-list');
+        if (!list) return;
+        if (!notifState.loaded) {
+            list.innerHTML = '<div class="dash-notif-empty"><span class="brand-spinner"></span><span>Loading…</span></div>';
+            return;
+        }
+        if (notifState.items.length === 0) {
+            list.innerHTML = `
+                <div class="dash-notif-empty">
+                    <svg fill="none" stroke="currentColor" stroke-width="1.6" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.4-1.4A2 2 0 0118 14.2V11a6 6 0 10-12 0v3.2c0 .53-.21 1.04-.6 1.4L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
+                    <span>You're all caught up.</span>
+                </div>`;
+            return;
+        }
+        list.innerHTML = notifState.items.map(n => {
+            const isUnread = !n.readAt;
+            const kindCls = 'kind-' + (n.kind || 'info');
+            const icon = n.kind === 'warn'
+                ? '<svg fill="none" stroke="currentColor" stroke-width="1.9" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4m0 4h.01M4.93 19h14.14a2 2 0 001.74-3l-7.07-12a2 2 0 00-3.48 0L3.19 16a2 2 0 001.74 3z"/></svg>'
+                : n.kind === 'urgent'
+                    ? '<svg fill="none" stroke="currentColor" stroke-width="1.9" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>'
+                    : n.kind === 'success'
+                        ? '<svg fill="none" stroke="currentColor" stroke-width="1.9" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.6 4.5A9 9 0 1112 21a9 9 0 008.6-6.5z"/></svg>'
+                        : '<svg fill="none" stroke="currentColor" stroke-width="1.9" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>';
+            const cta = (n.actionUrl && n.actionLabel)
+                ? `<a class="dash-notif-cta" href="${escapeHtml(n.actionUrl)}" target="_blank" rel="noopener">${escapeHtml(n.actionLabel)}</a>`
+                : '';
+            const age = formatNotifAge(n.createdAt);
+            return `
+                <div class="dash-notif-item ${kindCls} ${isUnread ? 'unread' : ''}" data-nid="${escapeHtml(n.id)}">
+                    <div class="dash-notif-kind">${icon}</div>
+                    <div class="dash-notif-content">
+                        <div class="dash-notif-title">${escapeHtml(n.title || '')}</div>
+                        <div class="dash-notif-body">${escapeHtml(n.body || '')}</div>
+                        ${cta}
+                        <div class="dash-notif-meta">${age}</div>
+                    </div>
+                    <button class="dash-notif-dismiss" data-nid="${escapeHtml(n.id)}" aria-label="Dismiss">×</button>
+                </div>`;
+        }).join('');
+    }
+
+    function formatNotifAge(iso) {
+        if (!iso) return '';
+        const d = new Date(iso);
+        const diffMs = Date.now() - d.getTime();
+        const mins = Math.floor(diffMs / 60000);
+        if (mins < 1) return 'Just now';
+        if (mins < 60) return `${mins}m ago`;
+        const hrs = Math.floor(mins / 60);
+        if (hrs < 24) return `${hrs}h ago`;
+        const days = Math.floor(hrs / 24);
+        if (days < 7) return `${days}d ago`;
+        return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
+    }
+
+    function toggleNotifPanel(forceOpen) {
+        const panel = document.getElementById('dash-notif-panel');
+        const bell = document.getElementById('dash-notif-bell');
+        if (!panel) return;
+        const willOpen = typeof forceOpen === 'boolean' ? forceOpen : !panel.classList.contains('show');
+        panel.classList.toggle('show', willOpen);
+        panel.setAttribute('aria-hidden', willOpen ? 'false' : 'true');
+        if (bell) bell.setAttribute('aria-expanded', String(willOpen));
+        if (willOpen) {
+            renderNotifList();
+            // Auto-mark visible unread notifications as read after 1s
+            // so the user doesn't have to click each one. Client-side
+            // update is optimistic; server catches up in the background.
+            if (notifState.unread > 0) {
+                setTimeout(() => {
+                    fetch(`${API_BASE}/api/notifications/read-all`, {
+                        method: 'POST',
+                        headers: { 'Authorization': `Bearer ${getToken()}` },
+                    }).catch(() => {});
+                    notifState.items = notifState.items.map(n => n.readAt ? n : { ...n, readAt: new Date().toISOString() });
+                    notifState.unread = 0;
+                    renderNotifBell();
+                    // Redraw list to remove unread indicators.
+                    renderNotifList();
+                }, 1500);
+            }
+        }
+    }
+
+    // Wire the bell + panel + dismiss buttons ONCE at boot. All
+    // callers are idempotent so this is safe even if the bell node
+    // is re-rendered later.
+    (function initNotifPanel() {
+        const bell = document.getElementById('dash-notif-bell');
+        if (!bell) return;
+        bell.addEventListener('click', (e) => {
+            e.stopPropagation();
+            toggleNotifPanel();
+        });
+        // Dismiss via delegated handler on the list.
+        document.getElementById('dash-notif-list').addEventListener('click', async (e) => {
+            const btn = e.target.closest('.dash-notif-dismiss[data-nid]');
+            if (!btn) return;
+            e.stopPropagation();
+            const nid = btn.dataset.nid;
+            // Optimistic update.
+            notifState.items = notifState.items.filter(n => n.id !== nid);
+            renderNotifList();
+            renderNotifBell();
+            try {
+                await fetch(`${API_BASE}/api/notifications/${encodeURIComponent(nid)}/dismiss`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${getToken()}` },
+                });
+            } catch (err) {
+                // Non-fatal — next poll will resync.
+                console.warn('dismiss failed', err);
+            }
+        });
+        // Mark all read button.
+        document.getElementById('dash-notif-mark-all').addEventListener('click', async () => {
+            try {
+                await fetch(`${API_BASE}/api/notifications/read-all`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${getToken()}` },
+                });
+                notifState.items = notifState.items.map(n => n.readAt ? n : { ...n, readAt: new Date().toISOString() });
+                notifState.unread = 0;
+                renderNotifBell();
+                renderNotifList();
+            } catch (e) {
+                console.warn('mark-all-read failed', e);
+            }
+        });
+        // Click-outside closes.
+        document.addEventListener('click', (e) => {
+            const panel = document.getElementById('dash-notif-panel');
+            if (panel && panel.classList.contains('show') && !panel.contains(e.target) && !bell.contains(e.target)) {
+                toggleNotifPanel(false);
+            }
+        });
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                const panel = document.getElementById('dash-notif-panel');
+                if (panel && panel.classList.contains('show')) toggleNotifPanel(false);
+            }
+        });
+    })();
+
+    // Start / stop the 60s poll based on whether the dashboard view
+    // is active. No point wasting network round-trips while the user
+    // is on the sign-in or plan-picker view.
+    function startNotifPolling() {
+        if (notifPollTimer) return;
+        fetchNotifications();
+        notifPollTimer = setInterval(fetchNotifications, 60_000);
+    }
+    function stopNotifPolling() {
+        if (notifPollTimer) { clearInterval(notifPollTimer); notifPollTimer = null; }
+    }
+    // Pause polling when the tab is hidden to save the backend.
+    document.addEventListener('visibilitychange', () => {
+        if (document.hidden) stopNotifPolling();
+        else if (document.body.dataset.activeView === 'dashboard') startNotifPolling();
+    });
+
     /* ─── Active dashboard render ─── */
     /* ─── Active dashboard render ─── */
     const PLAN_CREDITS = { 'Pro': 1000, 'Pro+': 2000, 'Pro Max': 5000, 'Power': 10000 };
@@ -3560,6 +4306,10 @@
         return '@' + local + '_' + suffix;
     }
     function renderDashboard(user) {
+        // Kick off notification polling as soon as the dashboard
+        // renders. Idempotent — subsequent calls are no-ops.
+        startNotifPolling();
+
         const totalCredits = PLAN_CREDITS[user.currentPlan] || 0;
         const totalCreditsStr = totalCredits ? totalCredits.toLocaleString('en-IN') : '—';
         const startDate = user.planStartDate ? new Date(user.planStartDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '—';

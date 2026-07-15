@@ -15,7 +15,16 @@
  *   block obvious tampering.
  */
 
+const crypto = require('crypto');
 const { getClient } = require('./db');
+
+// ─── Screenshot upload configuration ────────────────────────────────
+// Kept lax on the server side (we let the client compress before
+// upload) but capped so a hostile client can't force us to swallow a
+// 20MB image. If you raise this, also raise the JSON body limit on
+// the /api/payment/upload-screenshot route in server.js.
+const SCREENSHOT_MAX_BYTES = 800 * 1024; // 800KB post-decode
+const ALLOWED_MIME = new Set(['image/jpeg', 'image/png', 'image/webp']);
 
 /**
  * Validate UTR format. Returns { valid: boolean, message: string }.
@@ -284,6 +293,302 @@ function getUTRConfidence(utr) {
   return Math.min(score, 100);
 }
 
+/* ═══════════════════════════════════════════════════════════════
+ * Screenshot upload + verification
+ * ─────────────────────────────────────────────────────────────── */
+
+/**
+ * Parse a "data:image/xxx;base64,YYYY" string into { mime, buffer }.
+ * Returns null on any format error.
+ */
+function parseDataUrl(str) {
+  if (typeof str !== 'string') return null;
+  const m = /^data:([\w/+.-]+);base64,([A-Za-z0-9+/=\r\n]+)$/.exec(str);
+  if (!m) return null;
+  const mime = m[1].toLowerCase();
+  try {
+    // Node's Buffer.from ignores whitespace + accepts standard base64.
+    const buffer = Buffer.from(m[2], 'base64');
+    if (!buffer || buffer.length === 0) return null;
+    return { mime, buffer };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Score how well the OCR'd values line up with the ground truth.
+ *
+ * Inputs:
+ *   userUtr           — the UTR the user typed into the form
+ *   expectedAmount    — payments.amount for the row
+ *   extractedUtr      — the UTR the client-side OCR pulled out
+ *                       (null if OCR didn't find one)
+ *   extractedAmount   — the amount the client-side OCR pulled out
+ *
+ * Returns 0-100. Both values matching = 100. UTR matching but amount
+ * missing/off = 70. UTR mismatch = 0 (fail-closed).
+ *
+ * This is a UX / audit signal — the actual fraud gate is
+ *   (a) the user-entered UTR passes format validation + isn't a
+ *       reused verified UTR, AND
+ *   (b) the screenshot's sha256 isn't a reused screenshot.
+ */
+function computeScreenshotMatchScore({ userUtr, expectedAmount, extractedUtr, extractedAmount }) {
+  const u = String(userUtr || '').replace(/\s+/g, '').toLowerCase();
+  const eu = String(extractedUtr || '').replace(/\s+/g, '').toLowerCase();
+  if (!u || !eu) {
+    // No extraction — neutral, admin will review visually.
+    return 40;
+  }
+  if (u !== eu) {
+    // The screenshot's UTR doesn't match what the user typed. This is
+    // the strongest fraud signal we can produce automatically.
+    return 0;
+  }
+  // UTR matches. Grade the amount separately.
+  const exp = Number(expectedAmount);
+  const got = Number(extractedAmount);
+  if (!Number.isFinite(got) || !Number.isFinite(exp)) return 70;
+  const diff = Math.abs(got - exp);
+  // Within ₹1 = perfect. Within ₹5 = 90 (rounding differences in some
+  // UPI apps). Otherwise degrade linearly.
+  if (diff <= 1) return 100;
+  if (diff <= 5) return 90;
+  if (diff <= 25) return 75;
+  return 50;
+}
+
+/**
+ * Validate + normalise the incoming screenshot payload. Returns
+ *   { valid: true, mime, buffer, sha256, base64Body }
+ *   { valid: false, message, status? }
+ */
+function prepareScreenshotUpload(imageDataUrl) {
+  const parsed = parseDataUrl(imageDataUrl);
+  if (!parsed) {
+    return { valid: false, message: 'Screenshot must be a data:image/...;base64,... URL' };
+  }
+  if (!ALLOWED_MIME.has(parsed.mime)) {
+    return { valid: false, message: 'Screenshot must be JPEG, PNG, or WebP' };
+  }
+  if (parsed.buffer.length > SCREENSHOT_MAX_BYTES) {
+    return {
+      valid: false,
+      message: `Screenshot too large (${(parsed.buffer.length / 1024).toFixed(0)}KB). Please compress to under ${(SCREENSHOT_MAX_BYTES / 1024).toFixed(0)}KB.`,
+    };
+  }
+  const sha256 = crypto.createHash('sha256').update(parsed.buffer).digest('hex');
+  const base64Body = parsed.buffer.toString('base64');
+  return {
+    valid: true,
+    mime: parsed.mime,
+    buffer: parsed.buffer,
+    sha256,
+    base64Body,
+  };
+}
+
+/**
+ * Reject known-fraudulent duplicate screenshots. Returns
+ *   { duplicate: false }                       — good to proceed
+ *   { duplicate: true, previousPaymentId }     — same image already used
+ *
+ * The check is scoped ACROSS all users — the same screenshot re-uploaded
+ * by a different account is the exact fraud pattern we want to catch.
+ * We prefer the payments-table check because it's guaranteed indexed;
+ * the payment_screenshots.sha256 UNIQUE index is the second-line defence
+ * that catches races between two near-simultaneous uploads.
+ */
+async function checkScreenshotDuplicate(sha256, currentPaymentId) {
+  if (!sha256) return { duplicate: false };
+  const client = getClient();
+  const { data, error } = await client
+    .from('payments')
+    .select('id, user_id, status, created_at')
+    .eq('screenshot_sha256', sha256)
+    .neq('id', currentPaymentId)
+    .limit(1);
+  if (error) {
+    console.warn('checkScreenshotDuplicate warning:', error.message || error);
+    return { duplicate: false };
+  }
+  const hit = (data || [])[0];
+  if (!hit) return { duplicate: false };
+  return { duplicate: true, previousPaymentId: hit.id, previousStatus: hit.status };
+}
+
+/**
+ * Persist the screenshot blob (payment_screenshots) plus its metadata
+ * on the payments row. Called AFTER prepareScreenshotUpload +
+ * checkScreenshotDuplicate have passed.
+ *
+ * Also updates the payments row with the extracted OCR values +
+ * computed match score, and finally attaches the UTR via submitUTR.
+ * This is the single-transaction entry point the route handler uses.
+ *
+ * Returns { success, matchScore, isDuplicateUtr?, message? }
+ */
+async function attachScreenshotAndSubmitUTR({
+  paymentId,
+  userId,
+  utrId,
+  imageDataUrl,
+  extractedUtr,
+  extractedAmount,
+}) {
+  const prep = prepareScreenshotUpload(imageDataUrl);
+  if (!prep.valid) return { success: false, message: prep.message };
+
+  // Validate UTR format up front — no point uploading anything if
+  // the UTR itself is malformed.
+  const utrCheck = validateUTR(utrId);
+  if (!utrCheck.valid) return { success: false, message: utrCheck.message };
+
+  const client = getClient();
+
+  // Pull the payment row so we can (a) confirm ownership, (b) compute
+  // the match score against the expected amount, and (c) reject if
+  // the payment is already verified / expired / failed.
+  const { data: paymentRow, error: pErr } = await client
+    .from('payments')
+    .select('id, user_id, amount, status, plan')
+    .eq('id', paymentId)
+    .maybeSingle();
+  if (pErr || !paymentRow) {
+    return { success: false, message: 'Payment not found' };
+  }
+  if (paymentRow.user_id && paymentRow.user_id !== userId) {
+    return { success: false, message: 'Payment is not yours' };
+  }
+  if (!['pending', 'awaiting_verification'].includes(paymentRow.status)) {
+    return { success: false, message: `Payment is already ${paymentRow.status}` };
+  }
+
+  // Duplicate-screenshot fraud check.
+  const dup = await checkScreenshotDuplicate(prep.sha256, paymentId);
+  if (dup.duplicate) {
+    return {
+      success: false,
+      message: 'This screenshot has already been used for another payment. Please upload the actual receipt for THIS transaction.',
+      code: 'DUPLICATE_SCREENSHOT',
+    };
+  }
+
+  const matchScore = computeScreenshotMatchScore({
+    userUtr: utrCheck.valid ? utrId.trim() : null,
+    expectedAmount: paymentRow.amount,
+    extractedUtr,
+    extractedAmount,
+  });
+
+  // Reject up front if the OCR proved the screenshot doesn't match the
+  // typed UTR. Score 0 means we're confident the two don't line up.
+  if (matchScore === 0) {
+    return {
+      success: false,
+      message: "The UTR we found in your screenshot doesn't match the one you typed. Please double-check both.",
+      code: 'UTR_MISMATCH_IN_SCREENSHOT',
+    };
+  }
+
+  // Insert the screenshot blob first. If this fails (duplicate sha256
+  // race, storage error) we bail out BEFORE mutating the payments row
+  // so retries stay clean.
+  const dataUrl = `data:${prep.mime};base64,${prep.base64Body}`;
+  const { error: shotErr } = await client
+    .from('payment_screenshots')
+    .upsert(
+      {
+        payment_id: paymentId,
+        user_id: userId,
+        image_data: dataUrl,
+        mime_type: prep.mime,
+        sha256: prep.sha256,
+        byte_length: prep.buffer.length,
+      },
+      { onConflict: 'payment_id' }
+    );
+
+  if (shotErr) {
+    // 23505 = unique_violation. Most likely the sha256 uniqueness
+    // triggered because two clients are racing the same duplicate;
+    // surface that as a clean 409 rather than a generic 500.
+    if (shotErr.code === '23505' || /duplicate key/i.test(shotErr.message || '')) {
+      return {
+        success: false,
+        message: 'This screenshot has already been used for another payment. Please upload the actual receipt for THIS transaction.',
+        code: 'DUPLICATE_SCREENSHOT',
+      };
+    }
+    console.error('payment_screenshots insert error:', shotErr.message || shotErr);
+    return { success: false, message: 'Failed to store screenshot. Please try again.' };
+  }
+
+  // Stamp the payments row with the screenshot metadata BEFORE calling
+  // submitUTR — that way even if the UTR write later fails, the admin
+  // can still see the uploaded screenshot on the pending payment.
+  const { error: metaErr } = await client
+    .from('payments')
+    .update({
+      screenshot_uploaded_at: new Date().toISOString(),
+      screenshot_sha256: prep.sha256,
+      screenshot_extracted_utr: extractedUtr ? String(extractedUtr).trim().slice(0, 40) : null,
+      screenshot_extracted_amount: Number.isFinite(Number(extractedAmount))
+        ? Number(extractedAmount)
+        : null,
+      screenshot_extracted_at: new Date().toISOString(),
+      screenshot_match_score: matchScore,
+    })
+    .eq('id', paymentId);
+  if (metaErr) {
+    console.warn('payments metadata update warning:', metaErr.message || metaErr);
+    // Non-fatal: the blob is stored, the admin can still verify manually.
+  }
+
+  // Attach the UTR (this is what flips the row to awaiting_verification
+  // and runs the "UTR already used for verified payment" check).
+  const utrResult = await submitUTR(paymentId, utrId);
+  if (!utrResult.success) {
+    // The screenshot is already stored; we deliberately keep it so
+    // admins can see the evidence of the attempted UTR submission.
+    return { success: false, message: utrResult.message, code: 'UTR_SUBMIT_FAILED' };
+  }
+
+  return {
+    success: true,
+    matchScore,
+    record: utrResult.record,
+  };
+}
+
+/**
+ * Fetch the raw screenshot blob for a payment. Admin-only —
+ * gate at the route layer. Returns { found, imageData, mime, sha256,
+ * uploadedAt, matchScore } or { found: false }.
+ */
+async function getScreenshotForAdmin(paymentId) {
+  const client = getClient();
+  const { data, error } = await client
+    .from('payment_screenshots')
+    .select('image_data, mime_type, sha256, byte_length, created_at')
+    .eq('payment_id', paymentId)
+    .maybeSingle();
+  if (error) {
+    console.error('getScreenshotForAdmin error:', error.message || error);
+    return { found: false };
+  }
+  if (!data) return { found: false };
+  return {
+    found: true,
+    imageData: data.image_data,
+    mime: data.mime_type,
+    sha256: data.sha256,
+    byteLength: data.byte_length,
+    uploadedAt: data.created_at,
+  };
+}
+
 module.exports = {
   validateUTR,
   createPaymentRecord,
@@ -294,4 +599,11 @@ module.exports = {
   verifyPayment,
   getPendingPayments,
   getUTRConfidence,
+  // Screenshot helpers
+  attachScreenshotAndSubmitUTR,
+  getScreenshotForAdmin,
+  computeScreenshotMatchScore,
+  prepareScreenshotUpload,
+  checkScreenshotDuplicate,
+  SCREENSHOT_MAX_BYTES,
 };

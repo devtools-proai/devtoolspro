@@ -72,6 +72,14 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS username TEXT;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS last_reminded_at TIMESTAMPTZ;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS last_reminded_template TEXT;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ;
+-- v1.3: track WhatsApp number changes independently of the generic
+-- `updated_at` column. Admins routinely fix wrong numbers (users
+-- typo their country code, forget the +91, etc.) so surfacing a
+-- dedicated "WhatsApp updated N days ago (by admin)" hint in the
+-- registry makes the ops workflow much clearer. Both stay NULL for
+-- rows whose phone hasn't changed since import.
+ALTER TABLE users ADD COLUMN IF NOT EXISTS phone_updated_at TIMESTAMPTZ;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS phone_updated_by TEXT;
 
 -- Backfill updated_at on existing rows: prefer plan_start_date (last
 -- known business event) and fall back to created_at. Without this the

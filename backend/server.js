@@ -26,7 +26,9 @@ const {
   createPaymentRecord, findOpenPaymentForUser, getPaymentOwner,
   submitUTR, getPaymentStatus, verifyPayment,
   getPendingPayments, getUTRConfidence,
+  attachScreenshotAndSubmitUTR, getScreenshotForAdmin,
 } = require('./payment-verify');
+const notifications = require('./notifications');
 const { isValidMeetUrl } = require('./meet-service');
 const {
   verifyGoogleToken, findOrCreateUser, generateSessionToken, requireAuth,
@@ -79,6 +81,14 @@ app.use(cors({
 
 // Hard cap on request body so badly-formed clients can't memory-pressure the
 // server. 32KB is generous for anything we accept (JWT round-trips peak ~3KB).
+//
+// EXCEPTION: /api/payment/upload-screenshot carries a base64-encoded
+// image (~250-400KB after client compression + base64 overhead). We
+// mount a dedicated 2MB parser on that route BEFORE the global one so
+// its Content-Length pre-check passes. Everything else still hits the
+// 32KB ceiling. See the route handler for the actual size validation.
+const screenshotUploadParser = express.json({ limit: '2mb' });
+app.use('/api/payment/upload-screenshot', screenshotUploadParser);
 app.use(express.json({ limit: '32kb' }));
 
 // ─── Rate limiting ───
@@ -748,6 +758,11 @@ function rowToAdminUser(u) {
     // admin has deleted them via DELETE /admin/users/:id. Rows still
     // exist in the table — restore by POST /admin/users/:id/restore.
     deletedAt: u.deleted_at,
+    // WhatsApp number change tracking. Surfaced in the admin table's
+    // "WhatsApp" column as a small "updated Nd ago" hint so ops can
+    // quickly spot recently-fixed numbers.
+    phoneUpdatedAt: u.phone_updated_at,
+    phoneUpdatedBy: u.phone_updated_by,
   };
 }
 
@@ -831,7 +846,11 @@ app.patch('/admin/users/:id', requireAdminAuth, async (req, res) => {
       }
       updates.meet_link = raw || null;
     }
-    if ('phone'         in body) {
+    // Phone (WhatsApp) — parsed here, stamped for audit AFTER we know
+    // whether the value actually changed (see below).
+    let phoneChanged = false;
+    let phoneCleaned = null;
+    if ('phone' in body) {
       // Normalise to digits-only so the WhatsApp click-to-chat URL on
       // every row just works without re-parsing. Empty string clears.
       const cleaned = body.phone ? String(body.phone).replace(/\D+/g, '') : '';
@@ -839,6 +858,8 @@ app.patch('/admin/users/:id', requireAdminAuth, async (req, res) => {
         return res.status(400).json({ status: 'error', message: 'Phone must be 8-15 digits' });
       }
       updates.phone = cleaned || null;
+      phoneCleaned = cleaned || null;
+      phoneChanged = true; // resolved against DB below
     }
     if ('source'        in body) updates.source          = body.source        || null;
     if ('username'      in body) {
@@ -867,6 +888,35 @@ app.patch('/admin/users/:id', requireAdminAuth, async (req, res) => {
     }
 
     const client = getClient();
+
+    // Resolve the phone-change audit BEFORE the UPDATE. The admin
+    // edit modal ships every field on save (including unchanged
+    // phone values), so we only stamp phone_updated_at when the
+    // normalised value actually differs from what's in the DB.
+    if (phoneChanged) {
+      const { data: existingRow } = await client
+        .from('users')
+        .select('phone')
+        .eq('id', id)
+        .maybeSingle();
+      const existingPhone = existingRow ? (existingRow.phone || null) : null;
+      if (existingPhone === phoneCleaned) {
+        // No-op — leave audit columns untouched, and drop `phone`
+        // from the update payload so the trigger doesn't bump
+        // updated_at either.
+        delete updates.phone;
+      } else {
+        updates.phone_updated_at = new Date().toISOString();
+        updates.phone_updated_by = 'admin';
+      }
+    }
+
+    // If phone was the ONLY field and it turned out to be a no-op,
+    // there's nothing left to update.
+    if (Object.keys(updates).length === 0) {
+      return res.status(400).json({ status: 'error', message: 'No fields actually changed' });
+    }
+
     const { data, error } = await client
       .from('users')
       .update(updates)
@@ -1552,6 +1602,276 @@ app.get('/api/payment/pending', requireAdminAuth, async (req, res) => {
     }
     res.json({ status: 'success', count: result.payments.length, data: result.payments });
   } catch (error) {
+    res.status(500).json({ status: 'error', message: 'Internal error' });
+  }
+});
+
+// ─── POST /api/payment/upload-screenshot ───
+// Combined UTR + screenshot upload. Replaces the old UTR-only
+// /api/payment/submit-utr for clients that support screenshot capture
+// (the old route stays for backwards compatibility until every browser
+// tab is refreshed).
+//
+// Body (JSON, up to 2MB — see the dedicated parser mounted above):
+//   {
+//     paymentId, utrId,
+//     imageDataUrl,      // 'data:image/jpeg;base64,...'
+//     extractedUtr?,     // OCR candidate — trusted only as UX signal
+//     extractedAmount?,  // OCR amount — same
+//   }
+//
+// Behaviour:
+//   • Rejects duplicate screenshots (same SHA-256 as a prior payment).
+//   • Rejects when OCR-extracted UTR is present and doesn't match the
+//     user-typed UTR.
+//   • Persists the blob to payment_screenshots (1-to-1 with payments)
+//     and the metadata onto the payments row.
+//   • Attaches the UTR via the existing submitUTR path so all downstream
+//     Slack alerts / auto-verify heuristics still fire.
+//   • High-confidence (screenshot matches + clean UTR format) auto-
+//     verifies exactly like the UTR-only path.
+app.post('/api/payment/upload-screenshot', requireAuth, async (req, res) => {
+  try {
+    const { paymentId, utrId, imageDataUrl, extractedUtr, extractedAmount } = req.body || {};
+    if (!paymentId || !utrId || !imageDataUrl) {
+      return res.status(400).json({ status: 'error', message: 'paymentId, utrId, and imageDataUrl are required' });
+    }
+
+    // Ownership pre-check for a clearer 403 (attachScreenshotAndSubmitUTR
+    // also checks, but this way we don't waste base64-decode work on
+    // an obviously wrong request).
+    const owner = await getPaymentOwner(paymentId);
+    if (!owner) {
+      return res.status(404).json({ status: 'error', message: 'Payment not found' });
+    }
+    if (owner.userId && owner.userId !== req.user.userId) {
+      return res.status(403).json({ status: 'error', message: 'Payment is not yours' });
+    }
+
+    const result = await attachScreenshotAndSubmitUTR({
+      paymentId,
+      userId: req.user.userId,
+      utrId,
+      imageDataUrl,
+      extractedUtr,
+      extractedAmount,
+    });
+
+    if (!result.success) {
+      // DUPLICATE_SCREENSHOT / UTR_MISMATCH_IN_SCREENSHOT → 409 so the
+      // client can surface a specific error UI, everything else → 400.
+      const status = result.code === 'DUPLICATE_SCREENSHOT' || result.code === 'UTR_MISMATCH_IN_SCREENSHOT'
+        ? 409 : 400;
+      // Duplicate UTR (previously used for a verified payment) is a
+      // fraud signal — mirror the Slack alert the UTR-only path fires.
+      if (/already been used/i.test(result.message || '')) {
+        slack.notifyDuplicateUtr({
+          utrId: String(utrId).trim(),
+          attemptedBy: `uid: ${req.user.userId}`,
+        });
+      }
+      return res.status(status).json({ status: 'error', message: result.message, code: result.code });
+    }
+
+    // Screenshot passed, UTR attached. Now decide whether to auto-verify
+    // using the SAME threshold as /api/payment/submit-utr — but bump
+    // the effective confidence by the screenshot match so a clean
+    // UTR+matching screenshot always auto-verifies.
+    const utrConfidence = getUTRConfidence(String(utrId).trim());
+    const combinedConfidence = Math.min(
+      100,
+      Math.round(0.6 * utrConfidence + 0.4 * result.matchScore)
+    );
+
+    let autoVerified = false;
+    if (combinedConfidence >= AUTO_VERIFY_THRESHOLD) {
+      try {
+        await verifyPayment(paymentId);
+        autoVerified = true;
+        console.log(`payment: auto-verified (screenshot) id=${paymentId} conf=${combinedConfidence}`);
+      } catch (e) {
+        console.error('screenshot auto-verify failed:', e.message);
+      }
+    }
+
+    res.json({
+      status: 'success',
+      message: autoVerified ? 'Payment verified' : 'Screenshot received — verifying payment',
+      paymentStatus: autoVerified ? 'verified' : 'awaiting_verification',
+      confidence: combinedConfidence,
+      matchScore: result.matchScore,
+      autoVerified,
+    });
+
+    // Slack: same routing as /api/payment/submit-utr.
+    try {
+      const client = getClient();
+      const { data: userRow } = await client
+        .from('users')
+        .select('id, email, name, picture, phone')
+        .eq('id', req.user.userId)
+        .single();
+      slack.notifyUtrSubmitted({
+        user: userRow || { id: req.user.userId, email: req.user.email },
+        payment: {
+          id: paymentId,
+          utrId: String(utrId).trim(),
+          plan: result.record && result.record.plan,
+          amount: result.record && result.record.amount,
+        },
+        confidence: combinedConfidence,
+        autoVerified,
+      });
+    } catch (e) {
+      console.warn('slack screenshot-upload enrichment failed:', e.message);
+    }
+  } catch (error) {
+    console.error('payment/upload-screenshot exception:', error.message);
+    res.status(500).json({ status: 'error', message: 'Internal error' });
+  }
+});
+
+// ─── GET /admin/payments/:paymentId/screenshot ───
+// Admin fetches the raw base64 image for a payment. Returns the data
+// URL directly so the admin UI can just drop it into an <img src>.
+app.get('/admin/payments/:paymentId/screenshot', requireAdminAuth, async (req, res) => {
+  try {
+    const result = await getScreenshotForAdmin(req.params.paymentId);
+    if (!result.found) {
+      return res.status(404).json({ status: 'error', message: 'No screenshot on file' });
+    }
+    res.json({
+      status: 'success',
+      imageData: result.imageData,
+      mime: result.mime,
+      sha256: result.sha256,
+      byteLength: result.byteLength,
+      uploadedAt: result.uploadedAt,
+    });
+  } catch (e) {
+    console.error('admin/payments/screenshot exception:', e.message);
+    res.status(500).json({ status: 'error', message: 'Internal error' });
+  }
+});
+
+// ═══════════════════════════════════════════
+// NOTIFICATIONS ENDPOINTS
+// ═══════════════════════════════════════════
+
+// ─── User-side: list, mark read, mark all read, dismiss ───
+
+// GET /api/notifications
+// Returns the non-dismissed notifications for the caller (dashboard
+// panel) plus an unread count for the header bell badge.
+app.get('/api/notifications', requireAuth, async (req, res) => {
+  try {
+    const [listResult, unread] = await Promise.all([
+      notifications.listForUser(req.user.userId, { includeDismissed: false, limit: 30 }),
+      notifications.unreadCountForUser(req.user.userId),
+    ]);
+    if (!listResult.success) {
+      return res.status(500).json({ status: 'error', message: listResult.message });
+    }
+    res.json({
+      status: 'success',
+      unread,
+      count: listResult.notifications.length,
+      notifications: listResult.notifications.map(notifications.toDto),
+    });
+  } catch (e) {
+    console.error('api/notifications exception:', e.message);
+    res.status(500).json({ status: 'error', message: 'Internal error' });
+  }
+});
+
+// POST /api/notifications/:id/read
+app.post('/api/notifications/:id/read', requireAuth, async (req, res) => {
+  try {
+    const result = await notifications.markRead(req.params.id, req.user.userId);
+    if (!result.success) {
+      return res.status(500).json({ status: 'error', message: result.message });
+    }
+    res.json({ status: 'success', notification: notifications.toDto(result.notification) });
+  } catch (e) {
+    res.status(500).json({ status: 'error', message: 'Internal error' });
+  }
+});
+
+// POST /api/notifications/read-all
+app.post('/api/notifications/read-all', requireAuth, async (req, res) => {
+  try {
+    const result = await notifications.markAllReadForUser(req.user.userId);
+    res.json({ status: 'success', updated: result.updated });
+  } catch (e) {
+    res.status(500).json({ status: 'error', message: 'Internal error' });
+  }
+});
+
+// POST /api/notifications/:id/dismiss
+app.post('/api/notifications/:id/dismiss', requireAuth, async (req, res) => {
+  try {
+    const result = await notifications.dismiss(req.params.id, req.user.userId);
+    if (!result.success) {
+      return res.status(500).json({ status: 'error', message: result.message });
+    }
+    res.json({ status: 'success', notification: notifications.toDto(result.notification) });
+  } catch (e) {
+    res.status(500).json({ status: 'error', message: 'Internal error' });
+  }
+});
+
+// ─── Admin-side: create, list, delete ───
+
+// POST /admin/users/:id/notifications
+// Body: { title, body, kind?, actionUrl?, actionLabel? }
+app.post('/admin/users/:id/notifications', requireAdminAuth, async (req, res) => {
+  try {
+    const result = await notifications.createForUser(req.params.id, req.body || {}, 'admin');
+    if (!result.success) {
+      return res.status(result.status || 500).json({ status: 'error', message: result.message });
+    }
+    res.status(201).json({ status: 'success', notification: notifications.toDto(result.notification) });
+    console.log(`admin: notification sent uid=${req.params.id} kind=${result.notification.kind}`);
+  } catch (e) {
+    console.error('admin/notifications exception:', e.message);
+    res.status(500).json({ status: 'error', message: 'Internal error' });
+  }
+});
+
+// GET /admin/users/:id/notifications
+// Full trail (includes dismissed) so admins can see what they've sent
+// even after the user has cleared the panel.
+app.get('/admin/users/:id/notifications', requireAdminAuth, async (req, res) => {
+  try {
+    const result = await notifications.listForUser(req.params.id, { includeDismissed: true, limit: 100 });
+    if (!result.success) {
+      return res.status(500).json({ status: 'error', message: result.message });
+    }
+    res.json({
+      status: 'success',
+      count: result.notifications.length,
+      notifications: result.notifications.map(notifications.toDto),
+    });
+  } catch (e) {
+    res.status(500).json({ status: 'error', message: 'Internal error' });
+  }
+});
+
+// DELETE /admin/notifications/:id
+// Hard delete — used when the admin sent the wrong message and wants
+// it gone from the trail too.
+app.delete('/admin/notifications/:id', requireAdminAuth, async (req, res) => {
+  try {
+    const result = await notifications.adminDelete(req.params.id);
+    if (!result.success) {
+      return res.status(500).json({ status: 'error', message: result.message });
+    }
+    if (!result.notification) {
+      return res.status(404).json({ status: 'error', message: 'Notification not found' });
+    }
+    res.json({ status: 'success', notification: notifications.toDto(result.notification) });
+    console.log(`admin: notification deleted id=${req.params.id}`);
+  } catch (e) {
     res.status(500).json({ status: 'error', message: 'Internal error' });
   }
 });

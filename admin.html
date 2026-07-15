@@ -342,6 +342,197 @@
         /* ─── Deleted-row styling ─── */
         /* Subtle dim + strikethrough so admins instantly see which
            rows are tombstones when the 'Show deleted' filter is on. */
+        /* ─── WhatsApp column ─── */
+        /* Compact cell showing the current WA number + a small green
+           launch chip. Empty state is rendered as a subtle "—" so the
+           column doesn't look broken for users we haven't spoken to
+           yet. The "updated Nd ago" hint uses the phoneUpdatedAt
+           column stamped by PATCH /admin/users/:id when an admin
+           actually changes the number (no-op saves leave it
+           untouched — see the pre-fetch compare in server.js). */
+        .wa-cell { display: inline-flex; flex-direction: column; gap: 3px; min-width: 0; }
+        .wa-cell-link {
+            display: inline-flex; align-items: center; gap: 6px;
+            font-family: 'JetBrains Mono', ui-monospace, monospace;
+            font-size: 12px; color: var(--ink-1);
+            text-decoration: none; padding: 3px 8px;
+            border-radius: 999px; border: 1px solid rgba(37,211,102,0.32);
+            background: rgba(37,211,102,0.08);
+            transition: background .12s, border-color .12s;
+            white-space: nowrap;
+        }
+        .wa-cell-link:hover { background: rgba(37,211,102,0.16); border-color: rgba(37,211,102,0.5); }
+        .wa-cell-link svg { width: 12px; height: 12px; color: rgba(74,222,128,0.9); }
+        .wa-cell-empty { color: var(--ink-3); font-style: italic; font-size: 12px; }
+        .wa-updated-hint {
+            font-size: 10.5px; color: rgba(74,222,128,0.85); font-weight: 500;
+            letter-spacing: 0.02em; display: inline-flex; align-items: center; gap: 3px;
+        }
+        .wa-updated-hint svg { width: 10px; height: 10px; }
+
+        /* ─── Notification composer (edit modal) ─── */
+        .notif-block {
+            margin-top: 12px; padding: 14px;
+            border-radius: 12px;
+            background: rgba(129,140,248,0.06);
+            border: 1px solid rgba(129,140,248,0.18);
+        }
+        .notif-block-head {
+            display: flex; align-items: center; justify-content: space-between; gap: 8px;
+            margin-bottom: 8px;
+        }
+        .notif-block-title {
+            font-size: 12px; font-weight: 700; letter-spacing: 0.08em;
+            text-transform: uppercase; color: var(--violet-soft);
+            display: flex; align-items: center; gap: 6px;
+        }
+        .notif-block-title svg { width: 14px; height: 14px; }
+        .notif-history-toggle {
+            font-size: 11px; background: none; border: none; color: var(--ink-2);
+            cursor: pointer; padding: 2px 6px; border-radius: 6px;
+        }
+        .notif-history-toggle:hover { background: rgba(255,255,255,0.05); color: var(--ink-0); }
+        .notif-templates {
+            display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px;
+        }
+        .notif-tmpl-chip {
+            padding: 4px 10px; border-radius: 999px; font-size: 11px; font-weight: 500;
+            background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);
+            color: var(--ink-1); cursor: pointer; transition: background .12s, border-color .12s;
+        }
+        .notif-tmpl-chip:hover { background: rgba(129,140,248,0.14); border-color: rgba(129,140,248,0.4); color: var(--ink-0); }
+        .notif-tmpl-chip.warn { border-color: rgba(251,191,36,0.35); background: rgba(251,191,36,0.08); color: #fcd34d; }
+        .notif-tmpl-chip.urgent { border-color: rgba(248,113,113,0.35); background: rgba(248,113,113,0.08); color: #fca5a5; }
+        .notif-form-row { display: grid; grid-template-columns: 1fr 130px; gap: 8px; margin-bottom: 8px; }
+        .notif-form-row input, .notif-form-row select {
+            width: 100%; padding: 9px 11px;
+            background: rgba(255,255,255,0.03);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 8px; color: var(--ink-0); font-size: 13px;
+        }
+        .notif-textarea {
+            width: 100%; min-height: 72px; padding: 9px 11px;
+            background: rgba(255,255,255,0.03);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 8px; color: var(--ink-0);
+            font-family: inherit; font-size: 13px; resize: vertical;
+            margin-bottom: 8px;
+        }
+        .notif-actions { display: flex; align-items: center; gap: 8px; }
+        .notif-msg { flex: 1; font-size: 11px; color: var(--ink-2); }
+        .notif-msg.ok { color: var(--green); }
+        .notif-msg.err { color: var(--red); }
+        .notif-send-btn {
+            padding: 8px 14px; border-radius: 8px; border: none;
+            background: linear-gradient(135deg, #6366f1, #a855f7);
+            color: white; font-weight: 600; font-size: 12px;
+            cursor: pointer; display: inline-flex; align-items: center; gap: 6px;
+            transition: filter .12s;
+        }
+        .notif-send-btn:hover:not(:disabled) { filter: brightness(1.1); }
+        .notif-send-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .notif-history {
+            margin-top: 10px; max-height: 220px; overflow-y: auto;
+            border-top: 1px solid rgba(255,255,255,0.06); padding-top: 8px;
+        }
+        .notif-history-item {
+            padding: 8px 10px; margin-bottom: 6px;
+            border-radius: 8px; background: rgba(0,0,0,0.2);
+            border: 1px solid rgba(255,255,255,0.05);
+            display: flex; align-items: flex-start; gap: 8px;
+        }
+        .notif-history-item .n-kind {
+            flex-shrink: 0; width: 6px; height: 6px; border-radius: 50%;
+            margin-top: 6px;
+            background: var(--violet-soft);
+        }
+        .notif-history-item .n-kind.warn { background: var(--amber); }
+        .notif-history-item .n-kind.urgent { background: var(--red); }
+        .notif-history-item .n-kind.success { background: var(--green); }
+        .notif-history-item .n-content { flex: 1; min-width: 0; }
+        .notif-history-item .n-title { font-size: 12px; font-weight: 600; color: var(--ink-0); }
+        .notif-history-item .n-body { font-size: 11px; color: var(--ink-2); margin-top: 2px; line-height: 1.4; word-wrap: break-word; }
+        .notif-history-item .n-meta { font-size: 10px; color: var(--ink-3); margin-top: 4px; letter-spacing: 0.02em; }
+        .notif-history-item .n-meta .read-badge { color: var(--green); }
+        .notif-history-item .n-meta .unread-badge { color: var(--amber); }
+        .notif-history-item .n-delete {
+            flex-shrink: 0; background: none; border: none; color: var(--ink-3);
+            cursor: pointer; padding: 2px 4px; font-size: 14px; border-radius: 4px;
+        }
+        .notif-history-item .n-delete:hover { color: var(--red); background: rgba(248,113,113,0.1); }
+        .notif-history-empty { text-align: center; color: var(--ink-3); font-size: 11px; padding: 14px; font-style: italic; }
+
+        /* ─── Payment screenshot viewer (edit modal) ─── */
+        .payments-block {
+            margin-top: 12px; padding: 14px;
+            border-radius: 12px;
+            background: rgba(74,222,128,0.05);
+            border: 1px solid rgba(74,222,128,0.16);
+        }
+        .payments-block-title {
+            font-size: 12px; font-weight: 700; letter-spacing: 0.08em;
+            text-transform: uppercase; color: var(--green);
+            display: flex; align-items: center; gap: 6px; margin-bottom: 10px;
+        }
+        .payments-block-title svg { width: 14px; height: 14px; }
+        .payment-item {
+            display: flex; gap: 12px; padding: 10px;
+            background: rgba(0,0,0,0.24); border-radius: 8px;
+            border: 1px solid rgba(255,255,255,0.05);
+            margin-bottom: 8px;
+        }
+        .payment-thumb {
+            flex-shrink: 0; width: 68px; height: 68px;
+            border-radius: 6px; overflow: hidden;
+            background: rgba(255,255,255,0.04);
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer; position: relative;
+            border: 1px solid rgba(255,255,255,0.08);
+        }
+        .payment-thumb img { width: 100%; height: 100%; object-fit: cover; }
+        .payment-thumb .no-shot {
+            font-size: 9px; color: var(--ink-3); text-align: center; padding: 4px;
+            line-height: 1.3;
+        }
+        .payment-thumb:hover::after {
+            content: 'View'; position: absolute; inset: 0;
+            background: rgba(0,0,0,0.55); color: white; font-size: 10px; font-weight: 600;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .payment-meta { flex: 1; min-width: 0; font-size: 11px; }
+        .payment-meta .pm-row { display: flex; gap: 6px; margin-bottom: 3px; }
+        .payment-meta .pm-label { color: var(--ink-3); flex-shrink: 0; min-width: 62px; }
+        .payment-meta .pm-value { color: var(--ink-0); font-family: 'JetBrains Mono', ui-monospace, monospace; word-break: break-all; }
+        .payment-meta .pm-value.mismatch { color: var(--red); }
+        .payment-meta .pm-value.match { color: var(--green); }
+        .payment-status-pill {
+            display: inline-block; padding: 2px 8px; border-radius: 999px;
+            font-size: 10px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase;
+        }
+        .payment-status-pill.verified { background: rgba(74,222,128,0.12); color: var(--green); }
+        .payment-status-pill.pending { background: rgba(251,191,36,0.12); color: var(--amber); }
+        .payment-status-pill.awaiting { background: rgba(129,140,248,0.14); color: var(--violet-soft); }
+        .payment-status-pill.expired, .payment-status-pill.failed { background: rgba(248,113,113,0.12); color: var(--red); }
+
+        /* Screenshot lightbox */
+        .screenshot-lightbox {
+            position: fixed; inset: 0; z-index: 2000;
+            background: rgba(0,0,0,0.88); backdrop-filter: blur(12px);
+            display: flex; align-items: center; justify-content: center;
+            opacity: 0; visibility: hidden; transition: opacity .2s, visibility .2s;
+            padding: 2rem;
+        }
+        .screenshot-lightbox.show { opacity: 1; visibility: visible; }
+        .screenshot-lightbox img { max-width: 100%; max-height: 100%; border-radius: 8px; box-shadow: 0 20px 60px rgba(0,0,0,0.6); }
+        .screenshot-lightbox-close {
+            position: absolute; top: 24px; right: 24px;
+            width: 40px; height: 40px; border-radius: 50%;
+            background: rgba(255,255,255,0.1); border: none;
+            color: white; font-size: 20px; cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .screenshot-lightbox-close:hover { background: rgba(255,255,255,0.2); }
+
         tbody tr.is-deleted { opacity: 0.55; }
         tbody tr.is-deleted .user-name { text-decoration: line-through; }
         tbody tr.is-deleted .wa-btn,
@@ -776,6 +967,7 @@
                                 <th class="sortable" data-sort-key="planStartDate">Started <span class="sort-caret">▲</span></th>
                                 <th class="sortable" data-sort-key="planEndDate">Renews <span class="sort-caret">▲</span></th>
                                 <th class="sortable" data-sort-key="email">Username <span class="sort-caret">▲</span></th>
+                                <th class="sortable" data-sort-key="phone">WhatsApp <span class="sort-caret">▲</span></th>
                                 <th>UTR</th>
                                 <th class="sortable" data-sort-key="updatedAt">Updated <span class="sort-caret">▲</span></th>
                                 <th class="sortable" data-sort-key="lastLogin">Last seen <span class="sort-caret">▲</span></th>
@@ -783,7 +975,7 @@
                             </tr>
                         </thead>
                         <tbody id="users-rows">
-                            <tr><td colspan="10" class="empty">Loading…</td></tr>
+                            <tr><td colspan="11" class="empty">Loading…</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -890,6 +1082,85 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- ─── Notification composer ─────────────────────────
+                     Dashboard-facing message to this user. Common use
+                     cases: "wrong UTR, please recheck", "unreachable
+                     WhatsApp number, please DM the correct one",
+                     free-form ad-hoc account messages. Persisted via
+                     POST /admin/users/:id/notifications; rendered on
+                     the user's dashboard as a bell-badge + panel.
+                     Sending is a separate action from saving the user
+                     row (each has its own button) so admins can send
+                     without touching the profile fields. -->
+                <div class="field full">
+                    <div class="notif-block">
+                        <div class="notif-block-head">
+                            <span class="notif-block-title">
+                                <svg fill="none" stroke="currentColor" stroke-width="1.9" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.4-1.4A2 2 0 0118 14.2V11a6 6 0 10-12 0v3.2c0 .53-.21 1.04-.6 1.4L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
+                                Send notification to dashboard
+                            </span>
+                            <button class="notif-history-toggle" id="notif-history-toggle" type="button">
+                                <span id="notif-history-toggle-label">Show history</span>
+                            </button>
+                        </div>
+                        <!-- Quick-fill templates. Clicking one populates
+                             title + body + kind (so the admin doesn't
+                             have to retype the same 3 messages every
+                             day). All are still editable before send. -->
+                        <div class="notif-templates" id="notif-templates">
+                            <button type="button" class="notif-tmpl-chip warn" data-tmpl="wrong-utr">Wrong UTR</button>
+                            <button type="button" class="notif-tmpl-chip warn" data-tmpl="wrong-whatsapp">Wrong WhatsApp #</button>
+                            <button type="button" class="notif-tmpl-chip urgent" data-tmpl="unreachable">Unreachable</button>
+                            <button type="button" class="notif-tmpl-chip" data-tmpl="payment-received">Payment received</button>
+                            <button type="button" class="notif-tmpl-chip" data-tmpl="meet-ready">Meet link ready</button>
+                            <button type="button" class="notif-tmpl-chip" data-tmpl="clear">Clear</button>
+                        </div>
+                        <div class="notif-form-row">
+                            <input type="text" id="notif-title" placeholder="Notification title (e.g. UTR looks wrong)" maxlength="120">
+                            <select id="notif-kind">
+                                <option value="info">Info</option>
+                                <option value="warn">Warning</option>
+                                <option value="urgent">Urgent</option>
+                                <option value="success">Success</option>
+                            </select>
+                        </div>
+                        <textarea class="notif-textarea" id="notif-body" placeholder="Body — what should the user see on their dashboard? (max 800 chars)" maxlength="800"></textarea>
+                        <div class="notif-actions">
+                            <span id="notif-msg" class="notif-msg"></span>
+                            <button type="button" class="notif-send-btn" id="notif-send-btn">
+                                <svg fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24" style="width:12px;height:12px;"><path stroke-linecap="round" stroke-linejoin="round" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg>
+                                <span id="notif-send-label">Send notification</span>
+                            </button>
+                        </div>
+                        <!-- Full trail of every notification we've ever
+                             sent this user, including dismissed rows.
+                             Hidden by default to keep the modal compact;
+                             the toggle above expands it. -->
+                        <div class="notif-history" id="notif-history" style="display:none;">
+                            <div id="notif-history-list">
+                                <div class="notif-history-empty">Loading…</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ─── Payment screenshot viewer ─────────────────────
+                     Renders the user's recent payments with a thumbnail
+                     of any uploaded UPI screenshot. Data comes from a
+                     side-fetch of /api/payment/pending filtered client-
+                     side to this user (the endpoint is admin-only and
+                     returns all rows regardless). Click the thumbnail
+                     to open a full-size lightbox for verification. -->
+                <div class="field full">
+                    <div class="payments-block" id="payments-block" style="display:none;">
+                        <div class="payments-block-title">
+                            <svg fill="none" stroke="currentColor" stroke-width="1.9" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.6 4.5A9 9 0 1112 21a9 9 0 008.6-6.5z"/></svg>
+                            Pending payments &amp; screenshots
+                        </div>
+                        <div id="payments-list"></div>
+                    </div>
+                </div>
             </form>
 
             <footer class="modal-foot">
@@ -944,6 +1215,15 @@
         <footer class="mail-popover-foot" id="mail-pop-foot">
             Opens Gmail's compose window with the message pre-filled.
         </footer>
+    </div>
+
+    <!-- Screenshot lightbox — opened when admin clicks a payment
+         thumbnail in the edit modal. Full-viewport backdrop so the
+         admin can inspect UPI screenshots (transaction id, amount,
+         timestamp, payee) before manually verifying a payment. -->
+    <div class="screenshot-lightbox" id="screenshot-lightbox" role="dialog" aria-modal="true" aria-hidden="true">
+        <button class="screenshot-lightbox-close" id="screenshot-lightbox-close" type="button" aria-label="Close">×</button>
+        <img id="screenshot-lightbox-img" alt="Payment screenshot">
     </div>
 
     <!-- Soft-delete confirmation toast — shown after DELETE /admin/users/:id.
@@ -1140,7 +1420,7 @@
             const deleted = document.getElementById('filter-deleted').value;
             const tbody = document.getElementById('users-rows');
             const meta = document.getElementById('count-meta');
-            tbody.innerHTML = '<tr><td colspan="10" class="empty">Loading…</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="11" class="empty">Loading…</td></tr>';
             try {
                 const params = new URLSearchParams();
                 if (search) params.set('search', search);
@@ -1152,7 +1432,7 @@
                 meta.textContent = `${count} user${count === 1 ? '' : 's'}`;
                 renderUserRows();
             } catch (e) {
-                tbody.innerHTML = `<tr><td colspan="10" class="empty">${escapeHTML(e.message || 'Failed to load')}</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="11" class="empty">${escapeHTML(e.message || 'Failed to load')}</td></tr>`;
             }
         }
 
@@ -1162,6 +1442,52 @@
         // instant feedback without a round-trip on every column toggle.
         let sortKey = 'createdAt';
         let sortDir = 'desc';
+
+        // ─── WhatsApp cell renderer ─────────────────────────────────
+        // Renders u.phone as a click-to-launch chip plus a small
+        // "updated Nd ago" hint if an admin changed the number
+        // recently (phoneUpdatedAt is stamped by PATCH /admin/users/:id
+        // only when the value actually differs — see server.js).
+        // The hint window is 14 days so the ops team notices recently-
+        // corrected numbers without the whole column being noisy.
+        function renderWhatsAppCell(u) {
+            if (!u || !u.phone) {
+                return '<span class="wa-cell-empty">—</span>';
+            }
+            const phone = String(u.phone);
+            const waUrl = `https://api.whatsapp.com/send?phone=${encodeURIComponent(phone)}`;
+            // Format the phone for display: keep it monospace-friendly
+            // but readable. We insert a thin space every 3-4 chars.
+            const display = phone.length > 10
+                ? `+${phone.slice(0, phone.length - 10)} ${phone.slice(-10, -5)} ${phone.slice(-5)}`
+                : phone;
+            let updatedHint = '';
+            if (u.phoneUpdatedAt) {
+                const ageMs = Date.now() - new Date(u.phoneUpdatedAt).getTime();
+                const ageDays = Math.floor(ageMs / (1000 * 60 * 60 * 24));
+                if (ageDays >= 0 && ageDays <= 14) {
+                    const label = ageDays === 0
+                        ? 'updated today'
+                        : ageDays === 1
+                            ? 'updated 1d ago'
+                            : `updated ${ageDays}d ago`;
+                    const by = u.phoneUpdatedBy ? ` (${u.phoneUpdatedBy})` : '';
+                    updatedHint = `
+                        <span class="wa-updated-hint" title="Changed ${escapeHTML(fmtDate(u.phoneUpdatedAt))}${escapeHTML(by)}">
+                            <svg fill="none" stroke="currentColor" stroke-width="2.4" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+                            ${escapeHTML(label)}
+                        </span>`;
+                }
+            }
+            return `
+                <div class="wa-cell">
+                    <a class="wa-cell-link" href="${escapeHTML(waUrl)}" target="_blank" rel="noopener" title="Open WhatsApp chat with ${escapeHTML(u.name || 'user')}">
+                        <svg fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path d="M20.52 3.48A11.9 11.9 0 0012.04 0C5.46 0 .12 5.34.12 11.92c0 2.1.55 4.15 1.6 5.96L0 24l6.28-1.65a11.9 11.9 0 005.76 1.47h.01c6.58 0 11.92-5.34 11.92-11.92 0-3.18-1.24-6.17-3.45-8.42zM12.05 21.8a9.87 9.87 0 01-5.03-1.38l-.36-.21-3.73.98 1-3.64-.23-.37a9.9 9.9 0 01-1.51-5.26c0-5.47 4.45-9.92 9.93-9.92 2.65 0 5.14 1.03 7.01 2.91a9.85 9.85 0 012.9 7.02c0 5.47-4.45 9.92-9.98 9.92z"/></svg>
+                        ${escapeHTML(display)}
+                    </a>
+                    ${updatedHint}
+                </div>`;
+        }
 
         function compareForSort(a, b, key) {
             const av = a[key];
@@ -1186,7 +1512,7 @@
             if (!tbody) return;
 
             if (!allUsers.length) {
-                tbody.innerHTML = '<tr><td colspan="10" class="empty">No users match the current filters.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="11" class="empty">No users match the current filters.</td></tr>';
                 return;
             }
 
@@ -1250,6 +1576,7 @@
                         <td data-label="Started">${escapeHTML(fmtDate(u.planStartDate))}</td>
                         <td data-label="Renews">${escapeHTML(fmtDate(u.planEndDate))}</td>
                         <td data-label="Username"><span class="user-handle" title="${escapeHTML(u.email || '')}">${escapeHTML(displayHandle(u))}</span></td>
+                        <td data-label="WhatsApp">${renderWhatsAppCell(u)}</td>
                         <td data-label="UTR"><span class="mono" title="${escapeHTML(u.utrId || '')}">${escapeHTML(u.utrId || '—')}</span></td>
                         <td data-label="Updated">${escapeHTML(fmtDate(u.updatedAt))}</td>
                         <td data-label="Last login">${escapeHTML(fmtDate(u.lastLogin))}</td>
@@ -1835,11 +2162,56 @@
             return `${channel} — ${label}`;
         }
 
+        // ─── Sender identity used in every mail signature ───
+        // A real first name reads warmer than "The Team", and modern
+        // spam filters treat first-name signatures + a single link +
+        // conversational subject lines as personal correspondence
+        // (which almost never lands in Spam). Edit these two constants
+        // when the sending admin changes — everything else in the
+        // template registry re-derives.
+        const MAIL_SENDER_NAME  = 'Rishabh';
+        const MAIL_SENDER_TITLE = 'DevTools Pro';
+        const MAIL_SIGNATURE    = `— ${MAIL_SENDER_NAME}\n${MAIL_SENDER_TITLE}`;
+
+        // First-name helper. Used in mail subjects + openings so each
+        // email looks addressed to the actual recipient (a strong
+        // personal-mail signal for Gmail's / Outlook's filters).
+        function firstName(u) {
+            const raw = (u && u.name) ? String(u.name).trim() : '';
+            if (!raw) return 'there';
+            const first = raw.split(/\s+/)[0];
+            return first || 'there';
+        }
+
+        // Short, calendar-style date (e.g. "12 Jul 2026") used in
+        // subject lines. Full timezone-aware timestamps live in
+        // formatBillingMoment() and stay in the body — subjects prefer
+        // human-scannable dates.
+        function shortDate(iso) {
+            if (!iso) return '';
+            const d = new Date(iso);
+            if (isNaN(d.getTime())) return '';
+            return d.toLocaleDateString('en-IN', {
+                day: 'numeric', month: 'short', year: 'numeric', timeZone: 'Asia/Kolkata',
+            });
+        }
+
         // Template registry for the mail flow. Structure mirrors
         // WA_TEMPLATES but each entry exposes subject() + body() so we
         // can populate both fields of the compose URL. Bodies are
         // plain text (no `*bold*` markers — Gmail's compose treats the
         // body param as plain text and renders asterisks literally).
+        //
+        // Deliverability notes (these matter — most spam-folder hits
+        // trace back to subject/body content, not sender reputation):
+        //   • First name in the subject → personal-mail signal.
+        //   • One primary link per email (the dashboard URL).
+        //   • No exclamation marks, no ALL-CAPS, no "50% off" / "unlock"
+        //     / "click here" language (classic spam triggers).
+        //   • Real-person signature via MAIL_SIGNATURE (not "The Team").
+        //   • A soft "reply to this email" close on every template —
+        //     two-way engagement is the single strongest signal filters
+        //     watch for.
         const MAIL_TEMPLATES = {
             renewal: {
                 cls: 'tmpl-renewal',
@@ -1854,32 +2226,36 @@
                 icon: '<svg fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>',
                 subject: (u) => {
                     const d = daysUntilRenewal(u.planEndDate);
-                    if (d !== null && d < 0) return `Your DevTools Pro ${u.currentPlan || 'plan'} has expired — renew to restore access`;
-                    if (d !== null && d <= RENEWAL_WARN_DAYS) return `Renewal reminder: your DevTools Pro ${u.currentPlan || 'plan'} renews soon`;
-                    return `Renewal reminder for your DevTools Pro ${u.currentPlan || 'plan'}`;
+                    const plan = u.currentPlan || 'plan';
+                    const fn = firstName(u);
+                    // Personal, calendar-style subjects. No urgency
+                    // punctuation, no "renew now", no percentage signs.
+                    if (d !== null && d < 0)                  return `Quick note on your ${plan} plan, ${fn}`;
+                    if (d !== null && d === 0)                return `Your ${plan} plan renews today, ${fn}`;
+                    if (d !== null && d <= RENEWAL_WARN_DAYS) return `Your ${plan} plan renews on ${shortDate(u.planEndDate)}, ${fn}`;
+                    return `Renewal note for your ${plan} plan, ${fn}`;
                 },
                 body: (u) => {
                     const plan = u.currentPlan || 'your plan';
                     const cycleMoment = formatBillingMoment(u.planEndDate);
                     const price = WA_PLAN_INR[u.currentPlan];
-                    return [
-                        `Hi ${u.name || 'there'},`,
-                        ``,
-                        `Quick reminder from DevTools Pro — your ${plan} subscription's next billing cycle starts on:`,
-                        cycleMoment,
-                        ``,
-                        `To keep your IDE access running without a break, please renew before this date.`,
-                        price ? `Renewal amount: ₹${price.toLocaleString('en-IN')}.` : '',
-                        ``,
-                        `If you don't want to continue, please cancel before the date above — otherwise the system will automatically disable your account access after this cutoff until you renew.`,
-                        ``,
-                        `Sign in and tap Renew Now or Cancel on your dashboard:`,
-                        DASHBOARD_URL,
-                        ``,
-                        `Reply to this email if you'd like help — happy to walk you through it.`,
-                        ``,
-                        `— Team DevTools Pro`,
-                    ].filter(Boolean).join('\n');
+                    // Build the body as an array of paragraph blocks so
+                    // the optional price line inserts cleanly with its
+                    // blank-line separator preserved. `join('\n\n')`
+                    // gives us the desired one-empty-line spacing without
+                    // needing .filter(Boolean) tricks.
+                    const paras = [
+                        `Hi ${firstName(u)},`,
+                        `Just a heads-up — your ${plan} subscription's next billing cycle starts on ${cycleMoment}. Renewing before then keeps everything running without a gap.`,
+                    ];
+                    if (price) paras.push(`The renewal amount is ₹${price.toLocaleString('en-IN')}.`);
+                    paras.push(
+                        `If you'd rather stop, cancel from your dashboard before that date and you won't be charged. Either way your data stays put.`,
+                        `Dashboard: ${DASHBOARD_URL}`,
+                        `Happy to walk through the renewal or a plan switch — just reply here.`,
+                        MAIL_SIGNATURE,
+                    );
+                    return paras.join('\n\n');
                 },
             },
             expired: {
@@ -1887,24 +2263,21 @@
                 label: 'Expired — reactivate',
                 desc: () => 'Plan past renewal date — bring them back.',
                 icon: '<svg fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 2m6-2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>',
-                subject: (u) => `Your DevTools Pro ${u.currentPlan || 'plan'} has ended — reactivate in 2 minutes`,
+                subject: (u) => `Your ${u.currentPlan || 'DevTools Pro'} plan ended on ${shortDate(u.planEndDate)}, ${firstName(u)}`,
                 body: (u) => {
                     const plan = u.currentPlan || 'your plan';
                     const endedMoment = formatBillingMoment(u.planEndDate);
                     return [
-                        `Hi ${u.name || 'there'},`,
+                        `Hi ${firstName(u)},`,
                         ``,
-                        `Your ${plan} DevTools Pro subscription ended on:`,
-                        endedMoment,
+                        `Your ${plan} DevTools Pro subscription ended on ${endedMoment}, so account access is paused for now. Nothing's been deleted — your projects, Meet link, and settings are all intact.`,
                         ``,
-                        `Your account access is currently disabled because no renewal was processed before the cutoff. Your data, projects, and Meet link are all preserved — reactivation takes 2 minutes via UPI.`,
-                        ``,
-                        `Sign in and tap Select Plan on your dashboard:`,
+                        `If you'd like to pick things back up, you can choose a plan again from your dashboard:`,
                         DASHBOARD_URL,
                         ``,
-                        `If something pushed you to pause, we'd love to hear about it — reply to this email, no pressure.`,
+                        `If something pushed you to pause, I'd genuinely like to hear about it — reply here, no pressure either way.`,
                         ``,
-                        `— Team DevTools Pro`,
+                        MAIL_SIGNATURE,
                     ].join('\n');
                 },
             },
@@ -1923,26 +2296,23 @@
                     return 'Confirm cancellation request.';
                 },
                 icon: '<svg fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>',
-                subject: (u) => `Your DevTools Pro ${u.currentPlan || 'plan'} cancellation is confirmed`,
+                subject: (u) => `Confirming your ${u.currentPlan || 'DevTools Pro'} cancellation, ${firstName(u)}`,
                 body: (u) => {
                     const plan = u.currentPlan || 'your plan';
                     const cycleMoment = formatBillingMoment(u.planEndDate);
                     return [
-                        `Hi ${u.name || 'there'},`,
+                        `Hi ${firstName(u)},`,
                         ``,
-                        `Your cancellation request for ${plan} is confirmed.`,
+                        `Confirming your cancellation for the ${plan} plan.`,
                         ``,
-                        `Your access stays active until:`,
-                        cycleMoment,
+                        `Your access stays active until ${cycleMoment}. After that, no further renewals will be charged and account access will pause until you resubscribe. Your data stays put either way.`,
                         ``,
-                        `After this date, no further renewal will be charged and your account access will be automatically disabled until you resubscribe.`,
-                        ``,
-                        `Changed your mind? You can renew before the cutoff to keep everything running uninterrupted — just sign in and tap Renew Now on your dashboard:`,
+                        `If you change your mind, you can pick a plan again from your dashboard:`,
                         DASHBOARD_URL,
                         ``,
-                        `If you have feedback on what prompted the cancellation, we'd genuinely love to hear it. Reply to this email anytime.`,
+                        `If you have a minute, I'd love to know what prompted the cancellation — the feedback genuinely helps. Just reply here anytime.`,
                         ``,
-                        `— Team DevTools Pro`,
+                        MAIL_SIGNATURE,
                     ].join('\n');
                 },
             },
@@ -1953,21 +2323,21 @@
                     ? 'Payment in queue — confirm UTR & schedule Meet.'
                     : 'Friendly onboarding ping for a fresh subscriber.'),
                 icon: '<svg fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>',
-                subject: (u) => `Welcome to DevTools Pro — let's get your ${u.currentPlan || 'plan'} set up`,
+                subject: (u) => `Welcome to DevTools Pro, ${firstName(u)} — quick next steps`,
                 body: (u) => {
                     const plan = u.currentPlan || 'your plan';
                     return [
-                        `Hi ${u.name || 'there'},`,
+                        `Hi ${firstName(u)},`,
                         ``,
-                        `Welcome to DevTools Pro!`,
+                        `Welcome to DevTools Pro.`,
                         ``,
-                        `Your ${plan} subscription is being set up. ${u.utrId ? `Once we verify your UTR (${u.utrId})` : 'Once payment is confirmed'}, we'll share the Google Meet link for your 1:1 onboarding call.`,
+                        `Your ${plan} subscription is being set up. ${u.utrId ? `Once I verify your UTR (${u.utrId})` : 'Once payment is confirmed'}, I'll send over the Google Meet link for a quick 1:1 onboarding call.`,
                         ``,
-                        `What's a good time today or tomorrow for a quick 15-minute setup call? We'll get your IDE up and running.`,
+                        `What's a good time today or tomorrow for a 15-minute call? We'll get your IDE running end-to-end.`,
                         ``,
-                        `Reply to this email with a time that works and we'll lock it in.`,
+                        `Reply here with a time that works and I'll lock it in.`,
                         ``,
-                        `— Team DevTools Pro`,
+                        MAIL_SIGNATURE,
                     ].join('\n');
                 },
             },
@@ -1978,22 +2348,21 @@
                     ? 'Registered & already on a plan.'
                     : 'Just registered — no plan picked yet.'),
                 icon: '<svg fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"/></svg>',
-                subject: () => `Ready to unlock Kiro at 50% off? Pick your DevTools Pro plan`,
+                subject: (u) => `Picking a DevTools Pro plan — happy to help, ${firstName(u)}`,
                 body: (u) => {
-                    const heard = u.source ? ` (we saw you found us via ${u.source})` : '';
+                    const heard = u.source ? ` (I saw you found us via ${u.source})` : '';
                     return [
-                        `Hi ${u.name || 'there'},`,
+                        `Hi ${firstName(u)},`,
                         ``,
-                        `Thanks for signing up with DevTools Pro${heard}!`,
+                        `Thanks for signing up${heard}.`,
                         ``,
-                        `You've created your account — the last step is picking a plan to unlock Kiro at 50% off with Claude Opus, Sonnet, and all premium models.`,
+                        `To finish setup, you'll want to pick a plan on your dashboard — that turns on Kiro with the premium models (Claude Opus, Sonnet, and the rest).`,
                         ``,
-                        `Plans start at just ₹946/month (Pro). Sign in and tap Select Plan on your dashboard:`,
-                        DASHBOARD_URL,
+                        `Dashboard: ${DASHBOARD_URL}`,
                         ``,
-                        `Payment is a quick UPI scan, and we'll hop on a 1:1 Google Meet to get your IDE set up. Reply to this email if you'd like a hand choosing the right plan — happy to help!`,
+                        `Payment is a quick UPI scan, and I'll hop on a short Google Meet to get your setup working. If you'd like a hand choosing between plans, just reply — happy to walk through it.`,
                         ``,
-                        `— Team DevTools Pro`,
+                        MAIL_SIGNATURE,
                     ].join('\n');
                 },
             },
@@ -2002,17 +2371,17 @@
                 label: 'Check-in / blank',
                 desc: () => 'Open Gmail with just a friendly hello.',
                 icon: '<svg fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>',
-                subject: (u) => `Checking in on your DevTools Pro ${u.currentPlan || 'subscription'}`,
+                subject: (u) => `Quick check-in from DevTools Pro, ${firstName(u)}`,
                 body: (u) => {
                     const plan = u.currentPlan || 'your subscription';
                     return [
-                        `Hi ${u.name || 'there'},`,
+                        `Hi ${firstName(u)},`,
                         ``,
-                        `Checking in from DevTools Pro — how's ${plan} working out for you?`,
+                        `Just checking in — how's ${plan} working out for you?`,
                         ``,
-                        `If there's anything we can help with (model picks, credits, Meet times, anything else), just reply to this email.`,
+                        `If there's anything I can help with (model picks, credits, Meet scheduling, anything else), just reply here.`,
                         ``,
-                        `— Team DevTools Pro`,
+                        MAIL_SIGNATURE,
                     ].join('\n');
                 },
             },
@@ -2183,11 +2552,20 @@
             //   • email on file  → "Sends to email@example.com."
             //   • no email        → warn, but still let them open Gmail
             //     with an empty To so they can paste the address by hand.
+            //
+            // A second line reminds the admin that replying to an
+            // existing thread with this recipient (when one exists) is
+            // the single biggest lever for staying out of the Spam
+            // folder — bigger than any subject/body tweak, because
+            // Gmail treats "reply to a known correspondent" as an
+            // effectively unblockable personal-mail signal.
             const hasEmail = !!user.email;
             footEl.classList.toggle('warn', !hasEmail);
-            footEl.textContent = hasEmail
-                ? `Sends to ${user.email}.`
+            const primary = hasEmail
+                ? `Sends to ${escapeHTML(user.email)}.`
                 : 'No email on file — Gmail will open with the To field empty.';
+            const tip = `<span style="display:block; margin-top:4px; color: rgb(155,150,180);">Tip: if you've emailed ${escapeHTML(firstName(user))} before, reply in that thread for best inbox delivery.</span>`;
+            footEl.innerHTML = `${primary}${tip}`;
 
             const r = btn.getBoundingClientRect();
             const pw = 320;
@@ -2295,9 +2673,326 @@
                 deleteBtn.style.display  = 'inline-flex';
                 restoreBtn.style.display = 'none';
             }
+            // Reset the notification composer + close history panel every
+            // time the modal opens so leftover state from a prior user
+            // doesn't leak across.
+            resetNotificationComposer();
+            hideNotificationHistory();
+            // Kick off lazy loads of the notification trail + pending
+            // payments in the background — they don't block the modal.
+            preloadUserPayments(u.id);
             modal.classList.add('show');
         }
-        function closeEdit() { modal.classList.remove('show'); editingUser = null; }
+        function closeEdit() {
+            modal.classList.remove('show');
+            editingUser = null;
+            // Reset composer / history / payments state so opening the
+            // modal for a different user is a clean slate.
+            resetNotificationComposer();
+            hideNotificationHistory();
+            document.getElementById('payments-block').style.display = 'none';
+        }
+
+        /* ══════════════════════════════════════════════════════════
+         * Notification composer
+         * ────────────────────────────────────────────────────────── */
+
+        // Template catalog. Each entry populates title + body + kind
+        // in one click. Wording is deliberately empathetic — these
+        // land on the user's dashboard and reflect on the brand.
+        const NOTIF_TEMPLATES = {
+            'wrong-utr': {
+                title: 'The UTR you entered doesn\'t match our records',
+                body: 'Hi! We couldn\'t match the UTR you submitted with any incoming payment. Please double-check the transaction reference in your UPI app (GPay / PhonePe / Paytm → recent transactions) and re-submit. If you paid, your money is safe — we just need the correct 12-digit UTR to activate your plan.',
+                kind: 'warn',
+            },
+            'wrong-whatsapp': {
+                title: 'Your WhatsApp number seems unreachable',
+                body: 'We tried to reach you on the WhatsApp number on file to send your Meet link, but the number didn\'t go through. Please reply here with the correct number (with country code) or DM us at +91 90198 79108 so we can activate your plan.',
+                kind: 'warn',
+            },
+            'unreachable': {
+                title: 'Please contact us — action needed on your account',
+                body: 'We\'ve been unable to reach you on WhatsApp / email. Please ping us at +91 90198 79108 as soon as you see this so we can finish activating your subscription.',
+                kind: 'urgent',
+            },
+            'payment-received': {
+                title: 'Payment received — activating your plan',
+                body: 'We\'ve confirmed your UPI transaction. Your subscription is being activated now and your Meet link will land here (and on WhatsApp) within the next few minutes.',
+                kind: 'success',
+            },
+            'meet-ready': {
+                title: 'Your onboarding Meet is scheduled',
+                body: 'Your onboarding Google Meet link is now visible on your dashboard. Please join at your convenience — we\'ll walk you through setting up the IDE and answer any questions.',
+                kind: 'info',
+            },
+        };
+
+        function resetNotificationComposer() {
+            document.getElementById('notif-title').value = '';
+            document.getElementById('notif-body').value = '';
+            document.getElementById('notif-kind').value = 'info';
+            const msg = document.getElementById('notif-msg');
+            msg.textContent = '';
+            msg.className = 'notif-msg';
+            const btn = document.getElementById('notif-send-btn');
+            btn.disabled = false;
+            document.getElementById('notif-send-label').textContent = 'Send notification';
+        }
+
+        function hideNotificationHistory() {
+            const wrap = document.getElementById('notif-history');
+            wrap.style.display = 'none';
+            document.getElementById('notif-history-toggle-label').textContent = 'Show history';
+        }
+
+        // Template chip clicks — populate the form. 'clear' resets.
+        document.getElementById('notif-templates').addEventListener('click', (e) => {
+            const chip = e.target.closest('[data-tmpl]');
+            if (!chip) return;
+            const key = chip.dataset.tmpl;
+            if (key === 'clear') { resetNotificationComposer(); return; }
+            const tmpl = NOTIF_TEMPLATES[key];
+            if (!tmpl) return;
+            document.getElementById('notif-title').value = tmpl.title;
+            document.getElementById('notif-body').value = tmpl.body;
+            document.getElementById('notif-kind').value = tmpl.kind;
+        });
+
+        // Send button — validates + POSTs to /admin/users/:id/notifications.
+        document.getElementById('notif-send-btn').addEventListener('click', async () => {
+            if (!editingUser) return;
+            const title = document.getElementById('notif-title').value.trim();
+            const body  = document.getElementById('notif-body').value.trim();
+            const kind  = document.getElementById('notif-kind').value;
+            const msg = document.getElementById('notif-msg');
+            const btn = document.getElementById('notif-send-btn');
+            const lbl = document.getElementById('notif-send-label');
+            msg.className = 'notif-msg';
+            msg.textContent = '';
+            if (!title || !body) {
+                msg.textContent = 'Title and body are required';
+                msg.className = 'notif-msg err';
+                return;
+            }
+            btn.disabled = true;
+            lbl.innerHTML = '<span class="spinner"></span> Sending…';
+            try {
+                await api(`/admin/users/${encodeURIComponent(editingUser.id)}/notifications`, {
+                    method: 'POST',
+                    body: JSON.stringify({ title, body, kind }),
+                });
+                msg.textContent = 'Notification sent — will appear on the user\'s dashboard within seconds.';
+                msg.className = 'notif-msg ok';
+                // Clear the form so a subsequent send is a clean slate.
+                document.getElementById('notif-title').value = '';
+                document.getElementById('notif-body').value = '';
+                document.getElementById('notif-kind').value = 'info';
+                // If the history panel is open, refresh it so the new
+                // entry shows immediately.
+                const historyWrap = document.getElementById('notif-history');
+                if (historyWrap.style.display !== 'none') {
+                    loadNotificationHistory(editingUser.id);
+                }
+            } catch (e) {
+                msg.textContent = e.message || 'Failed to send notification';
+                msg.className = 'notif-msg err';
+            } finally {
+                btn.disabled = false;
+                lbl.textContent = 'Send notification';
+            }
+        });
+
+        // History panel toggle. Loads the full trail (including
+        // dismissed rows) via GET /admin/users/:id/notifications.
+        document.getElementById('notif-history-toggle').addEventListener('click', async () => {
+            if (!editingUser) return;
+            const wrap = document.getElementById('notif-history');
+            const label = document.getElementById('notif-history-toggle-label');
+            if (wrap.style.display === 'none') {
+                wrap.style.display = '';
+                label.textContent = 'Hide history';
+                await loadNotificationHistory(editingUser.id);
+            } else {
+                hideNotificationHistory();
+            }
+        });
+
+        async function loadNotificationHistory(userId) {
+            const listEl = document.getElementById('notif-history-list');
+            listEl.innerHTML = '<div class="notif-history-empty">Loading…</div>';
+            try {
+                const { notifications: items } = await api(`/admin/users/${encodeURIComponent(userId)}/notifications`);
+                if (!items || items.length === 0) {
+                    listEl.innerHTML = '<div class="notif-history-empty">No notifications sent yet.</div>';
+                    return;
+                }
+                listEl.innerHTML = items.map(n => {
+                    const kindCls = n.kind || 'info';
+                    const readState = n.readAt
+                        ? '<span class="read-badge">read</span>'
+                        : '<span class="unread-badge">unread</span>';
+                    const dismissedTag = n.dismissedAt ? ' · dismissed' : '';
+                    return `
+                        <div class="notif-history-item" data-nid="${escapeHTML(n.id)}">
+                            <span class="n-kind ${escapeHTML(kindCls)}"></span>
+                            <div class="n-content">
+                                <div class="n-title">${escapeHTML(n.title || '')}</div>
+                                <div class="n-body">${escapeHTML(n.body || '')}</div>
+                                <div class="n-meta">${escapeHTML(fmtDate(n.createdAt))} · ${readState}${escapeHTML(dismissedTag)}</div>
+                            </div>
+                            <button class="n-delete" data-nid="${escapeHTML(n.id)}" title="Delete permanently" type="button">×</button>
+                        </div>`;
+                }).join('');
+            } catch (e) {
+                listEl.innerHTML = `<div class="notif-history-empty">Failed to load: ${escapeHTML(e.message || '')}</div>`;
+            }
+        }
+
+        // Delegated delete handler for history rows.
+        document.getElementById('notif-history-list').addEventListener('click', async (e) => {
+            const btn = e.target.closest('.n-delete[data-nid]');
+            if (!btn) return;
+            if (!confirm('Delete this notification permanently? The user will no longer see it, and it will be removed from the trail.')) return;
+            const nid = btn.dataset.nid;
+            btn.disabled = true;
+            try {
+                await api(`/admin/notifications/${encodeURIComponent(nid)}`, { method: 'DELETE' });
+                if (editingUser) loadNotificationHistory(editingUser.id);
+            } catch (err) {
+                btn.disabled = false;
+                alert(err.message || 'Failed to delete');
+            }
+        });
+
+        /* ══════════════════════════════════════════════════════════
+         * Payment / screenshot viewer
+         * ────────────────────────────────────────────────────────── */
+
+        // Fetches ALL pending payments (admin-scoped, cheap) once per
+        // modal open and renders the ones belonging to this user.
+        // Verified payments aren't returned by /api/payment/pending, so
+        // this list is naturally scoped to "still needs attention".
+        async function preloadUserPayments(userId) {
+            const block = document.getElementById('payments-block');
+            const list = document.getElementById('payments-list');
+            list.innerHTML = '';
+            block.style.display = 'none';
+            try {
+                const { data: rows } = await api('/api/payment/pending');
+                const mine = (rows || []).filter(r => r.user_id === userId);
+                if (mine.length === 0) return;
+                block.style.display = '';
+                list.innerHTML = mine.map(renderPaymentItem).join('');
+                // Wire thumbnails to the lightbox after render.
+                list.querySelectorAll('.payment-thumb[data-pid]').forEach(el => {
+                    el.addEventListener('click', () => openScreenshotLightbox(el.dataset.pid));
+                });
+            } catch (e) {
+                // Non-fatal — the modal still works without this pane.
+                console.warn('preloadUserPayments failed:', e.message || e);
+            }
+        }
+
+        function renderPaymentItem(row) {
+            const hasShot = !!row.screenshot_uploaded_at;
+            const status = String(row.status || '').toLowerCase();
+            const statusCls = status === 'verified' ? 'verified'
+                : status === 'awaiting_verification' ? 'awaiting'
+                : status === 'pending' ? 'pending'
+                : ['expired', 'failed'].includes(status) ? status
+                : 'pending';
+            const statusLabel = status === 'awaiting_verification' ? 'Awaiting verify' : status;
+            const userUtr = row.utr_id || '';
+            const extractedUtr = row.screenshot_extracted_utr || '';
+            const utrMatch = userUtr && extractedUtr
+                ? (String(userUtr).toLowerCase() === String(extractedUtr).toLowerCase())
+                : null;
+            const utrValueCls = utrMatch === true ? 'match' : (utrMatch === false ? 'mismatch' : '');
+            const score = row.screenshot_match_score;
+            const scoreLine = (score !== null && score !== undefined) ? `
+                <div class="pm-row"><span class="pm-label">Score</span><span class="pm-value ${score >= 90 ? 'match' : score === 0 ? 'mismatch' : ''}">${score}/100</span></div>
+            ` : '';
+            const shotLine = hasShot
+                ? `<div class="pm-row"><span class="pm-label">Screenshot</span><span class="pm-value match">Uploaded ${escapeHTML(fmtDate(row.screenshot_uploaded_at))}</span></div>`
+                : `<div class="pm-row"><span class="pm-label">Screenshot</span><span class="pm-value" style="color: var(--ink-3);">Not uploaded</span></div>`;
+            return `
+                <div class="payment-item">
+                    <div class="payment-thumb" ${hasShot ? `data-pid="${escapeHTML(row.id)}"` : ''}>
+                        ${hasShot
+                            ? '<span class="no-shot" style="color: var(--ink-2);">Click to view</span>'
+                            : '<span class="no-shot">No screenshot</span>'}
+                    </div>
+                    <div class="payment-meta">
+                        <div class="pm-row">
+                            <span class="pm-label">Status</span>
+                            <span class="pm-value"><span class="payment-status-pill ${statusCls}">${escapeHTML(statusLabel)}</span></span>
+                        </div>
+                        <div class="pm-row"><span class="pm-label">Plan</span><span class="pm-value">${escapeHTML(row.plan || '—')}</span></div>
+                        <div class="pm-row"><span class="pm-label">Amount</span><span class="pm-value">₹${escapeHTML(String(row.amount || 0))}</span></div>
+                        <div class="pm-row"><span class="pm-label">User UTR</span><span class="pm-value ${utrValueCls}">${escapeHTML(userUtr || '—')}</span></div>
+                        ${extractedUtr ? `<div class="pm-row"><span class="pm-label">OCR UTR</span><span class="pm-value ${utrValueCls}">${escapeHTML(extractedUtr)}</span></div>` : ''}
+                        ${scoreLine}
+                        ${shotLine}
+                        <div class="pm-row" style="margin-top: 6px;">
+                            <button class="btn-primary" data-verify-pid="${escapeHTML(row.id)}" style="padding: 6px 12px; font-size: 11px; width: auto;">Mark verified</button>
+                        </div>
+                    </div>
+                </div>`;
+        }
+
+        // Delegated verify-payment button handler.
+        document.getElementById('payments-list').addEventListener('click', async (e) => {
+            const btn = e.target.closest('button[data-verify-pid]');
+            if (!btn) return;
+            const pid = btn.dataset.verifyPid;
+            if (!confirm('Mark this payment as verified? This will activate the user\'s plan.')) return;
+            btn.disabled = true;
+            btn.textContent = 'Verifying…';
+            try {
+                await api(`/api/payment/verify/${encodeURIComponent(pid)}`, { method: 'POST' });
+                // Refresh the pending list and user row.
+                if (editingUser) preloadUserPayments(editingUser.id);
+                await loadUsers();
+                await loadStats();
+            } catch (err) {
+                alert(err.message || 'Failed to verify');
+                btn.disabled = false;
+                btn.textContent = 'Mark verified';
+            }
+        });
+
+        // ─── Screenshot lightbox ───────────────────────────────────
+        async function openScreenshotLightbox(paymentId) {
+            const box = document.getElementById('screenshot-lightbox');
+            const img = document.getElementById('screenshot-lightbox-img');
+            img.src = ''; // clear previous
+            box.classList.add('show');
+            box.setAttribute('aria-hidden', 'false');
+            try {
+                const { imageData } = await api(`/admin/payments/${encodeURIComponent(paymentId)}/screenshot`);
+                img.src = imageData;
+            } catch (e) {
+                alert(e.message || 'Failed to load screenshot');
+                closeScreenshotLightbox();
+            }
+        }
+        function closeScreenshotLightbox() {
+            const box = document.getElementById('screenshot-lightbox');
+            box.classList.remove('show');
+            box.setAttribute('aria-hidden', 'true');
+            document.getElementById('screenshot-lightbox-img').src = '';
+        }
+        document.getElementById('screenshot-lightbox-close').addEventListener('click', closeScreenshotLightbox);
+        document.getElementById('screenshot-lightbox').addEventListener('click', (e) => {
+            if (e.target.id === 'screenshot-lightbox') closeScreenshotLightbox();
+        });
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                const box = document.getElementById('screenshot-lightbox');
+                if (box.classList.contains('show')) closeScreenshotLightbox();
+            }
+        });
 
         document.getElementById('modal-close').addEventListener('click', closeEdit);
         document.getElementById('modal-cancel').addEventListener('click', closeEdit);

@@ -30,6 +30,27 @@ CREATE TABLE IF NOT EXISTS payments (
 -- check on /api/payment/submit-utr. Legacy rows stay NULL (admin can
 -- backfill from the linked submission rows if needed).
 ALTER TABLE payments ADD COLUMN IF NOT EXISTS user_id UUID;
+
+-- v1.3: payment-screenshot verification. Users must upload the UPI
+-- payment screenshot alongside their UTR; client-side OCR extracts
+-- candidate values which the server cross-checks against user input.
+-- The actual image blob lives in payment_screenshots (separate table
+-- so `SELECT *` on payments stays cheap). These columns are lightweight
+-- metadata only.
+ALTER TABLE payments ADD COLUMN IF NOT EXISTS screenshot_uploaded_at TIMESTAMPTZ;
+-- Sha-256 mirrored from payment_screenshots.sha256 so the payments-only
+-- duplicate-screenshot check doesn't need a JOIN.
+ALTER TABLE payments ADD COLUMN IF NOT EXISTS screenshot_sha256 TEXT;
+-- OCR outputs from the client (untrusted-but-audited). We don't rely
+-- on these for verification; the actual gate is the user-entered UTR
+-- vs the extracted candidates comparison done at request time. Storing
+-- them lets admins spot systematic mismatches (wrong app, wrong payee).
+ALTER TABLE payments ADD COLUMN IF NOT EXISTS screenshot_extracted_utr TEXT;
+ALTER TABLE payments ADD COLUMN IF NOT EXISTS screenshot_extracted_amount NUMERIC;
+ALTER TABLE payments ADD COLUMN IF NOT EXISTS screenshot_extracted_at TIMESTAMPTZ;
+-- Combined confidence score (0-100). Combines UTR match, amount match,
+-- and whether the user-entered UTR appeared verbatim in the OCR output.
+ALTER TABLE payments ADD COLUMN IF NOT EXISTS screenshot_match_score INTEGER;
 DO $$
 BEGIN
   IF NOT EXISTS (
@@ -43,13 +64,17 @@ BEGIN
 END $$;
 
 -- Indices: status (polling), UTR (dedup), expiry (cleanup),
--- user_id (duplicate-session check on /api/payment/create).
+-- user_id (duplicate-session check on /api/payment/create),
+-- screenshot_sha256 (duplicate-screenshot fraud detection).
 CREATE INDEX IF NOT EXISTS idx_payments_status  ON payments (status);
 CREATE INDEX IF NOT EXISTS idx_payments_utr     ON payments (LOWER(utr_id)) WHERE utr_id IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_payments_expires ON payments (expires_at) WHERE status = 'pending';
 CREATE INDEX IF NOT EXISTS idx_payments_user_open
   ON payments (user_id, status)
   WHERE user_id IS NOT NULL AND status IN ('pending', 'awaiting_verification');
+CREATE INDEX IF NOT EXISTS idx_payments_screenshot_sha
+  ON payments (screenshot_sha256)
+  WHERE screenshot_sha256 IS NOT NULL;
 
 -- Enable Row Level Security
 ALTER TABLE payments ENABLE ROW LEVEL SECURITY;
