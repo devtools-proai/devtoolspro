@@ -922,6 +922,19 @@
            over it to extract UTR + amount candidates, and submit
            the whole bundle to /api/payment/upload-screenshot. */
         .utr-shot-block { display: flex; flex-direction: column; gap: 10px; }
+        /* Amber advisory pill shown above the dropzone. Uses the same
+           visual language as the .wa-stay-note (compact icon + text
+           row) so it reads as guidance, not an error. */
+        .utr-shot-note {
+            display: flex; align-items: flex-start; gap: 10px;
+            padding: 10px 12px; border-radius: 12px;
+            background: rgba(251,191,36,0.08);
+            border: 1px solid rgba(251,191,36,0.28);
+            color: rgb(233,215,180);
+            font-size: 12.5px; line-height: 1.5;
+        }
+        .utr-shot-note svg { width: 16px; height: 16px; flex-shrink: 0; color: #fbbf24; margin-top: 1px; }
+        .utr-shot-note strong { color: #fef3c7; font-weight: 700; }
         .utr-shot-dropzone {
             position: relative;
             padding: 20px; border-radius: 14px;
@@ -2496,11 +2509,28 @@
                                      and rejects duplicates. -->
                                 <div class="utr-shot-block">
                                     <label class="utr-label" for="pay-shot-input">Upload payment screenshot <span style="color: #f87171; font-weight: 500; font-size: 12px;">(required)</span></label>
+                                    <!-- UTR visibility note. The primary anti-fraud signal is
+                                         the OCR-extracted UTR matching the typed one, so a
+                                         cropped or blurry screenshot with the UTR cut off
+                                         will fail auto-verify and stall in admin review.
+                                         Calling it out upfront saves users a round-trip. -->
+                                    <div class="utr-shot-note" role="note">
+                                        <svg fill="none" stroke="currentColor" stroke-width="1.9" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                        <span>Make sure the <strong>UTR / transaction reference</strong> is <strong>clearly visible</strong> in the screenshot — we verify your payment by matching it against the number you type below.</span>
+                                    </div>
                                     <div class="utr-shot-dropzone" id="pay-shot-dropzone" tabindex="0" role="button" aria-label="Choose a screenshot of your UPI payment">
                                         <svg fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M7 16a4 4 0 01-.88-7.9A5 5 0 0117 7a3 3 0 01.2 5.94M12 12v9m0-9l-3 3m3-3l3 3"/></svg>
-                                        <span class="utr-shot-title">Tap to upload or drag &amp; drop</span>
+                                        <span class="utr-shot-title">Tap to choose from gallery or take a photo</span>
                                         <span class="utr-shot-hint">JPG, PNG, WebP · Auto-compressed · Max 5MB before compression</span>
-                                        <input type="file" class="utr-shot-input" id="pay-shot-input" accept="image/jpeg,image/png,image/webp" capture="environment">
+                                        <!-- capture="" attribute intentionally omitted. When present
+                                             (even as capture="environment") most mobile browsers
+                                             launch the camera directly with no picker, blocking
+                                             users who want to attach an existing screenshot from
+                                             their gallery. With no capture attribute the browser
+                                             shows its native chooser (Camera / Photo Library /
+                                             Choose File on iOS; equivalent on Android) so users
+                                             can pick either path. -->
+                                        <input type="file" class="utr-shot-input" id="pay-shot-input" accept="image/jpeg,image/png,image/webp">
                                     </div>
                                     <div class="utr-shot-preview" id="pay-shot-preview">
                                         <img id="pay-shot-preview-img" alt="">
@@ -3272,6 +3302,21 @@
         void el.offsetWidth;
         if (id === 'view-signin' || id === 'view-dashboard') el.classList.add('animate-fade-in');
         else el.classList.add('animate-slide-up');
+        // Snap the viewport back to the top on every view swap. Without
+        // this, if the previous view was tall (e.g. registration form
+        // filled to the bottom), the next view opens mid-scroll — most
+        // visibly reported on the plan picker after signup where users
+        // landed staring at "Pro Max" instead of the page heading.
+        // `behavior: 'instant'` avoids a smooth-scroll animation that
+        // would look like a bug on the very first render. We also
+        // reset any nested scrollport (e.g. .dash-main) for safety.
+        try {
+            window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+        } catch { window.scrollTo(0, 0); }
+        // Common inner scrollports used across the different views.
+        // Each is optional; skip silently if the node isn't in the DOM.
+        ['.dash-main', '.plans-stage', '.pay-stage', '.utr-stage', '.signin-stage', '.reg-stage']
+            .forEach(sel => { const n = document.querySelector(sel); if (n) n.scrollTop = 0; });
     }
 
     /* ─── Overlay loader controls ───
@@ -4802,6 +4847,13 @@
         const bodyEl = document.getElementById('plan-modal-body');
         if (!titleEl || !subEl || !bodyEl) return;
 
+        // Reset the modal-body scroll on every step transition. Without
+        // this, moving from pick → pay → utr can leave the user staring
+        // at the middle of the new step because the scrollport kept its
+        // previous position. Matches the outer showView() behaviour so
+        // navigation feels consistent across the two flows.
+        bodyEl.scrollTop = 0;
+
         switch (planModalState.step) {
             case 'pick':           return renderModalPick(titleEl, subEl, bodyEl);
             case 'pay':            return renderModalPay(titleEl, subEl, bodyEl);
@@ -5714,9 +5766,15 @@
         document.querySelectorAll('.dash-nav-item[data-dash-nav]').forEach(b => b.classList.toggle('active', b.dataset.dashNav === page));
         // Render data lazily — only when the user actually navigates to it
         if (page === 'history') renderHistory(getUser());
-        // Scroll the main scrollport back to top for a fresh "page" feel
+        // Reset every scroll surface for a fresh "page" feel. .dash-main
+        // is the inner scrollport on desktop; the outer window can also
+        // be scrolled on mobile where the layout is single-column and
+        // the body inherits the scroll. Both need to move to top.
         const main = document.querySelector('.dash-main');
         if (main) main.scrollTop = 0;
+        try {
+            window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+        } catch { window.scrollTo(0, 0); }
     }
     document.querySelectorAll('.dash-nav-item[data-dash-nav]').forEach(btn => {
         btn.addEventListener('click', () => showDashPage(btn.dataset.dashNav));
