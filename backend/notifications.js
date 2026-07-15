@@ -57,9 +57,16 @@ function validateNotification({ title, body, kind, actionUrl, actionLabel }) {
     }
     if (url.length > ACTION_URL_MAX) return { valid: false, message: 'action_url is too long' };
     if (label.length > ACTION_LABEL_MAX) return { valid: false, message: 'action_label is too long' };
-    // Only http(s) and mailto are safe. javascript:/data: are rejected.
-    if (!/^(https?:|mailto:)/i.test(url)) {
-      return { valid: false, message: 'action_url must start with http(s):// or mailto:' };
+    // Safe URL schemes only. Rejected: javascript:, data:, file:, etc.
+    // Accepted:
+    //   • http(s)://          — external links (WhatsApp, docs, admin URLs)
+    //   • mailto:             — support email fallbacks
+    //   • #fragment           — dashboard-internal actions (e.g. "#retry-utr"
+    //                            reopens the UTR entry flow without a full
+    //                            page navigation). Dashboard JS intercepts
+    //                            these and routes them through showView().
+    if (!/^(https?:|mailto:|#)/i.test(url)) {
+      return { valid: false, message: 'action_url must start with http(s)://, mailto:, or # (dashboard action)' };
     }
     cleanedUrl = url;
     cleanedLabel = label;

@@ -4434,8 +4434,16 @@
                     : n.kind === 'success'
                         ? '<svg fill="none" stroke="currentColor" stroke-width="1.9" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.6 4.5A9 9 0 1112 21a9 9 0 008.6-6.5z"/></svg>'
                         : '<svg fill="none" stroke="currentColor" stroke-width="1.9" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>';
+            // Hash-prefixed actionUrls are dashboard-internal actions
+            // (e.g. "#retry-utr" reopens the UTR flow) — those should
+            // navigate in-place, not open in a new tab. External
+            // actionUrls (WhatsApp, docs, etc.) keep the target="_blank"
+            // + rel="noopener" pair so they open safely in a new tab
+            // without giving the opened page access to window.opener.
             const cta = (n.actionUrl && n.actionLabel)
-                ? `<a class="dash-notif-cta" href="${escapeHtml(n.actionUrl)}" target="_blank" rel="noopener">${escapeHtml(n.actionLabel)}</a>`
+                ? (String(n.actionUrl).startsWith('#')
+                    ? `<a class="dash-notif-cta" href="${escapeHtml(n.actionUrl)}" data-action-hash="${escapeHtml(n.actionUrl.slice(1))}">${escapeHtml(n.actionLabel)}</a>`
+                    : `<a class="dash-notif-cta" href="${escapeHtml(n.actionUrl)}" target="_blank" rel="noopener">${escapeHtml(n.actionLabel)}</a>`)
                 : '';
             const age = formatNotifAge(n.createdAt);
             return `
@@ -4464,6 +4472,47 @@
         const days = Math.floor(hrs / 24);
         if (days < 7) return `${days}d ago`;
         return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
+    }
+
+    /* ─── Dashboard-internal notification actions ────────────────
+       Handles the hash-prefixed actionUrls the admin can attach to a
+       notification. Currently only "retry-utr" is defined, but the
+       switch is here so future admin templates can add more actions
+       without touching the render layer.
+
+       retry-utr → user got a "wrong UTR / bad screenshot" notification.
+       Reopens the plan-modal so they can pick their plan (which
+       creates a fresh payment session) and land back on the UTR + screenshot
+       entry screen. The UTR view already has the "Need help?" WhatsApp
+       chip I built earlier, so the "option to connect to WhatsApp on
+       the same page" is already there.
+    */
+    function handleNotifHashAction(action) {
+        toggleNotifPanel(false);   // close the panel first so the flow is visible
+        switch (action) {
+            case 'retry-utr':
+                // The plan-modal ("Select plan / Renew / Change") is the
+                // authoritative re-entry into the pay flow — it creates
+                // a fresh payments row on the server every time it opens,
+                // which is exactly what we need after a rejected UTR.
+                if (typeof openPlanModal === 'function') {
+                    const user = getUser() || {};
+                    // Cancelled / no-plan users go through the picker;
+                    // active users get the direct renew flow which
+                    // preserves their existing plan tier.
+                    const flow = user.currentPlan ? 'renew' : 'change';
+                    openPlanModal(flow);
+                } else {
+                    // Fallback: full page navigation to the plans view.
+                    // Should never fire because openPlanModal is a
+                    // module-scope function, but this keeps the action
+                    // link functional even if the SPA breaks.
+                    window.location.href = 'dashboard.html';
+                }
+                break;
+            default:
+                console.warn('Unknown notification action:', action);
+        }
     }
 
     function toggleNotifPanel(forceOpen) {
@@ -4504,6 +4553,17 @@
         bell.addEventListener('click', (e) => {
             e.stopPropagation();
             toggleNotifPanel();
+        });
+        // Dashboard-internal action links (hash-prefixed actionUrl).
+        // Kept as a separate delegate BEFORE the dismiss handler so the
+        // "Try again" chip inside a notification card doesn't accidentally
+        // trigger the outer dismiss button click zone.
+        document.getElementById('dash-notif-list').addEventListener('click', (e) => {
+            const link = e.target.closest('a.dash-notif-cta[data-action-hash]');
+            if (!link) return;
+            e.preventDefault();
+            const action = link.dataset.actionHash;
+            handleNotifHashAction(action);
         });
         // Dismiss via delegated handler on the list.
         document.getElementById('dash-notif-list').addEventListener('click', async (e) => {
@@ -4561,7 +4621,13 @@
     function startNotifPolling() {
         if (notifPollTimer) return;
         fetchNotifications();
-        notifPollTimer = setInterval(fetchNotifications, 60_000);
+        // 15s (down from 60s) so notifications the admin sends land on
+        // the user's dashboard within roughly a card-refresh cycle. Still
+        // light enough on the backend that 100 concurrent users cost
+        // ~6.7 req/s, well under the /api/ rate-limit ceiling. Combined
+        // with the visibilitychange handler below, a user coming back
+        // from another tab also gets an immediate refresh.
+        notifPollTimer = setInterval(fetchNotifications, 15_000);
     }
     function stopNotifPolling() {
         if (notifPollTimer) { clearInterval(notifPollTimer); notifPollTimer = null; }
@@ -6000,6 +6066,43 @@
     }
 
     init();
+
+    /* ─── Handle hash-based notification actions on cold load ─────
+       If a user long-presses a notification's CTA and opens it in a
+       new tab (or copies the link + pastes it), the page loads with
+       `#retry-utr` (or similar) in the URL rather than firing our
+       inline click intercept. Read the hash once init() has resolved
+       auth + view routing, then dispatch to the same handler the
+       inline click uses. Guarded on document.readyState so the DOM
+       is fully parsed before we touch openPlanModal. */
+    (function handleColdLoadHashAction() {
+        const hash = String(window.location.hash || '').replace(/^#/, '');
+        if (!hash) return;
+        // The dashboard's init() is async — wait a full task-tick for
+        // auth to resolve before triggering the action. If auth fails,
+        // handleNotifHashAction's openPlanModal call is a no-op
+        // (user hasn't reached the dashboard shell yet).
+        const runOnce = () => {
+            // Only fire when the dashboard shell is actually visible;
+            // otherwise the user might land on sign-in and the modal
+            // would open behind a login gate.
+            if (document.body.dataset.activeView !== 'dashboard') {
+                // Try again once the shell is up; give up after 6s.
+                if (runOnce._tries < 30) {
+                    runOnce._tries++;
+                    setTimeout(runOnce, 200);
+                }
+                return;
+            }
+            if (typeof handleNotifHashAction === 'function') {
+                handleNotifHashAction(hash);
+            }
+            // Clean the hash so refreshes don't re-trigger the flow.
+            history.replaceState(null, '', window.location.pathname + window.location.search);
+        };
+        runOnce._tries = 0;
+        setTimeout(runOnce, 400);
+    })();
     </script>
 </body>
 </html>

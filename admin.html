@@ -441,6 +441,21 @@
             font-family: inherit; font-size: 13px; resize: vertical;
             margin-bottom: 8px;
         }
+        /* Preview strip that appears under the body when a template
+           attaches an actionUrl/actionLabel — tells the admin the
+           notification will land with a CTA button (Try again / Chat
+           on WhatsApp) without having to inspect the template code. */
+        .notif-action-preview {
+            display: none;
+            padding: 6px 10px; margin-bottom: 8px;
+            font-size: 11px; line-height: 1.4;
+            border-radius: 8px;
+            background: rgba(129,140,248,0.06);
+            border: 1px solid rgba(129,140,248,0.22);
+            color: var(--ink-2);
+        }
+        .notif-action-preview.show { display: block; }
+        .notif-action-preview strong { color: var(--violet-soft); font-weight: 700; }
         .notif-actions { display: flex; align-items: flex-start; gap: 8px; }
         .notif-msg {
             flex: 1; font-size: 11px; color: var(--ink-2);
@@ -1156,6 +1171,11 @@
                             </select>
                         </div>
                         <textarea class="notif-textarea" id="notif-body" placeholder="Body — what should the user see on their dashboard? (max 800 chars)" maxlength="800"></textarea>
+                        <!-- Populated by updateComposerActionPreview() when a
+                             template attaches an action button (Try again /
+                             Chat on WhatsApp) so the admin sees at a glance
+                             that the notification ships with a CTA. -->
+                        <div class="notif-action-preview" id="notif-action-preview"></div>
                         <div class="notif-actions">
                             <span id="notif-msg" class="notif-msg"></span>
                             <button type="button" class="notif-send-btn" id="notif-send-btn">
@@ -2752,21 +2772,51 @@
         // Template catalog. Each entry populates title + body + kind
         // in one click. Wording is deliberately empathetic — these
         // land on the user's dashboard and reflect on the brand.
+        // Support number used as the WhatsApp deeplink target for every
+        // template that wants a "Chat on WhatsApp" primary CTA. Same
+        // number that already appears in the WA / mail popovers so
+        // there's a single source of truth for the support endpoint.
+        const NOTIF_SUPPORT_NUMBER = '919019879108';
+        // Pre-encode a template that lands the support agent with
+        // enough context to help instantly ("what's this about, who's
+        // asking"). The user's specific plan / email is not injected
+        // here because notification templates are prepared before we
+        // know which user they'll be sent to.
+        const NOTIF_WA_HELP_TEXT = encodeURIComponent(
+            'Hi DevTools Pro team, I received a notification on my dashboard and need your help. Please assist.'
+        );
+        const NOTIF_WA_URL = `https://api.whatsapp.com/send?phone=${NOTIF_SUPPORT_NUMBER}&text=${NOTIF_WA_HELP_TEXT}`;
+
         const NOTIF_TEMPLATES = {
             'wrong-utr': {
                 title: 'The UTR you entered doesn\'t match our records',
                 body: 'Hi! We couldn\'t match the UTR you submitted with any incoming payment. Please double-check the transaction reference in your UPI app (GPay / PhonePe / Paytm → recent transactions) and re-submit. If you paid, your money is safe — we just need the correct 12-digit UTR to activate your plan.',
                 kind: 'warn',
+                // "#retry-utr" is a dashboard-internal hash action —
+                // the dashboard's notification click handler intercepts
+                // it and routes back through the plan → payment → UTR
+                // flow so the user can re-submit a correct UTR +
+                // screenshot in-place, no manual navigation.
+                actionUrl: '#retry-utr',
+                actionLabel: 'Try again',
             },
             'wrong-whatsapp': {
                 title: 'Your WhatsApp number seems unreachable',
-                body: 'We tried to reach you on the WhatsApp number on file to send your Meet link, but the number didn\'t go through. Please reply here with the correct number (with country code) or DM us at +91 90198 79108 so we can activate your plan.',
+                // Phone number removed from body copy — replaced by the
+                // "Chat on WhatsApp" CTA below so the user gets a
+                // one-tap deeplink to the correct number instead of
+                // having to select/copy digits from a paragraph.
+                body: 'We tried to reach you on the WhatsApp number on file to send your Meet link, but the number didn\'t go through. Please DM us the correct number (with country code) so we can activate your plan.',
                 kind: 'warn',
+                actionUrl: NOTIF_WA_URL,
+                actionLabel: 'Chat on WhatsApp',
             },
             'unreachable': {
                 title: 'Please contact us — action needed on your account',
-                body: 'We\'ve been unable to reach you on WhatsApp / email. Please ping us at +91 90198 79108 as soon as you see this so we can finish activating your subscription.',
+                body: 'We\'ve been unable to reach you on WhatsApp or email. Please ping us here as soon as you see this so we can finish activating your subscription.',
                 kind: 'urgent',
+                actionUrl: NOTIF_WA_URL,
+                actionLabel: 'Chat on WhatsApp',
             },
             'payment-received': {
                 title: 'Payment received — activating your plan',
@@ -2780,16 +2830,48 @@
             },
         };
 
+        // Composer state for the optional action button (Try again /
+        // Chat on WhatsApp). Populated when a template is applied,
+        // cleared on reset / send. Kept as a module-scoped variable
+        // rather than a hidden input so admins can't accidentally
+        // type garbage into it and blow up the notifications.js
+        // validation on submit.
+        let composerActionUrl = null;
+        let composerActionLabel = null;
+
         function resetNotificationComposer() {
             document.getElementById('notif-title').value = '';
             document.getElementById('notif-body').value = '';
             document.getElementById('notif-kind').value = 'info';
+            composerActionUrl = null;
+            composerActionLabel = null;
+            updateComposerActionPreview();
             const msg = document.getElementById('notif-msg');
             msg.textContent = '';
             msg.className = 'notif-msg';
             const btn = document.getElementById('notif-send-btn');
             btn.disabled = false;
             document.getElementById('notif-send-label').textContent = 'Send notification';
+        }
+
+        // Small preview so the admin knows what action button (if any)
+        // will land on the user's dashboard alongside the message they
+        // just typed. Silent when no action is attached.
+        function updateComposerActionPreview() {
+            const preview = document.getElementById('notif-action-preview');
+            if (!preview) return;
+            if (composerActionUrl && composerActionLabel) {
+                const targetHint = composerActionUrl === '#retry-utr'
+                    ? 'opens the UTR retry flow on the dashboard'
+                    : /^https?:\/\/api\.whatsapp\.com|wa\.me/i.test(composerActionUrl)
+                        ? 'opens WhatsApp with a pre-filled message'
+                        : 'opens ' + composerActionUrl.slice(0, 40);
+                preview.innerHTML = `Action button: <strong>${escapeHTML(composerActionLabel)}</strong> · ${escapeHTML(targetHint)}`;
+                preview.classList.add('show');
+            } else {
+                preview.textContent = '';
+                preview.classList.remove('show');
+            }
         }
 
         function hideNotificationHistory() {
@@ -2809,6 +2891,13 @@
             document.getElementById('notif-title').value = tmpl.title;
             document.getElementById('notif-body').value = tmpl.body;
             document.getElementById('notif-kind').value = tmpl.kind;
+            // Templates may carry an action button (Try again / Chat on
+            // WhatsApp). Store it so the send handler can include it in
+            // the POST; show a subtle preview so the admin knows the
+            // template ships with a CTA attached.
+            composerActionUrl = tmpl.actionUrl || null;
+            composerActionLabel = tmpl.actionLabel || null;
+            updateComposerActionPreview();
         });
 
         // Send button — validates + POSTs to /admin/users/:id/notifications.
@@ -2830,9 +2919,18 @@
             btn.disabled = true;
             lbl.innerHTML = '<span class="spinner"></span> Sending…';
             try {
+                // Only include action fields when a template attached
+                // them — the server rejects half-configured pairs
+                // (url without label or vice versa) with a clear
+                // error, so we never send one without the other.
+                const payload = { title, body, kind };
+                if (composerActionUrl && composerActionLabel) {
+                    payload.actionUrl = composerActionUrl;
+                    payload.actionLabel = composerActionLabel;
+                }
                 await api(`/admin/users/${encodeURIComponent(editingUser.id)}/notifications`, {
                     method: 'POST',
-                    body: JSON.stringify({ title, body, kind }),
+                    body: JSON.stringify(payload),
                 });
                 msg.textContent = 'Notification sent — will appear on the user\'s dashboard within seconds.';
                 msg.className = 'notif-msg ok';
@@ -2840,6 +2938,9 @@
                 document.getElementById('notif-title').value = '';
                 document.getElementById('notif-body').value = '';
                 document.getElementById('notif-kind').value = 'info';
+                composerActionUrl = null;
+                composerActionLabel = null;
+                updateComposerActionPreview();
                 // If the history panel is open, refresh it so the new
                 // entry shows immediately.
                 const historyWrap = document.getElementById('notif-history');

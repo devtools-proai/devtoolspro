@@ -174,7 +174,7 @@ describe('notifications.validateNotification', () => {
     }).valid).toBe(false);
   });
 
-  test('accepts https and mailto action_url', () => {
+  test('accepts https, mailto, and dashboard-hash action_url', () => {
     expect(validateNotification({
       title: 'Hi', body: 'B',
       actionUrl: 'https://wa.me/919019879108', actionLabel: 'Chat',
@@ -182,6 +182,12 @@ describe('notifications.validateNotification', () => {
     expect(validateNotification({
       title: 'Hi', body: 'B',
       actionUrl: 'mailto:hi@example.com', actionLabel: 'Email',
+    }).valid).toBe(true);
+    // Dashboard-internal action — routes to showView() in the SPA
+    // via a click interceptor on the notification panel.
+    expect(validateNotification({
+      title: 'Hi', body: 'B',
+      actionUrl: '#retry-utr', actionLabel: 'Try again',
     }).valid).toBe(true);
   });
 
