@@ -420,6 +420,13 @@
         .notif-tmpl-chip.warn { border-color: rgba(251,191,36,0.35); background: rgba(251,191,36,0.08); color: #fcd34d; }
         .notif-tmpl-chip.urgent { border-color: rgba(248,113,113,0.35); background: rgba(248,113,113,0.08); color: #fca5a5; }
         .notif-form-row { display: grid; grid-template-columns: 1fr 130px; gap: 8px; margin-bottom: 8px; }
+        /* On narrow phones the 1fr + 130px layout clips the title
+           input placeholder ("Notification title (e.g. UTR looks
+           wrong)"). Stack title on its own row + kind below at
+           ≤560px so both fields breathe. */
+        @media (max-width: 560px) {
+            .notif-form-row { grid-template-columns: 1fr; gap: 6px; }
+        }
         .notif-form-row input, .notif-form-row select {
             width: 100%; padding: 9px 11px;
             background: rgba(255,255,255,0.03);
@@ -783,10 +790,13 @@
             .table-wrap { max-height: none; overflow: visible; }
 
             /* The Username + UTR cells use fixed-width caps for the
-               truncate ellipsis. On phones the cell itself is narrower
-               than the cap, so let them expand to fill available space. */
+               truncate ellipsis. Give them the full available width
+               inside the phone-mode stacked-card cell layout. The
+               32px avatar + 10px gap + 12px cell padding = 54px chrome,
+               so 60px is a safe reserve (adds ~6px slack for the
+               ellipsis to not butt up against the action icons). */
             .user-name, .user-email {
-                max-width: calc(100vw - 140px);
+                max-width: calc(100vw - 60px);
             }
         }
 

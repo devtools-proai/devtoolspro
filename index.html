@@ -825,7 +825,11 @@
             display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.25rem;
             max-width: 900px; margin: 0 auto;
         }
-        @media (max-width: 720px) { .trust-strip { grid-template-columns: 1fr; } }
+        /* 3 → 2 → 1 collapse. Adding the 2-col intermediate stops the
+           iPad-portrait / medium-phone width (480–720px) from wasting
+           horizontal space on 1-col stacked cards. */
+        @media (max-width: 720px) { .trust-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+        @media (max-width: 480px) { .trust-strip { grid-template-columns: 1fr; } }
         .trust-card {
             padding: 1.5rem; border-radius: 16px; text-align: center;
             background: linear-gradient(180deg, rgba(28,22,56,0.4) 0%, rgba(14,10,30,0.55) 100%);
@@ -844,7 +848,10 @@
 
         /* ─── Kiro explained / 3 cards ─── */
         .kiro-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.25rem; max-width: 1100px; margin: 0 auto 3.5rem; }
-        @media (max-width: 880px) { .kiro-cards { grid-template-columns: 1fr; } }
+        /* 3 → 2 → 1 — matches the trust-strip collapse. Prevents the
+           three long text cards from stacking prematurely on iPads. */
+        @media (max-width: 880px) { .kiro-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+        @media (max-width: 560px) { .kiro-cards { grid-template-columns: 1fr; } }
         .kiro-card {
             padding: 2rem 1.75rem; border-radius: 20px; text-align: center;
             background: linear-gradient(180deg, rgba(28,22,56,0.45) 0%, rgba(14,10,30,0.6) 100%);
@@ -1677,7 +1684,11 @@
             </div>
 
             <div class="compare-wrap" data-reveal>
-                <div style="overflow-x:auto;">
+                <!-- Removed a legacy inner div with inline overflow-x:auto;
+                     the outer .compare-wrap already handles horizontal
+                     scroll at ≤768px, and having both nested created a
+                     touch-scroll trap (users had to land the swipe on the
+                     inner element specifically). Single scroll context now. -->
                     <table class="compare-table">
                         <thead>
                             <tr>
@@ -1724,7 +1735,6 @@
                             </tr>
                         </tbody>
                     </table>
-                </div>
             </div>
         </section>
 
@@ -1763,7 +1773,11 @@
 
             <div class="review-form-wrap" data-reveal>
                 <form id="review-form" class="review-form" novalidate>
-                    <div class="grid grid-cols-2 gap-3 mb-4">
+                    <!-- Name + City row: was fixed 2-col at every width, which
+                         squashed inputs to ~155px each on 375px phones. Now
+                         stacks on phones and goes 2-col from Tailwind's `sm`
+                         breakpoint (640px) upward. -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
                         <div>
                             <label class="review-field-label" for="reviewName">Your name</label>
                             <input type="text" id="reviewName" placeholder="e.g. Rahul K." required class="review-input">
