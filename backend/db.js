@@ -60,10 +60,60 @@ function getClient() {
 }
 
 /**
+ * Decode the Supabase API key (a JWT) to determine which role it
+ * represents. Both `anon` and `service_role` keys are JWTs — the
+ * payload contains a `role` claim we can read without hitting the DB.
+ *
+ * The `service_role` key bypasses RLS. The `anon` key doesn't and
+ * will hit every default-deny RLS policy in the project. If someone
+ * accidentally sets SUPABASE_KEY to the anon key, most tables might
+ * still "seem to work" (older RLS-disabled tables, permissive
+ * policies) but every RLS-strict table will fail with 42501.
+ *
+ * Returns 'service_role' | 'anon' | 'unknown'.
+ */
+function detectKeyRole(key) {
+  if (!key || typeof key !== 'string') return 'unknown';
+  const parts = key.split('.');
+  if (parts.length !== 3) return 'unknown';
+  try {
+    // JWT payload is base64url-encoded; convert to standard base64 first.
+    const b64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+    const padded = b64 + '='.repeat((4 - b64.length % 4) % 4);
+    const payload = JSON.parse(Buffer.from(padded, 'base64').toString('utf8'));
+    if (payload.role === 'service_role') return 'service_role';
+    if (payload.role === 'anon') return 'anon';
+    return 'unknown';
+  } catch {
+    return 'unknown';
+  }
+}
+
+/**
  * Initialize database — creates the table if it doesn't exist.
  * Run this once via `npm run setup-db` or the first time the server starts.
  */
 async function initDB() {
+  // Detect the API key type BEFORE we try any queries so the boot log
+  // makes it obvious when the wrong key is configured. Historically the
+  // most confusing production issue is someone pasting the anon key
+  // into SUPABASE_KEY — everything on RLS-off tables still works, but
+  // RLS-strict tables all 42501 with a "permission denied" that's easy
+  // to misdiagnose. Fail loud, fail early.
+  const keyRole = detectKeyRole(SUPABASE_KEY);
+  if (keyRole === 'anon') {
+    console.error('❌ SUPABASE_KEY is the ANON key, not the SERVICE_ROLE key.');
+    console.error('   Every write to an RLS-protected table will fail with permission denied (42501).');
+    console.error('   Go to Supabase Dashboard → Settings → API and copy the "service_role" secret');
+    console.error('   into SUPABASE_KEY (on Render / your env). Do NOT ship the anon key server-side.');
+    process.exit(1);
+  } else if (keyRole === 'unknown') {
+    console.warn('⚠️  Could not determine SUPABASE_KEY role from its JWT payload.');
+    console.warn('   If admin writes fail with 42501, verify the key in the Supabase dashboard.');
+  } else {
+    console.log('✅ SUPABASE_KEY detected as service_role — RLS bypass confirmed.');
+  }
+
   try {
     const client = getClient();
     // Test connection by querying the table
@@ -246,6 +296,20 @@ function formatRecord(row) {
   };
 }
 
+// Cache the detection at module load so callers don't re-decode
+// every time. SUPABASE_KEY is read at module init; if you rotate it
+// you have to restart the server anyway.
+const DETECTED_KEY_ROLE = detectKeyRole(SUPABASE_KEY);
+
+/**
+ * Returns 'service_role' | 'anon' | 'unknown'. Used by the admin
+ * diagnostic endpoint and by the notifications error handler to
+ * pinpoint permission-denied causes without a DB round-trip.
+ */
+function getKeyRole() {
+  return DETECTED_KEY_ROLE;
+}
+
 module.exports = {
   initDB,
   addSubmission,
@@ -254,5 +318,7 @@ module.exports = {
   getSubmissionByUTR,
   updateSubmissionStatus,
   getStats,
-  getClient
+  getClient,
+  getKeyRole,
+  detectKeyRole,  // exported for unit tests only
 };

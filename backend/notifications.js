@@ -15,7 +15,7 @@
  * the full trail via GET /admin/users/:id/notifications.
  */
 
-const { getClient } = require('./db');
+const { getClient, getKeyRole } = require('./db');
 
 const ALLOWED_KINDS = new Set(['info', 'warn', 'urgent', 'success']);
 
@@ -134,13 +134,23 @@ async function createForUser(userId, payload, createdBy = 'admin') {
     } else if (code === '23503') {
       userFacing = 'Could not send — the user may have been deleted. Refresh the page and try again.';
     } else if (code === '42501' || /permission denied/i.test(msg)) {
-      // Two distinct causes of this:
-      //   1. SUPABASE_KEY is the anon key instead of service_role.
-      //   2. service_role has no GRANT on the notifications table
-      //      (older Supabase projects without ALTER DEFAULT PRIVILEGES).
-      // Case 2 is FAR more common in practice — the setup script now
-      // grants explicitly, so the fix is to re-run setup-notifications.sql.
-      userFacing = 'Database permission denied on the notifications table. Please re-run backend/setup-notifications.sql in the Supabase SQL editor — the latest version explicitly grants service_role access. If the error persists after that, double-check SUPABASE_KEY is the service_role key (not the anon key).';
+      // Two distinct causes of a 42501 here:
+      //   (A) SUPABASE_KEY is the ANON key — anon can't bypass RLS,
+      //       and our deny-all policy blocks it. This is caught at
+      //       boot by db.js, but we surface it here too for anyone
+      //       reading the admin error rather than the server log.
+      //   (B) SUPABASE_KEY is service_role but the notifications
+      //       table has no GRANT for service_role (older Supabase
+      //       projects). The setup script now GRANTs explicitly.
+      // Look at the boot-detected key role to pick the right message.
+      const role = getKeyRole();
+      if (role === 'anon') {
+        userFacing = 'Server is using the Supabase ANON key. Anon cannot write to notifications (RLS blocks it). Replace SUPABASE_KEY with the SERVICE_ROLE key from Supabase Dashboard → Settings → API, redeploy, and try again.';
+      } else if (role === 'service_role') {
+        userFacing = 'Service role is configured but was denied on the notifications table. Please re-run backend/setup-notifications.sql in the Supabase SQL editor — the latest version explicitly grants service_role access. If the error persists, check that the SQL ran successfully (no red error banner).';
+      } else {
+        userFacing = 'Database permission denied. Could not verify which Supabase key is configured. Ensure SUPABASE_KEY is the service_role key (not anon) and that setup-notifications.sql has been re-run with the latest GRANT statements.';
+      }
     }
     return { success: false, status: 500, message: userFacing };
   }

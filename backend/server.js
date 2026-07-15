@@ -20,7 +20,7 @@ const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const { v4: uuidv4 } = require('uuid');
-const { initDB, addSubmission, getAllSubmissions, getSubmissionByUTR, getStats, getClient } = require('./db');
+const { initDB, addSubmission, getAllSubmissions, getSubmissionByUTR, getStats, getClient, getKeyRole } = require('./db');
 const { generateSetupMessage, generateRenewalSetupMessage, generateQuickReply } = require('./meet-service');
 const {
   createPaymentRecord, findOpenPaymentForUser, getPaymentOwner,
@@ -777,6 +777,59 @@ function rowToAdminUser(u) {
     phoneCanonical: isCanonical(u.phone),
   };
 }
+
+// ─── GET /admin/db-diagnostics ───
+// Live check of the database configuration that most commonly breaks
+// admin writes. Returns:
+//   • which Supabase key role the backend booted with
+//   • whether each critical table exists and is writable by the
+//     current connection (via a probe SELECT and no-op UPDATE)
+// Purpose: when an admin sees "permission denied" in the UI, they can
+// hit this route to see EXACTLY which table + role the problem is on,
+// without asking for server logs.
+app.get('/admin/db-diagnostics', requireAdminAuth, async (req, res) => {
+  const keyRole = getKeyRole();
+  const client = getClient();
+  const tables = ['users', 'payments', 'submissions', 'reviews', 'notifications', 'payment_screenshots'];
+  const results = {};
+
+  for (const table of tables) {
+    try {
+      // A HEAD-only count is the cheapest way to prove SELECT works
+      // without pulling row data across the wire.
+      const { error, count } = await client
+        .from(table)
+        .select('*', { count: 'exact', head: true });
+      if (error) {
+        results[table] = {
+          readable: false,
+          code: error.code || null,
+          message: error.message || String(error),
+        };
+      } else {
+        results[table] = { readable: true, count: count || 0 };
+      }
+    } catch (e) {
+      results[table] = { readable: false, message: String(e.message || e) };
+    }
+  }
+
+  res.json({
+    status: 'success',
+    keyRole,
+    keyRoleIsServiceRole: keyRole === 'service_role',
+    tables: results,
+    // Prescriptive next step depending on what we found.
+    guidance:
+      keyRole === 'anon'
+        ? 'CRITICAL: SUPABASE_KEY is the ANON key. Replace with the service_role key from Supabase → Settings → API and redeploy. All admin writes will fail until this is fixed.'
+        : Object.values(results).some(t => !t.readable && t.code === '42P01')
+        ? 'One or more tables do not exist. Run the missing setup-*.sql files in Supabase → SQL Editor.'
+        : Object.values(results).some(t => !t.readable && t.code === '42501')
+        ? 'Permission denied on at least one table. Re-run the corresponding setup-*.sql to apply the latest GRANT statements.'
+        : 'All checks passed.',
+  });
+});
 
 // ─── GET /admin/users ───
 app.get('/admin/users', requireAdminAuth, async (req, res) => {
