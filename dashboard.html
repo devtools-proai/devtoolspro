@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>DevTools Pro · Dashboard</title>
-    <meta name="description" content="Your DevTools Pro dashboard — pick a Kiro IDE plan at 50% off, complete UPI payment, and get your onboarding Google Meet link. Claude Opus, Sonnet + new GPT 5.6 (Sol / Terra / Luna) included.">
+    <meta name="description" content="Your DevTools Pro dashboard — pick a Kiro IDE plan at 50% off, complete UPI payment, and get your onboarding Google Meet link. Claude Opus, new Sonnet 5, and new GPT 5.6 (Sol / Terra / Luna) included.">
 
     <!-- ═══════════════════════════════════════════════════════════════
          OPEN GRAPH (WhatsApp, Facebook, LinkedIn, Discord previews)
@@ -21,7 +21,7 @@
     <meta property="og:type" content="website">
     <meta property="og:site_name" content="DevTools Pro">
     <meta property="og:title" content="DevTools Pro · Your Kiro IDE Dashboard">
-    <meta property="og:description" content="Pick a Kiro plan at 50% off, complete UPI payment in 30 seconds, and grab your 1:1 Google Meet onboarding link. Claude Opus, Sonnet + new GPT 5.6 (Sol / Terra / Luna) included at the same price.">
+    <meta property="og:description" content="Pick a Kiro plan at 50% off, complete UPI payment in 30 seconds, and grab your 1:1 Google Meet onboarding link. Claude Opus, new Sonnet 5, and new GPT 5.6 (Sol / Terra / Luna) included at the same price.">
     <meta property="og:url" content="https://devtools-proai.github.io/devtoolspro/dashboard.html">
     <meta property="og:image" content="https://devtools-proai.github.io/devtoolspro/og-image.jpg">
     <meta property="og:image:secure_url" content="https://devtools-proai.github.io/devtoolspro/og-image.jpg">
@@ -998,6 +998,17 @@
         .utr-guide-step p { font-size: 13.5px; color: rgb(170,165,195); line-height: 1.55; margin: 0; }
         .utr-help-foot { display: flex; align-items: center; gap: 10px; padding-top: 1.25rem; margin-top: auto; border-top: 1px solid rgba(255,255,255,0.05); font-size: 13px; color: rgb(170,165,195); }
         .utr-help-avatar { width: 24px; height: 24px; border-radius: 50%; background: linear-gradient(135deg, #f472b6, #a855f7); flex-shrink: 0; box-shadow: 0 0 12px rgba(168,85,247,0.4); }
+        /* The help-foot as a whole is now a click-target that opens
+           WhatsApp with a pre-filled support message. Uses an <a> so
+           middle-click / long-press behaviour just works (open in new
+           tab, copy link, etc). Kept visually subtle to match the
+           surrounding "we'll take care of you" tone of the UTR page. */
+        a.utr-help-foot { text-decoration: none; transition: color .18s, border-color .18s, background .18s; border-radius: 10px; padding: 1rem 0.75rem 0.35rem; margin: 0 -0.75rem -0.35rem; }
+        a.utr-help-foot:hover { color: #f5f3ff; background: rgba(255,255,255,0.03); }
+        a.utr-help-foot:hover .utr-help-cta { color: #6ee7b7; text-decoration: underline; }
+        .utr-help-cta { color: #4ade80; font-weight: 600; }
+        .utr-help-arrow { margin-left: auto; width: 16px; height: 16px; flex-shrink: 0; color: rgb(140,135,165); transition: transform .18s, color .18s; }
+        a.utr-help-foot:hover .utr-help-arrow { color: #4ade80; transform: translateX(2px); }
 
         /* Phone mockup with floating animation */
         .utr-phone-wrap { display: flex; align-items: center; justify-content: center; }
@@ -2008,8 +2019,8 @@
                             <li>
                                 <span class="welcome-check"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>
                                 <div>
-                                    <span class="welcome-feat-title">Claude Opus, Sonnet, GPT 5.6 &amp; every premium model</span>
-                                    <span class="welcome-feat-desc">State-of-the-art models for superior reasoning and coding — including the newly-launched GPT 5.6 Sol, Terra &amp; Luna at no extra cost.</span>
+                                    <span class="welcome-feat-title">Claude Opus, Sonnet 5, GPT 5.6 &amp; every premium model</span>
+                                    <span class="welcome-feat-desc">State-of-the-art models for superior reasoning and coding — including the newly-launched Claude Sonnet 5 and GPT 5.6 Sol, Terra &amp; Luna at no extra cost.</span>
                                 </div>
                             </li>
                             <li>
@@ -2236,7 +2247,7 @@
                                 <li><svg fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>1,000 credits / month</li>
                                 <li><svg fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>Web, IDE &amp; CLI access</li>
                                 <li><svg fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>Claude Opus 4.8, Sonnet 4.6 + all premium models</li>
-                                <li><svg fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>GPT 5.6 Sol · Terra · Luna <span class="banner-new-chip">New</span></li>
+                                <li><svg fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>Sonnet 5 · GPT 5.6 Sol · Terra · Luna <span class="banner-new-chip">New</span></li>
                                 <li><svg fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>Standard support</li>
                             </ul>
                             <span class="plan-action">Select Pro</span>
@@ -2269,7 +2280,7 @@
                                 <li><svg fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>2,000 credits / month</li>
                                 <li><svg fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>Web, IDE &amp; CLI access</li>
                                 <li><svg fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>Claude Opus 4.8, Sonnet 4.6 + all premium models</li>
-                                <li><svg fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>GPT 5.6 Sol · Terra · Luna <span class="banner-new-chip">New</span></li>
+                                <li><svg fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>Sonnet 5 · GPT 5.6 Sol · Terra · Luna <span class="banner-new-chip">New</span></li>
                                 <li><svg fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>Priority support</li>
                             </ul>
                             <span class="plan-action">Select Pro+</span>
@@ -2300,7 +2311,7 @@
                                 <li><svg fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>5,000 credits / month</li>
                                 <li><svg fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>Web, IDE &amp; CLI access</li>
                                 <li><svg fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>Claude Opus 4.8, Sonnet 4.6 + all premium models</li>
-                                <li><svg fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>GPT 5.6 Sol · Terra · Luna <span class="banner-new-chip">New</span></li>
+                                <li><svg fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>Sonnet 5 · GPT 5.6 Sol · Terra · Luna <span class="banner-new-chip">New</span></li>
                                 <li><svg fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>24/7 Concierge support</li>
                             </ul>
                             <span class="plan-action">Select Pro Max</span>
@@ -2329,7 +2340,7 @@
                                 <li><svg fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>10,000 credits / month</li>
                                 <li><svg fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>Web, IDE &amp; CLI access</li>
                                 <li><svg fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>Claude Opus 4.8, Sonnet 4.6 + all premium models</li>
-                                <li><svg fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>GPT 5.6 Sol · Terra · Luna <span class="banner-new-chip">New</span></li>
+                                <li><svg fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>Sonnet 5 · GPT 5.6 Sol · Terra · Luna <span class="banner-new-chip">New</span></li>
                                 <li><svg fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>Dedicated account manager</li>
                             </ul>
                             <span class="plan-action">Select Power</span>
@@ -2627,10 +2638,18 @@
                                             </div>
                                         </li>
                                     </ol>
-                                    <div class="utr-help-foot">
-                                        <span class="utr-help-avatar"></span>
-                                        <span>Need help? Our agents are online 24/7.</span>
-                                    </div>
+                                    <!-- Click-to-chat support link. Opens WhatsApp with a
+                                         pre-filled help message so users on the UTR page
+                                         who can't find their transaction reference can
+                                         reach the team in one tap. Uses api.whatsapp.com
+                                         (works on both mobile and desktop) with the
+                                         support number already used by the rest of the
+                                         app (WHATSAPP_NUMBER const in the module scope). -->
+                                    <a class="utr-help-foot" id="utr-help-chat" target="_blank" rel="noopener" href="#" aria-label="Chat with support on WhatsApp">
+                                        <span class="utr-help-avatar" aria-hidden="true"></span>
+                                        <span><span class="utr-help-cta">Need help?</span> Message us on WhatsApp — our team responds in minutes.</span>
+                                        <svg class="utr-help-arrow" fill="none" stroke="currentColor" stroke-width="2.4" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+                                    </a>
                                 </div>
 
                                 <div class="utr-phone-wrap">
@@ -2928,6 +2947,11 @@
                                         <span class="dash-news-live"><span class="dash-news-dot"></span>Live</span>
                                     </div>
                                     <ul class="dash-news-list">
+                                        <li>
+                                            <span class="dash-news-tag tag-violet">New</span>
+                                            <span class="dash-news-title">Claude Sonnet 5 now available inside Kiro — same subscription, same price</span>
+                                            <span class="dash-news-meta">Just launched · Anthropic</span>
+                                        </li>
                                         <li>
                                             <span class="dash-news-tag tag-violet">New</span>
                                             <span class="dash-news-title">GPT 5.6 Sol, Terra &amp; Luna now live inside Kiro — same subscription, same price</span>
@@ -3880,6 +3904,46 @@
         setTimeout(() => { showView('view-utr'); setBtnLoading(btn, false); }, 200);
     });
     document.getElementById('utr-back').addEventListener('click', () => showView('view-payment'));
+
+    /* ─── UTR-view help chat link ─────────────────────────────────
+       Turns the "Need help?" foot chip into a real WhatsApp deeplink.
+       The template surfaces the user's current plan + email so the
+       support agent lands the chat with the context they need to
+       help immediately — no back-and-forth to figure out which user
+       is asking. Values that aren't known yet (e.g. plan on first
+       arrival) fall back to a generic string, so the URL is always
+       valid regardless of when the user clicks. */
+    (function initUtrHelpChat() {
+        const link = document.getElementById('utr-help-chat');
+        if (!link) return;
+        const SUPPORT_NUMBER = '919019879108';
+
+        function buildHref() {
+            const user = getUser() || {};
+            const plan = selectedPlan || user.currentPlan || null;
+            const email = user.email || '';
+            const lines = [
+                'Hi DevTools Pro team,',
+                '',
+                'I need help with my UTR submission on the dashboard.',
+            ];
+            if (plan) lines.push(`Plan: ${plan}`);
+            if (email) lines.push(`Email: ${email}`);
+            lines.push('', 'Please assist. Thanks!');
+            const msg = encodeURIComponent(lines.join('\n'));
+            return `https://api.whatsapp.com/send?phone=${SUPPORT_NUMBER}&text=${msg}`;
+        }
+
+        // Freshen the href every time the user hovers / focuses /
+        // clicks so the message always reflects the latest state
+        // (plan / email may have been updated since the view opened).
+        // Also set an initial static value so long-press / middle-click
+        // "copy link" gives them a working URL without needing focus.
+        link.href = buildHref();
+        ['mouseenter', 'focus', 'touchstart'].forEach(evt => {
+            link.addEventListener(evt, () => { link.href = buildHref(); }, { passive: true });
+        });
+    })();
 
     document.getElementById('dash-copy-upi').addEventListener('click', () => {
         navigator.clipboard.writeText('devtoolpro@ybl');
@@ -5203,14 +5267,14 @@
             // payment amount on the QR (₹X) doesn't look like a mistake.
             subEl.textContent = `You only pay the difference between ${fromPlan} (₹${PLAN_INR[fromPlan].toLocaleString('en-IN')}) and ${plan} (₹${fullInr.toLocaleString('en-IN')}) for this cycle. Full ${plan} access kicks in immediately; from 1st of next month you'll be billed ₹${fullInr.toLocaleString('en-IN')}/mo.`;
         } else if (verb === 'Upgrade to') {
-            subEl.textContent = `One month of full ${plan} access — Claude Opus, Sonnet, GPT 5.6, and every premium model with the bigger monthly credit cap.`;
+            subEl.textContent = `One month of full ${plan} access — Claude Opus, Sonnet 5, GPT 5.6, and every premium model with the bigger monthly credit cap.`;
         } else if (isCancelled) {
             // Fallback for cancelled users when proration somehow didn't
             // get computed (e.g. flow not 'change'). Shouldn't normally
             // hit this branch.
             subEl.textContent = `One month of full ${plan} access — your subscription resumes from Processing once we verify the payment.`;
         } else {
-            subEl.textContent = `One month of full ${plan} access — Claude Opus, Sonnet, GPT 5.6, and every premium model.`;
+            subEl.textContent = `One month of full ${plan} access — Claude Opus, Sonnet 5, GPT 5.6, and every premium model.`;
         }
 
         // Pre-summary breakdown row — shown for upgrade-diff OR prorated
